@@ -1,0 +1,23 @@
+[tool.poetry]
+authors = ["Daniel Mueller <acct.d-mueller@mailbox.org>"]
+description = "Synchronise G-codes with an audio file that was recorded during the execution of the G-codes."
+license = "MIT"
+name = "gcaudiosync"
+readme = "README.md"
+version = "0.0.1"
+
+[tool.poetry.dependencies]
+numpy = "^1.26.2"
+pydantic = "^2.5.0"
+python = "^3.11"
+
+[tool.poetry.group.dev.dependencies]
+bump2version = "^1.0.1"
+mypy = "^1.7.0"
+pytest = "^7.4.3"
+ruff = "^0.1.5"
+pytest-cov = "^4.1.0"
+
+[build-system]
+build-backend = "poetry.core.masonry.api"
+requires = ["poetry-core"]
