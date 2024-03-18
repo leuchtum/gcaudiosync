@@ -13,4 +13,5 @@ G_Code = GCodeAnalyser()
 # analyse G-Code
 G_Code.analyse(src_path_1)
 
+# print visualisation data
 print(G_Code.Data_visualisation)

@@ -90,7 +90,6 @@ class GCodeAnalyser:
         ]
     )
 
-
     # Constructor
     def __init__(self):
         self.CNC_Parameter = CNC_Parameter()
@@ -130,7 +129,7 @@ class GCodeAnalyser:
         self.interprete()
 
     ##################################################################################################
-    # Methods: DataFrame
+    # Methods: Interact with DataFrame
         
     def get_from_intern_data(self, index: int, column: str) -> Any:
         """
@@ -448,6 +447,7 @@ class GCodeAnalyser:
 
         return line
 
+    #TODO: make methods or functions
     def handle_arc_movement(self, line: str, index: int) -> str:
         '''
         Handle arc movement coordinates in a given line of the G-code.
