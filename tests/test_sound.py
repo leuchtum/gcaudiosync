@@ -1,6 +1,6 @@
 import numpy as np
 
-from gaudiosync.sound import SoundData
+from gcaudiosync.sound import SoundData
 
 
 def test_sound_data_properties():
