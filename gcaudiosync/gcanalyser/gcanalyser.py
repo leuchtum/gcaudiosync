@@ -490,13 +490,15 @@ class GCodeAnalyser:
             value = float(value)
 
             if available:  # Check if coordinate is available in the line
-                    if coordinate in coordinates_0 and not self.get_from_intern_data(index, "absolute_position"):
+                    if coordinate in coordinates_0:
                         # Update coordinate value based on absolute/relative positioning
-                        value = self.get_from_intern_data(index, coordinate) + value
+                        if not self.get_from_intern_data(index, "absolute_position"):    
+                            value = self.get_from_intern_data(index, coordinate) + value
                         self.write_in_intern_data(index, coordinate, value)  # Write value of coordinate in line
-                    elif coordinate in coordinates_1 and not self.get_from_intern_data(index, "absolute_arc_center"):
+                    elif coordinate in coordinates_1:
                         # Update coordinate value based on absolute/relative arc center
-                        value = self.get_from_intern_data(index, coordinate) + value
+                        if not self.get_from_intern_data(index, "absolute_arc_center"):
+                            value = self.get_from_intern_data(index, coordinate) + value
                         self.write_in_intern_data(index, coordinate, value)
                     elif coordinate in coordinates_2:
                         # Write the arc radius into the internal data
@@ -597,10 +599,10 @@ class GCodeAnalyser:
             axis_2 (str): The second axis coordinate (e.g., "X", "Y", or "Z").
 
         Returns:
-            Tuple containing the X and Y coordinates of the arc center.
+            Tuple containing the two coordinates of the arc center.
         '''
 
-        G = self.get_from_intern_data(index, "movement")
+        arc_movement = self.get_from_intern_data(index, "movement")
         P0X = self.get_from_intern_data(index-1, axis_1)
         P0Y = self.get_from_intern_data(index-1, axis_2)
         P1X = self.get_from_intern_data(index, axis_1)
@@ -617,7 +619,7 @@ class GCodeAnalyser:
 
         DMC = math.sqrt(math.pow(R,2) - math.pow(DP0M,2))
 
-        if G == 2:
+        if arc_movement == 2:
             if R > 0:
                 MCX = P0MY
                 MCY = -P0MX
