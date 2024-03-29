@@ -78,6 +78,7 @@ class GCodeAnalyser:
             ("arc_full_turns",      np.uint64),         # number of full turns in a G02 or G03 move, filled out by parser
             ("feed_rate",           np.float64),        # actual feed rate in this line [mm/min] -> important for synchronisation, filled out by interpreter
             ("spindle_speed",       np.float64),        # actual spindle speed in this line [RPM] -> important for synchronisation, filled out by interpreter
+            ("spindle_speed_change",np.bool_),          # True if previous line has diffrend spindle speed            
             ("dwell_time",          np.uint64),         # value of dwell time in ms   
             ("active_plane",        np.uint8),          # active plane 
             ("program_paused",      np.bool_),          # true if program is paused in this line     
@@ -203,6 +204,41 @@ class GCodeAnalyser:
         """
 
         self.Data_visualisation.loc[index, column] = data
+
+    def get_from_all_data(self, index: int, column: str) -> Any:
+        """
+        Retrieves a value from the specified index and column in the Data_all.
+
+        Args:
+            index (int):    The index of the row to access.
+            column (str):   The name of the column to access.
+
+        Returns:
+            Any: The value at the specified location in the Data_intern, or raises a KeyError if the index or column is not found.
+
+        Raises:
+            KeyError: If the specified index or column is not found in the Data_intern.
+        """
+
+        try:
+            return self.Data_all.loc[index, column]
+        except KeyError:
+            raise KeyError(f"Index {index} or column '{column}' not found in Data_all")
+ 
+    def write_in_all_data(self, index: int, column: str, data) -> None:
+        """
+        Inserts or updates a value in the specified cell of the Data_all.
+
+        Args:
+            index (int):    The index of the row to modify.
+            column (str):   The name of the column to modify.
+            data:           The new value to insert or update.
+
+        Returns:
+            None
+        """
+
+        self.Data_all.loc[index, column] = data
 
     def copy_all_from_line_above_intern_data(self, index: int) -> None:
         """
@@ -1012,7 +1048,11 @@ class GCodeAnalyser:
     # interprets the data from the parser and fills in the rest of the columns in the DataFrame
     def interprete(self):
 
-        self.compute_needed_lines_for_all_data()
+        noflines = self.compute_needed_lines_for_all_data()
+
+        self.Data_all = pd.DataFrame(np.empty(noflines, dtype = self.Col_Names_and_DataTypes_all))
+
+        self.fill_in_all_data()
         
         self.compute_feed_rate()
 
@@ -1030,17 +1070,19 @@ class GCodeAnalyser:
         # self.compute_tool_path()
 
         # self.compute_expected_frequencies()
-    # TODO: work and comment
-    def compute_needed_lines_for_all_data(self):
+
+    # TODO: improve
+    def compute_needed_lines_for_all_data(self) -> int:
         '''
         Compute the lines needed for the DataFrame with all Data.
 
         Returns:
-            None
+            int: number of needed lines for all data
         '''
 
-        for index in range(len(self.Data_intern)):
-            pass
+        counter = 2*len(self.Data_intern)
+
+        return counter
 
     def compute_feed_rate(self):
         '''
@@ -1063,10 +1105,12 @@ class GCodeAnalyser:
             # If it's a rapid linear movement (G0), assign the maximum feed rate
             if movement == 0:
                 self.write_in_intern_data(index, "feed_rate", self.CNC_Parameter.F_max)
-            else:
+            elif movement in [1, 2, 3]:
                 # For other movements (G1, G2, G3), use the specified feed rate (F) if available
                 F = self.get_from_intern_data(index, "F")
                 self.write_in_intern_data(index, "feed_rate", F)
+            else:
+                self.write_in_intern_data(index, "feed_rate", 0.0)
 
     def compute_spindle_speed(self) -> None:
         '''
@@ -1105,6 +1149,9 @@ class GCodeAnalyser:
 
             if RPM_old != RPM_new:
                 self.write_in_intern_data(index, "spindle_speed_change", True)
+                # Set line importance flags
+                self.write_in_intern_data(index, "important", True)
+                self.write_in_visualization_data(index, "important", True)
 
             # TODO: Make chart with all changes of spindle_speed
 
