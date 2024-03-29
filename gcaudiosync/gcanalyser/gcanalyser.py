@@ -40,13 +40,15 @@ class GCodeAnalyser:
             ("feed_rate",           np.float64),        # actual feed rate in this line [mm/min] -> important for synchronisation, filled out by interpreter
             ("S",                   np.float64),        # spindle speed if the spindle is on -> important for tracking S, filled out by parser
             ("spindle_speed",       np.float64),        # actual spindle speed in this line [RPM] -> important for synchronisation, filled out by interpreter
+            ("spindle_speed_change",np.bool_),          # True if previous line has diffrend spindle speed
             ("dwell_time",          np.uint64),         # value of dwell time in ms   
             ("exact_stop",          np.bool_),          # exact stop
+            ("G_61_on",             np.bool_),          # True if G61 is on
             ("active_plane",        np.uint8),          # active plane 
             ("cutter_compensation", np.uint8),          # kind of cutter compensation
             ("absolute_position",   np.bool_),          # True if position are absolute
             ("absolute_arc_center", np.bool_),          # True if arc center position is absolute
-            ("program_paused",      np.bool_),          # true if program is paused in this line     
+            ("program_paused",      np.bool_),          # True if program is paused in this line     
             ("spindle_on",          np.bool_),          # is spindle on or not
             ("spindle_direction",   str),               # direction of spindle
             ("active_tool_number",  np.uint8),          # number of active tool
@@ -362,6 +364,10 @@ class GCodeAnalyser:
             "active_plane",
             "cutter_compensation",
         ]
+
+        if self.get_from_intern_data(index, "G_61_on"):
+            columns.append("exact_stop")
+
         self.copy_from_line_above_intern_data(index, columns)
 
         movement_available = False
@@ -397,6 +403,10 @@ class GCodeAnalyser:
                     pass    # Standard unit, nothing to do
                 case 40 | 41 | 41.1 | 42 | 42.1:    # Cutter compensation
                     line = self.handle_cutter_compensation(line, index, number)
+                case 61:    # exact stop on for this and following lines
+                    self.handle_g_61_on(index)
+                case 64:    # exact stop off
+                    self.handle_g_61_off(index)
                 case 90 | 90.1 | 91 | 91.1:    # Absolute position
                     self.handle_value_command(index, number)
                 case _:  # Unsupported G-code
@@ -734,6 +744,31 @@ class GCodeAnalyser:
         
         return line
 
+    def handle_g_61_on(self, index: int) -> None:
+        '''
+        Activates G61
+
+        Args:
+            index (int):    The index of the line in the G-code file.
+
+        Returns:
+            None
+        '''
+        self.write_in_intern_data(index, "G_61_on", True)
+        self.write_in_intern_data(index, "exact_stop", True)
+
+    def handle_g_61_off(self, index: int) -> None:
+        '''
+        Deactivates G61
+
+        Args:
+            index (int):    The index of the line in the G-code file.
+
+        Returns:
+            None
+        '''
+        self.write_in_intern_data(index, "G_61_on", False)
+
     def handle_value_command(self, index: int, value_command: float) -> None:
         '''
         Handle the value command in the given line of the G-code.
@@ -976,12 +1011,14 @@ class GCodeAnalyser:
     # TODO: work and comment
     # interprets the data from the parser and fills in the rest of the columns in the DataFrame
     def interprete(self):
+
+        self.compute_needed_lines_for_all_data()
         
         self.compute_feed_rate()
 
         self.compute_spindle_speed()
 
-        self.compute_needed_lines_for_all_data()
+        self.check_spindle_speed_changes()
 
         # make dataframe: all
         # self.Data_all = pd.DataFrame(np.empty(len(?), dtype = self.Col_Names_and_DataTypes_all))
@@ -993,6 +1030,17 @@ class GCodeAnalyser:
         # self.compute_tool_path()
 
         # self.compute_expected_frequencies()
+    # TODO: work and comment
+    def compute_needed_lines_for_all_data(self):
+        '''
+        Compute the lines needed for the DataFrame with all Data.
+
+        Returns:
+            None
+        '''
+
+        for index in range(len(self.Data_intern)):
+            pass
 
     def compute_feed_rate(self):
         '''
@@ -1020,7 +1068,7 @@ class GCodeAnalyser:
                 F = self.get_from_intern_data(index, "F")
                 self.write_in_intern_data(index, "feed_rate", F)
 
-    def compute_spindle_speed(self):
+    def compute_spindle_speed(self) -> None:
         '''
         Compute the spindle speed in RPM for each line of the G-code.
 
@@ -1039,19 +1087,28 @@ class GCodeAnalyser:
                 RPM = self.get_from_intern_data(index, "S")
 
             # write RPM in DataFrame
-            self.write_in_intern_data(index, "spindle_speed")
+            self.write_in_intern_data(index, "spindle_speed", RPM)
 
-    # TODO: work and comment
-    def compute_needed_lines_for_all_data(self):
+    def check_spindle_speed_changes(self) -> None:
         '''
-        Compute the lines needed for the DataFrame with all Data.
+        Checks if there is a change in the RPMs in each line of the G-code.
 
         Returns:
             None
         '''
+        
+        RPM_old = 0
 
         for index in range(len(self.Data_intern)):
-            pass
+
+            RPM_new = self.get_from_intern_data(index, "spindle_speed")
+
+            if RPM_old != RPM_new:
+                self.write_in_intern_data(index, "spindle_speed_change", True)
+
+            # TODO: Make chart with all changes of spindle_speed
+
+
 
 # end of class
 ######################################################################################################
