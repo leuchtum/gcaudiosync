@@ -981,7 +981,7 @@ class GCodeAnalyser:
 
     def compute_feed_rate(self):
         '''
-        Compute the feed rate for each line of the G-code.
+        Compute the feed rate in mm/min for each line of the G-code.
 
         This method iterates through each line of the G-code data and computes
         the feed rate based on the movement type. For rapid linear movements (G0),
@@ -993,6 +993,7 @@ class GCodeAnalyser:
         '''
 
         for index in range(len(self.Data_intern)):
+
             # Get the movement type from the current line
             movement = self.get_from_intern_data(index, "movement")
 
@@ -1004,10 +1005,26 @@ class GCodeAnalyser:
                 F = self.get_from_intern_data(index, "F")
                 self.write_in_intern_data(index, "feed_rate", F)
 
-    # TODO: work and comment
-    # compute the spindle speed
     def compute_spindle_speed(self):
-        pass
+        '''
+        Compute the spindle speed in RPM for each line of the G-code.
+
+        Returns:
+            None
+        '''
+
+        for index in range(len(self.Data_intern)):
+            
+            # set RPM to 0
+            RPM = 0
+
+            # check if spindle is on
+            if self.get_from_intern_data(index, "spindle_on"):
+                # get RPM
+                RPM = self.get_from_intern_data(index, "S")
+
+            # write RPM in DataFrame
+            self.write_in_intern_data(index, "spindle_speed")
 
     # TODO: work and comment
     def compute_needed_lines_for_all_data(self):
