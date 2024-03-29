@@ -41,6 +41,7 @@ class GCodeAnalyser:
             ("S",                   np.float64),        # spindle speed if the spindle is on -> important for tracking S, filled out by parser
             ("spindle_speed",       np.float64),        # actual spindle speed in this line [RPM] -> important for synchronisation, filled out by interpreter
             ("dwell_time",          np.uint64),         # value of dwell time in ms   
+            ("exact_stop",          np.bool_),          # exact stop
             ("active_plane",        np.uint8),          # active plane 
             ("cutter_compensation", np.uint8),          # kind of cutter compensation
             ("absolute_position",   np.bool_),          # True if position are absolute
@@ -386,6 +387,8 @@ class GCodeAnalyser:
                 case 4:     # Dwell
                     movement_possible = False
                     line = self.handle_g04(line, index) 
+                case 9:     # Exact stop
+                    self.handle_exact_stop(index)
                 case 17 | 18 | 19:    # Select XY-plane, Select XZ-plane, Select YZ-plane
                     self.handle_plane_selection(index, number)
                 case 20:    # Inch
@@ -674,6 +677,18 @@ class GCodeAnalyser:
         self.write_in_visualization_data(index, "important", True)
 
         return line
+
+    def handle_exact_stop(self, index: int) -> None:
+        '''
+        Handle the command for an exact stop in a specific line of the G-code.
+
+        Args:
+            index(int):     The index of the line in the G-code file.
+
+        Returns:
+            None
+        '''
+        self.write_in_intern_data(index, "exact_stop", True)
 
     def handle_plane_selection(self, index: int, plane: int) -> None:
         '''
@@ -1028,7 +1043,15 @@ class GCodeAnalyser:
 
     # TODO: work and comment
     def compute_needed_lines_for_all_data(self):
-        pass
+        '''
+        Compute the lines needed for the DataFrame with all Data.
+
+        Returns:
+            None
+        '''
+
+        for index in range(len(self.Data_intern)):
+            pass
 
 # end of class
 ######################################################################################################
