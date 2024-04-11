@@ -288,6 +288,7 @@ class GCodeAnalyser:
             None
         '''
 
+        self.write_in_intern_data(0, "important", True)                                 # first line is important
         self.write_in_intern_data(0, "movement", 0)                                     # start movement: G00
         self.write_in_intern_data(0, "X", self.CNC_Parameter.tool_change_point[0])      # start X-coordinate: Tool change point of CNC-machine
         self.write_in_intern_data(0, "Y", self.CNC_Parameter.tool_change_point[1])      # start Y-coordinate: Tool change point of CNC-machine
@@ -1014,7 +1015,7 @@ class GCodeAnalyser:
         line, available, value = get_number(line,  "F", True)
         value = float(value)
 
-        # Write the value of F or copy from the line above if available
+        # Write the value of F if available
         if available:                                                                       # F is in line
             self.write_in_intern_data(index, "F", value)                                               # write value of F in line
 
@@ -1037,7 +1038,7 @@ class GCodeAnalyser:
 
         # Write the value of S or copy from the line above if available
         if available:                                                                       # F is in line
-            self.write_in_intern_data(index, "S", value)                                               # write value of F in line
+            self.write_in_intern_data(index, "S", value)                                    # write value of F in line
 
         return line
     
@@ -1050,22 +1051,10 @@ class GCodeAnalyser:
 
         noflines = self.compute_needed_lines_for_all_data()
 
+        # make dataframe: all
         self.Data_all = pd.DataFrame(np.empty(noflines, dtype = self.Col_Names_and_DataTypes_all))
 
         self.fill_in_all_data()
-        
-        self.compute_feed_rate()
-
-        self.compute_spindle_speed()
-
-        self.check_spindle_speed_changes()
-
-        # make dataframe: all
-        # self.Data_all = pd.DataFrame(np.empty(len(?), dtype = self.Col_Names_and_DataTypes_all))
-
-        # self.smooth_contour() # make R0.2 to every "sharp" edge
-        
-        # self.compute_cutter_compensation()
 
         # self.compute_tool_path()
 
@@ -1084,76 +1073,107 @@ class GCodeAnalyser:
 
         return counter
 
-    def compute_feed_rate(self):
+    # TODO: work and comment
+    def fill_in_all_data(self) -> None:
+
+        index_all = 0
+
+        for index_intern in range(len(self.Data_intern)):
+
+            # check movement
+            # check dwell
+            # check pause
+            # check end of program
+            # check tool change
+            # check spindle speed change
+            # check cooling change
+            # add diameter compensation
+
+            feed_rate = self.compute_feed_rate(index_intern)
+
+            spindle_speed = self.compute_spindle_speed(index_intern)
+
+            # self.smooth_contour() # make R0.2 to every "sharp" edge
+        
+        # self.compute_cutter_compensation()
+
+    def compute_feed_rate(self, intern_index: int) -> float:
         '''
-        Compute the feed rate in mm/min for each line of the G-code.
+        Compute the feed rate in mm/min for a line of the G-code.
 
         This method iterates through each line of the G-code data and computes
         the feed rate based on the movement type. For rapid linear movements (G0),
         it assigns the maximum feed rate. For other movements (G1, G2, G3),
         it uses the specified feed rate value (F) if available.
 
-        Returns:
-            None
-        '''
-
-        for index in range(len(self.Data_intern)):
-
-            # Get the movement type from the current line
-            movement = self.get_from_intern_data(index, "movement")
-
-            # If it's a rapid linear movement (G0), assign the maximum feed rate
-            if movement == 0:
-                self.write_in_intern_data(index, "feed_rate", self.CNC_Parameter.F_max)
-            elif movement in [1, 2, 3]:
-                # For other movements (G1, G2, G3), use the specified feed rate (F) if available
-                F = self.get_from_intern_data(index, "F")
-                self.write_in_intern_data(index, "feed_rate", F)
-            else:
-                self.write_in_intern_data(index, "feed_rate", 0.0)
-
-    def compute_spindle_speed(self) -> None:
-        '''
-        Compute the spindle speed in RPM for each line of the G-code.
+        Args:
+            intern_index (int):    The index of the line in intern data.
 
         Returns:
-            None
+            float: feed rate in mm/min
         '''
 
-        for index in range(len(self.Data_intern)):
+        # Get the movement type from the current line
+        movement = self.get_from_intern_data(intern_index, "movement")
+
+        feed_rate = 0.0
+
+        # If it's a rapid linear movement (G0), assign the maximum feed rate
+        if movement == 0:
+            feed_rate = self.CNC_Parameter.F_max
+        elif movement in [1, 2, 3]:
+            # For other movements (G1, G2, G3), use the specified feed rate (F) if available
+            feed_rate = self.get_from_intern_data(intern_index, "F")
+
+        return feed_rate
+
+    # TODO: change to all data
+    def compute_spindle_speed(self, intern_index) -> float:
+        '''
+        Compute the spindle speed in RPM for a line of the G-code.
+
+        Args:
+            intern_index (int):    The index of the line in intern data.
+
+        Returns:
+            float: spindle speed in RPM
+        '''
             
-            # set RPM to 0
-            RPM = 0
+        # set RPM to 0
+        RPM = 0
 
-            # check if spindle is on
-            if self.get_from_intern_data(index, "spindle_on"):
-                # get RPM
-                RPM = self.get_from_intern_data(index, "S")
+        # check if spindle is on
+        if self.get_from_intern_data(intern_index, "spindle_on"):
+            # get RPM
+            RPM = self.get_from_all_data(intern_index, "S")
 
-            # write RPM in DataFrame
-            self.write_in_intern_data(index, "spindle_speed", RPM)
+        return RPM
 
-    def check_spindle_speed_changes(self) -> None:
+    # TODO: change to all data
+    def check_spindle_speed_changes(self, intern_index) -> bool:
         '''
         Checks if there is a change in the RPMs in each line of the G-code.
 
         Returns:
-            None
+            bool: True if spindle speed changes
         '''
-        
-        RPM_old = 0
 
-        for index in range(len(self.Data_intern)):
+        change = False
 
-            RPM_new = self.get_from_intern_data(index, "spindle_speed")
+        if intern_index == 0:
+            return change
 
-            if RPM_old != RPM_new:
-                self.write_in_intern_data(index, "spindle_speed_change", True)
-                # Set line importance flags
-                self.write_in_intern_data(index, "important", True)
-                self.write_in_visualization_data(index, "important", True)
+        RPM_old = self.get_from_intern_data(intern_index-1, "spindle_speed")
 
-            # TODO: Make chart with all changes of spindle_speed
+        RPM_new = self.get_from_intern_data(intern_index, "spindle_speed")
+
+        if RPM_old != RPM_new:
+            self.write_in_intern_data(intern_index, "spindle_speed_change", True)
+            # Set line importance flags
+            self.write_in_intern_data(intern_index, "important", True)
+            self.write_in_visualization_data(intern_index, "important", True)
+
+        return change
 
 
 
