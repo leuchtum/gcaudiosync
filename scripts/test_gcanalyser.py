@@ -11,7 +11,7 @@ src_path_2 = src_path / "Getriebegehaeuse.tap"
 G_Code = GCodeAnalyser()
 
 # analyse G-Code
-G_Code.analyse(src_path_1)
+G_Code.analyse(src_path_2)
 
 # print visualisation data
 print(G_Code.Data_visualisation)

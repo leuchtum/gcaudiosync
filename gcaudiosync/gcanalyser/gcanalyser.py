@@ -57,6 +57,7 @@ class GCodeAnalyser:
             ("tool_length",         np.float64),        # diameter of tool
             ("tool_change",         np.bool_),          # True if tool change
             ("cooling_on",          np.bool_),          # True if cooling ist on
+            ("cooling_change",      np.bool_),          # True if cooling changes
             ("program_end_reached", np.bool_),          # True if program end reached
         ]
     )
@@ -64,7 +65,8 @@ class GCodeAnalyser:
     # list with the column names and the datatypes for the all the data for synchronisation
     Col_Names_and_DataTypes_all = np.dtype(
         [   
-            ("what_happens",        np.uint8),          # 1: linear movement
+            ("what_happens",        np.uint8),          # 0: start of program
+                                                        # 1: linear movement
                                                         # 2: arc movement
                                                         # 3: end of program
                                                         # 4: pause
@@ -987,8 +989,13 @@ class GCodeAnalyser:
 
         # Set the cooling status and mark importance
         self.write_in_intern_data(index, "cooling_on", command)
-        self.write_in_intern_data(index, "important", True)
-        self.write_in_visualization_data(index, "important", True)
+
+        cooling_old = self.get_from_intern_data(index-1, "cooling_on")
+
+        if command != cooling_old:
+            self.write_in_intern_data(index, "cooling_change", True)
+            self.write_in_intern_data(index, "important", True)
+            self.write_in_visualization_data(index, "important", True)
 
     def handle_end_of_program(self, index: int) -> None:
         '''
@@ -1132,74 +1139,125 @@ class GCodeAnalyser:
     def fill_in_all_data(self) -> None:
 
         index_all = 0
+        end_of_program = False
 
         for index_intern in range(len(self.Data_intern)):
             
             if index_intern == 0:
                 self.add_first_line_to_all_data()
                 index_all += 1
-                break
 
-            intern_line_is_important = self.get_from_intern_data(index_intern, "important")
+            elif self.get_from_intern_data(index_intern, "important"):
 
-            if intern_line_is_important:
-            
-                if self.check_end_of_program(index_intern, index_all):
+                end_of_program = self.check_end_of_program(index_intern, index_all)
+                
+                if end_of_program:
                     index_all += 1
                     break
                 elif self.check_pause(index_intern, index_all):
                     index_all += 1
-                    break
                 elif self.check_dwell_time(index_intern, index_all):
                     index_all += 1
-                    break
                 elif self.check_tool_change(index_intern, index_all):
                     index_all += 1
-                    break
                 else:
                     if self.check_cooling_changes(index_intern, index_all):
                         index_all += 1
                     if self.check_spindle_speed_changes(index_intern, index_all):
                         index_all += 1
+                    index_all = self.check_movement(index_intern, index_all)
 
-                    
-
-
-
-                # self.smooth_contour() # make R0.2 to every "sharp" edge
-        
-                # self.compute_cutter_compensation()
-
-
-
-    # TODO: work and comment
-    def add_first_line_to_all_data(self):
-        pass    
-
-    # TODO: work and comment
-    def check_end_of_program(self, index_intern, index_all):
-        pass
-
-    # TODO: work and comment
-    def check_pause(self, index_intern, index_all):
-        pass
-
-    # TODO: work and comment
-    def check_dwell_time(self, index_intern, index_all):
-        pass
-
-    # TODO: work and comment
-    def check_tool_change(self, index_intern, index_all):
-        pass
-
-    # TODO: work and delete and comment
-    def check_spindle_speed_changes(self, intern_index):
-        pass
 
     # TODO: comment
-    def add_lin_movement_from_intern_data_to_all_data(self, intern_index: int, all_index: int):
+    def add_first_line_to_all_data(self):
+        self.write_in_all_data(0, "what_happens", 0)
 
-        self.write_in_all_data(all_index, "what_happens", 1)
+        columns = [ "movement",
+                    "X", 
+                    "Y", 
+                    "Z", 
+                    "A", 
+                    "B", 
+                    "C", 
+                    "active_plane", 
+                   ]
+
+        for column in columns:
+            value = self.get_from_intern_data(0, column)
+            self.write_in_all_data(0, column, value)
+
+    # TODO: comment
+    def check_end_of_program(self, index_intern, index_all):
+        if self.get_from_intern_data(index_intern, "program_end_reached"):
+            self.write_in_all_data(index_all, "what_happens", 3)
+            self.write_in_all_data(index_all, "program_end_reached", True)
+            return True
+        return False
+
+    # TODO: comment
+    def check_pause(self, index_intern, index_all):
+        if self.get_from_intern_data(index_intern, "program_paused"):
+            self.write_in_all_data(index_all, "program_paused", True)
+            self.write_in_all_data(index_all, "what_happens", 4)
+            return True
+        return False
+
+    # TODO: comment
+    def check_dwell_time(self, index_intern, index_all):
+        if self.get_from_intern_data(index_intern, "dwell_time"):
+            self.write_in_all_data(index_all, "dwell_time", True)
+            self.write_in_all_data(index_all, "what_happens", 5)
+            dwell_time = self.get_from_intern_data(index_intern, "dwell_time")
+            self.write_in_all_data(index_all, "dwell_time", dwell_time)
+            return True
+        return False
+        
+    # TODO: comment
+    def check_tool_change(self, index_intern, index_all):
+        if self.get_from_intern_data(index_intern, "tool_change"):
+            self.write_in_all_data(index_all, "tool_change", True)
+            self.write_in_all_data(index_all, "what_happens", 6)
+
+            columns = [ "active_tool_number",
+                        "tool_diameter",
+                        "tool_length",
+                    ]
+
+            for column in columns:
+                value = self.get_from_intern_data(index_intern, column)
+                self.write_in_all_data(index_all, column, value)
+            return True
+        return False
+
+    # TODO: comment
+    def check_cooling_changes(self, index_intern, index_all):
+        if self.get_from_intern_data(index_intern, "cooling_change"):
+            self.write_in_all_data(index_all, "cooling_change", True)
+            self.write_in_all_data(index_all, "what_happens", 7)
+            cooling = self.get_from_intern_data(index_intern, "cooling_on")
+            self.write_in_all_data(index_all, "cooling_on", cooling)
+            return True
+        return False
+    
+    # TODO: comment
+    def check_spindle_speed_changes(self, index_intern, index_all):
+        if self.get_from_intern_data(index_intern, "spindle_speed_change"):
+            self.write_in_all_data(index_all, "spindle_speed_change", True)
+            self.write_in_all_data(index_all, "what_happens", 8)
+            RPM_new = self.get_from_intern_data(index_intern, "spindle_speed")
+            self.write_in_all_data(index_all, "spindle_speed", RPM_new)
+            return True
+        return False
+
+    # TODO: work and comment
+    def check_movement(self, index_intern, index_all):
+        # return new index all
+        return index_all
+
+    # TODO: comment
+    def add_lin_movement_from_intern_data_to_all_data(self, index_intern: int, index_all: int):
+
+        self.write_in_all_data(index_all, "what_happens", 1)
 
         columns = [ "movement",
                     "X", 
@@ -1220,13 +1278,13 @@ class GCodeAnalyser:
                    ]
 
         for column in columns:
-            value = self.get_from_intern_data(intern_index, column)
-            self.write_in_all_data(all_index, column, value)
+            value = self.get_from_intern_data(index_intern, column)
+            self.write_in_all_data(index_all, column, value)
 
     # TODO: comment
-    def add_arc_movement_from_intern_data_to_all_data(self, intern_index: int, all_index: int):
+    def add_arc_movement_from_intern_data_to_all_data(self, index_intern: int, index_all: int):
 
-        self.write_in_all_data(all_index, "what_happens", 2)
+        self.write_in_all_data(index_all, "what_happens", 2)
 
         columns = [ "movement",
                     "X", 
@@ -1252,11 +1310,8 @@ class GCodeAnalyser:
                    ]
 
         for column in columns:
-            value = self.get_from_intern_data(intern_index, column)
-            self.write_in_all_data(all_index, column, value)
-
-
-
+            value = self.get_from_intern_data(index_intern, column)
+            self.write_in_all_data(index_all, column, value)
 
 # 1: linear movement
 # 2: arc movement
@@ -1456,5 +1511,3 @@ def extract_number(line: str, number_start: int) -> str:
         end_index += 1
 
     return line[number_start:end_index]
-
-
