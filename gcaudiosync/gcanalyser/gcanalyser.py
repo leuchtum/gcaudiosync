@@ -14,6 +14,7 @@ class GCodeAnalyser:
             ("original_line_content",   str),           # original line of the cgode
             ("important",               np.bool_),      # bool if line is important for synchronisation, filles out by interpreter
             ("time",                    np.uint64),     # time this line needs in ms
+            ("index_all",               np.uint64),     # start of this data in all data
         ]
     )
 
@@ -62,7 +63,16 @@ class GCodeAnalyser:
 
     # list with the column names and the datatypes for the all the data for synchronisation
     Col_Names_and_DataTypes_all = np.dtype(
-        [
+        [   
+            ("what_happens",        np.uint8),          # 1: linear movement
+                                                        # 2: arc movement
+                                                        # 3: end of program
+                                                        # 4: pause
+                                                        # 5: dwell time
+                                                        # 6: tool change
+                                                        # 7: cooling change
+                                                        # 8: RPM change
+                                                    
             ("index_visualisation", np.uint64),         # index for same line in visualisation data
             ("movement",            np.uint8),          # movement (0, 1, 2, 3), filled out by parser
             ("X",                   np.float64),        # value of X-coordinate, filled out by parser, corrected by interpreter
@@ -89,6 +99,7 @@ class GCodeAnalyser:
             ("tool_length",         np.float64),        # diameter of tool
             ("tool_change",         np.bool_),          # True if tool change
             ("cooling_on",          np.bool_),          # True if cooling ist on
+            ("cooling_change",      np.bool_),          # True if cooling changes
             ("program_end_reached", np.bool_),          # True if program end reached
             ("time",                np.int64)           # time in ms
         ]
@@ -930,10 +941,6 @@ class GCodeAnalyser:
             self.write_in_intern_data(index, "spindle_on", True)
             self.write_in_intern_data(index, "spindle_direction", direction)
 
-        # Set line importance flags
-        self.write_in_intern_data(index, "important", True)
-        self.write_in_visualization_data(index, "important", True)
-
     # TODO: get tool data
     def handle_tool_change(self, line: str, index: int) -> str:
         '''
@@ -1045,9 +1052,12 @@ class GCodeAnalyser:
     ##################################################################################################
     # Methods: Interpreter
 
-    # TODO: work and comment
+    # TODO: comment
     # interprets the data from the parser and fills in the rest of the columns in the DataFrame
     def interprete(self):
+
+        self.compute_and_fill_in_spindle_speed_intern_data()
+        self.compute_and_fill_in_feed_rate_intern_data()
 
         noflines = self.compute_needed_lines_for_all_data()
 
@@ -1060,6 +1070,51 @@ class GCodeAnalyser:
 
         # self.compute_expected_frequencies()
 
+    def compute_and_fill_in_spindle_speed_intern_data(self):
+
+        for index in range(len(self.Data_intern)):
+
+            if index == 0:
+                break
+            
+            spindle_on_old = self.get_from_intern_data(index-1, "spindle_on")
+            spindle_on_new = self.get_from_intern_data(index, "spindle_on")
+            RPM_old = self.get_from_intern_data(index-1, "S")
+            RPM_new = self.get_from_intern_data(index, "S")
+            
+            if (spindle_on_old != spindle_on_new) or (spindle_on_new and (RPM_old != RPM_new)):
+                self.write_in_intern_data(index, "important", True)
+                self.write_in_visualization_data(index, "important", True)
+
+                self.write_in_intern_data(index, "spindle_speed_change", True)
+
+            if spindle_on_new:
+                self.write_in_intern_data(index, "spindle_speed", RPM_new)
+            else:
+                self.write_in_intern_data(index, "spindle_speed", 0)
+                
+    # TODO: comment
+    def compute_and_fill_in_feed_rate_intern_data(self):
+        
+        for index in range(len(self.Data_intern)):
+
+            if index == 0:
+                break
+
+        # Get the movement type from the current line
+        movement = self.get_from_intern_data(index, "movement")
+
+        feed_rate = 0.0
+
+        # If it's a rapid linear movement (G0), assign the maximum feed rate
+        if movement == 0:
+            feed_rate = self.CNC_Parameter.F_max
+        elif movement in [1, 2, 3]:
+            # For other movements (G1, G2, G3), use the specified feed rate (F) if available
+            feed_rate = self.get_from_intern_data(index, "F")
+
+        self.write_in_intern_data(index, "feed_rate", feed_rate)
+    
     # TODO: improve
     def compute_needed_lines_for_all_data(self) -> int:
         '''
@@ -1079,103 +1134,167 @@ class GCodeAnalyser:
         index_all = 0
 
         for index_intern in range(len(self.Data_intern)):
-
-            # check movement
-            # check dwell
-            # check pause
-            # check end of program
-            # check tool change
-            # check spindle speed change
-            # check cooling change
-            # add diameter compensation
-
-            feed_rate = self.compute_feed_rate(index_intern)
-
-            spindle_speed = self.compute_spindle_speed(index_intern)
-
-            # self.smooth_contour() # make R0.2 to every "sharp" edge
-        
-        # self.compute_cutter_compensation()
-
-    def compute_feed_rate(self, intern_index: int) -> float:
-        '''
-        Compute the feed rate in mm/min for a line of the G-code.
-
-        This method iterates through each line of the G-code data and computes
-        the feed rate based on the movement type. For rapid linear movements (G0),
-        it assigns the maximum feed rate. For other movements (G1, G2, G3),
-        it uses the specified feed rate value (F) if available.
-
-        Args:
-            intern_index (int):    The index of the line in intern data.
-
-        Returns:
-            float: feed rate in mm/min
-        '''
-
-        # Get the movement type from the current line
-        movement = self.get_from_intern_data(intern_index, "movement")
-
-        feed_rate = 0.0
-
-        # If it's a rapid linear movement (G0), assign the maximum feed rate
-        if movement == 0:
-            feed_rate = self.CNC_Parameter.F_max
-        elif movement in [1, 2, 3]:
-            # For other movements (G1, G2, G3), use the specified feed rate (F) if available
-            feed_rate = self.get_from_intern_data(intern_index, "F")
-
-        return feed_rate
-
-    # TODO: change to all data
-    def compute_spindle_speed(self, intern_index) -> float:
-        '''
-        Compute the spindle speed in RPM for a line of the G-code.
-
-        Args:
-            intern_index (int):    The index of the line in intern data.
-
-        Returns:
-            float: spindle speed in RPM
-        '''
             
-        # set RPM to 0
-        RPM = 0
+            if index_intern == 0:
+                self.add_first_line_to_all_data()
+                index_all += 1
+                break
 
-        # check if spindle is on
-        if self.get_from_intern_data(intern_index, "spindle_on"):
-            # get RPM
-            RPM = self.get_from_all_data(intern_index, "S")
+            intern_line_is_important = self.get_from_intern_data(index_intern, "important")
 
-        return RPM
+            if intern_line_is_important:
+            
+                if self.check_end_of_program(index_intern, index_all):
+                    index_all += 1
+                    break
+                elif self.check_pause(index_intern, index_all):
+                    index_all += 1
+                    break
+                elif self.check_dwell_time(index_intern, index_all):
+                    index_all += 1
+                    break
+                elif self.check_tool_change(index_intern, index_all):
+                    index_all += 1
+                    break
+                else:
+                    if self.check_cooling_changes(index_intern, index_all):
+                        index_all += 1
+                    if self.check_spindle_speed_changes(index_intern, index_all):
+                        index_all += 1
 
-    # TODO: change to all data
-    def check_spindle_speed_changes(self, intern_index) -> bool:
-        '''
-        Checks if there is a change in the RPMs in each line of the G-code.
-
-        Returns:
-            bool: True if spindle speed changes
-        '''
-
-        change = False
-
-        if intern_index == 0:
-            return change
-
-        RPM_old = self.get_from_intern_data(intern_index-1, "spindle_speed")
-
-        RPM_new = self.get_from_intern_data(intern_index, "spindle_speed")
-
-        if RPM_old != RPM_new:
-            self.write_in_intern_data(intern_index, "spindle_speed_change", True)
-            # Set line importance flags
-            self.write_in_intern_data(intern_index, "important", True)
-            self.write_in_visualization_data(intern_index, "important", True)
-
-        return change
+                    
 
 
+
+                # self.smooth_contour() # make R0.2 to every "sharp" edge
+        
+                # self.compute_cutter_compensation()
+
+
+
+    # TODO: work and comment
+    def add_first_line_to_all_data(self):
+        pass    
+
+    # TODO: work and comment
+    def check_end_of_program(self, index_intern, index_all):
+        pass
+
+    # TODO: work and comment
+    def check_pause(self, index_intern, index_all):
+        pass
+
+    # TODO: work and comment
+    def check_dwell_time(self, index_intern, index_all):
+        pass
+
+    # TODO: work and comment
+    def check_tool_change(self, index_intern, index_all):
+        pass
+
+    # TODO: work and delete and comment
+    def check_spindle_speed_changes(self, intern_index):
+        pass
+
+    # TODO: comment
+    def add_lin_movement_from_intern_data_to_all_data(self, intern_index: int, all_index: int):
+
+        self.write_in_all_data(all_index, "what_happens", 1)
+
+        columns = [ "movement",
+                    "X", 
+                    "Y", 
+                    "Z", 
+                    "A", 
+                    "B", 
+                    "C", 
+                    "feed_rate", 
+                    "spindle_speed", 
+                    "active_plane", 
+                    "spindle_on", 
+                    "spindle_direction", 
+                    "active_tool_number"
+                    "tool_diameter",
+                    "tool_length",
+                    "cooling_on",
+                   ]
+
+        for column in columns:
+            value = self.get_from_intern_data(intern_index, column)
+            self.write_in_all_data(all_index, column, value)
+
+    # TODO: comment
+    def add_arc_movement_from_intern_data_to_all_data(self, intern_index: int, all_index: int):
+
+        self.write_in_all_data(all_index, "what_happens", 2)
+
+        columns = [ "movement",
+                    "X", 
+                    "Y", 
+                    "Z", 
+                    "A", 
+                    "B", 
+                    "C", 
+                    "I",
+                    "J",
+                    "K",
+                    "arc_radius"
+                    "arc_full_turns"
+                    "feed_rate", 
+                    "spindle_speed", 
+                    "active_plane", 
+                    "spindle_on", 
+                    "spindle_direction", 
+                    "active_tool_number"
+                    "tool_diameter",
+                    "tool_length",
+                    "cooling_on",
+                   ]
+
+        for column in columns:
+            value = self.get_from_intern_data(intern_index, column)
+            self.write_in_all_data(all_index, column, value)
+
+
+
+
+# 1: linear movement
+# 2: arc movement
+# 3: end of program
+# 4: pause
+# 5: dwell time
+# 6: tool change
+# 7: cooling change
+# 8: RPM change
+
+"index_visualisation"
+"movement"
+"X"
+"Y"
+"Z"
+"A"
+"B"
+"C"
+"I"
+"J"
+"K"
+"arc_radius"
+"arc_full_turns"
+"feed_rate"
+"spindle_speed"
+"spindle_speed_change"
+"dwell_time"
+"active_plane"
+"program_paused"  
+"spindle_on"
+"spindle_direction"
+"active_tool_number"
+"tool_diameter"
+"tool_length"
+"tool_change"
+"cooling_on"
+"program_end_reached"
+"time"
 
 # end of class
 ######################################################################################################
