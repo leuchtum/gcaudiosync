@@ -24,6 +24,7 @@ class GCodeAnalyser:
             ("important",           np.bool_),          # bool if line is important for synchronisation, filles out by interpreter
             ("N",                   np.int64),          # line number -> copied out of the original line if possible, filled out by parser
             ("movement",            np.uint8),          # movement (0, 1, 2, 3), filled out by parser
+            ("has_movement",        np.bool_),          # True if line has movement
             ("X",                   np.float64),        # value of X-coordinate, filled out by parser, corrected by interpreter
             ("Y",                   np.float64),        # value of Y-coordinate, filled out by parser, corrected by interpreter
             ("Z",                   np.float64),        # value of Z-coordinate, filled out by parser, corrected by interpreter
@@ -46,7 +47,7 @@ class GCodeAnalyser:
             ("exact_stop",          np.bool_),          # exact stop
             ("G_61_on",             np.bool_),          # True if G61 is on
             ("active_plane",        np.uint8),          # active plane 
-            ("cutter_compensation", np.uint8),          # kind of cutter compensation
+            ("cutter_compensation", np.float64),        # kind of cutter compensation
             ("absolute_position",   np.bool_),          # True if position are absolute
             ("absolute_arc_center", np.bool_),          # True if arc center position is absolute
             ("program_paused",      np.bool_),          # True if program is paused in this line     
@@ -96,6 +97,7 @@ class GCodeAnalyser:
             ("program_paused",      np.bool_),          # true if program is paused in this line     
             ("spindle_on",          np.bool_),          # is spindle on or not
             ("spindle_direction",   str),               # direction of spindle
+            ("exact_stop",          np.bool_),          # exact stop
             ("active_tool_number",  np.uint8),          # number of active tool
             ("tool_diameter",       np.float64),        # diameter of tool
             ("tool_length",         np.float64),        # diameter of tool
@@ -505,6 +507,7 @@ class GCodeAnalyser:
 
         if line_has_movement:
             # Mark the line as important if movement coordinates are present
+            self.write_in_intern_data(index, "has_movement", True)
             self.write_in_intern_data(index, "important", True)
             self.write_in_visualization_data(index, "important", True)
 
@@ -574,6 +577,7 @@ class GCodeAnalyser:
   
         if line_has_movement:
             # Mark the line as important if movement coordinates are present
+            self.write_in_intern_data(index, "has_movement", True)
             self.write_in_intern_data(index, "important", True)
             self.write_in_visualization_data(index, "important", True)
 
@@ -1073,9 +1077,11 @@ class GCodeAnalyser:
 
         self.fill_in_all_data()
 
-        # self.compute_tool_path()
+        # self.compute_expected_time_and_toolpath()
 
         # self.compute_expected_frequencies()
+
+        # self.compute_other_important_stuff_for_synchronisation()
 
     def compute_and_fill_in_spindle_speed_intern_data(self):
 
@@ -1135,7 +1141,7 @@ class GCodeAnalyser:
 
         return counter
 
-    # TODO: work and comment
+    # TODO: comment
     def fill_in_all_data(self) -> None:
 
         index_all = 0
@@ -1166,7 +1172,6 @@ class GCodeAnalyser:
                     if self.check_spindle_speed_changes(index_intern, index_all):
                         index_all += 1
                     index_all = self.check_movement(index_intern, index_all)
-
 
     # TODO: comment
     def add_first_line_to_all_data(self):
@@ -1251,6 +1256,48 @@ class GCodeAnalyser:
 
     # TODO: work and comment
     def check_movement(self, index_intern, index_all):
+
+        if not self.get_from_intern_data(index_intern, "has_movement"):
+            return index_all
+        
+        movement = self.get_from_intern_data(index_intern, "movement")
+        linear_movement = False
+
+        if movement in [0, 1]:
+            linear_movement = True
+            self.write_in_all_data(index_all, "what_happens", 1)
+        else:
+            self.write_in_all_data(index_all, "what_happens", 2)
+
+        exact_stop = self.get_from_intern_data(index_intern, "exact_stop")
+        if exact_stop:
+            self.write_in_all_data(index_all, "exact_stop", exact_stop)
+        
+        position_start = self.get_start_position(index_all)
+        position_end = self.get_end_position(index_intern)
+        end_vector = self.get_end_vector(index_intern)
+        next_start_vector = self.get_start_vector_next_movement(index_intern)
+
+        radius_needed = vectors_same_direction(end_vector, next_start_vector)
+
+        cutter_compensation = self.get_from_intern_data(index_intern, "cutter_compensation")
+
+        if cutter_compensation:
+            # TODO
+            # compute new end point
+            # add movement
+            # add radius
+            pass
+        elif not exact_stop and radius_needed:
+            # add movement
+            # add radius
+            # TODO
+            pass
+        else:
+            # add movement
+            # TODO
+            pass
+                    
         # return new index all
         return index_all
 
@@ -1313,44 +1360,61 @@ class GCodeAnalyser:
             value = self.get_from_intern_data(index_intern, column)
             self.write_in_all_data(index_all, column, value)
 
-# 1: linear movement
-# 2: arc movement
-# 3: end of program
-# 4: pause
-# 5: dwell time
-# 6: tool change
-# 7: cooling change
-# 8: RPM change
+    # 1: linear movement
+    # 2: arc movement
+    # 3: end of program
+    # 4: pause
+    # 5: dwell time
+    # 6: tool change
+    # 7: cooling change
+    # 8: RPM change
+    # 9: plange change
 
-"index_visualisation"
-"movement"
-"X"
-"Y"
-"Z"
-"A"
-"B"
-"C"
-"I"
-"J"
-"K"
-"arc_radius"
-"arc_full_turns"
-"feed_rate"
-"spindle_speed"
-"spindle_speed_change"
-"dwell_time"
-"active_plane"
-"program_paused"  
-"spindle_on"
-"spindle_direction"
-"active_tool_number"
-"tool_diameter"
-"tool_length"
-"tool_change"
-"cooling_on"
-"program_end_reached"
-"time"
+    "index_visualisation"
+    "movement"
+    "X"
+    "Y"
+    "Z"
+    "A"
+    "B"
+    "C"
+    "I"
+    "J"
+    "K"
+    "arc_radius"
+    "arc_full_turns"
+    "feed_rate"
+    "spindle_speed"
+    "spindle_speed_change"
+    "dwell_time"
+    "active_plane"
+    "program_paused"  
+    "spindle_on"
+    "spindle_direction"
+    "active_tool_number"
+    "tool_diameter"
+    "tool_length"
+    "tool_change"
+    "cooling_on"
+    "program_end_reached"
+    "time"
 
+    # TODO: work and comment
+    def get_start_position(self, index_all):
+        return [1, 2, 3]
+    
+    # TODO: work and comment
+    def get_end_position(self, index_intern):
+        return [1, 2, 3]
+    
+    # TODO: work and comment
+    def get_end_vector(self, index_intern):
+        pass
+
+    # TODO: work and comment
+    def get_start_vector_next_movement(self, index_intern):
+        return [1, 2, 3]
+    
 # end of class
 ######################################################################################################
 # functions
@@ -1511,3 +1575,7 @@ def extract_number(line: str, number_start: int) -> str:
         end_index += 1
 
     return line[number_start:end_index]
+
+# TODO work and comment
+def vectors_same_direction(v1, v2):
+    pass
