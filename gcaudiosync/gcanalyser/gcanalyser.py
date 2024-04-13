@@ -1077,7 +1077,10 @@ class GCodeAnalyser:
 
         self.fill_in_all_data()
 
-        # self.compute_expected_time_and_toolpath()
+        # self.compute_expected_times()
+
+        self.toolpath = []
+        self.compute_toolpath()
 
         # self.compute_expected_frequencies()
 
@@ -1146,11 +1149,12 @@ class GCodeAnalyser:
 
         index_all = 0
         end_of_program = False
+        position = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 
         for index_intern in range(len(self.Data_intern)):
             
             if index_intern == 0:
-                self.add_first_line_to_all_data()
+                position = self.add_first_line_to_all_data()
                 index_all += 1
 
             elif self.get_from_intern_data(index_intern, "important"):
@@ -1171,25 +1175,30 @@ class GCodeAnalyser:
                         index_all += 1
                     if self.check_spindle_speed_changes(index_intern, index_all):
                         index_all += 1
-                    index_all = self.check_movement(index_intern, index_all)
+                    index_all, position = self.check_movement(index_intern, index_all, position)
 
     # TODO: comment
     def add_first_line_to_all_data(self):
         self.write_in_all_data(0, "what_happens", 0)
+        position = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 
-        columns = [ "movement",
-                    "X", 
+        columns = [ "X", 
                     "Y", 
                     "Z", 
                     "A", 
                     "B", 
                     "C", 
+                    "movement",
                     "active_plane", 
                    ]
 
-        for column in columns:
-            value = self.get_from_intern_data(0, column)
-            self.write_in_all_data(0, column, value)
+        for index in range(len(columns)):
+            value = self.get_from_intern_data(0, columns[index])
+            self.write_in_all_data(0, columns[index], value)
+            if index < 6:
+                position[index] = value
+
+        return position
 
     # TODO: comment
     def check_end_of_program(self, index_intern, index_all):
@@ -1255,7 +1264,7 @@ class GCodeAnalyser:
         return False
 
     # TODO: work and comment
-    def check_movement(self, index_intern, index_all):
+    def check_movement(self, index_intern, index_all, position):
 
         if not self.get_from_intern_data(index_intern, "has_movement"):
             return index_all
@@ -1273,14 +1282,20 @@ class GCodeAnalyser:
         if exact_stop:
             self.write_in_all_data(index_all, "exact_stop", exact_stop)
         
-        position_start = self.get_start_position(index_all)
+        position_start = position
         position_end = self.get_end_position(index_intern)
         end_vector = self.get_end_vector(index_intern)
         next_start_vector = self.get_start_vector_next_movement(index_intern)
 
-        radius_needed = vectors_same_direction(end_vector, next_start_vector)
+        if np.linalg.norm(next_start_vector) != 0:
+            radius_needed = not vectors_same_direction(end_vector, next_start_vector)
+        else:
+            radius_needed = False
 
         cutter_compensation = self.get_from_intern_data(index_intern, "cutter_compensation")
+
+        # TODO: delete
+        radius_needed = False
 
         if cutter_compensation:
             # TODO
@@ -1294,12 +1309,15 @@ class GCodeAnalyser:
             # TODO
             pass
         else:
-            # add movement
-            # TODO
-            pass
+            if linear_movement:
+                self.add_lin_movement_from_intern_data_to_all_data(index_intern, index_all)
+                index_all += 1
+            else:
+                self.add_arc_movement_from_intern_data_to_all_data(index_intern, index_all)
+                index_all += 1
                     
         # return new index all
-        return index_all
+        return index_all, position
 
     # TODO: comment
     def add_lin_movement_from_intern_data_to_all_data(self, index_intern: int, index_all: int):
@@ -1399,22 +1417,169 @@ class GCodeAnalyser:
     "program_end_reached"
     "time"
 
-    # TODO: work and comment
-    def get_start_position(self, index_all):
-        return [1, 2, 3]
-    
-    # TODO: work and comment
+    # TODO: comment
     def get_end_position(self, index_intern):
-        return [1, 2, 3]
+        
+        position = []
+        coordinates = ["X", "Y", "Z", "A", "B", "C"]
+
+        for index in range(len(coordinates)):
+            value = self.get_from_intern_data(index_intern, coordinates[index])
+            position.append(value)
+
+        return position
     
     # TODO: work and comment
     def get_end_vector(self, index_intern):
-        pass
+        
+        movement = self.get_from_intern_data(index_intern, "movement")
+
+        start_position = np.zeros(3)
+        end_position = np.zeros(3)
+        coordinates = ["X", "Y", "Z"]
+
+        for index in range(len(coordinates)):
+            value_start = self.get_from_intern_data(index_intern-1, coordinates[index])
+            start_position[index] = value_start
+            value_end = self.get_from_intern_data(index_intern, coordinates[index])
+            end_position[index] = value_end
+
+        feed_rate = self.get_from_intern_data(index_intern, "feed_rate")
+
+        if movement in [0, 1]:
+            end_vector = vec_lin(start_position, end_position, feed_rate)
+        else:
+            arc_center = np.zeros(3)
+            coordinates = ["I", "J", "K"]
+
+            for index in range(len(coordinates)):
+                value = self.get_from_intern_data(index_intern, coordinates[index])
+                arc_center[index] = value
+
+            radius = self.get_from_intern_data(index_intern, "arc_radius")
+            plane = self.get_from_intern_data(index_intern, "active_plane")
+            turns = self.get_from_intern_data(index_intern, "arc_full_turns")
+            _, end_vector = vec_arc(start_position, end_position, arc_center, radius, movement, feed_rate, plane, turns)
+        
+        return end_vector
 
     # TODO: work and comment
     def get_start_vector_next_movement(self, index_intern):
-        return [1, 2, 3]
+
+        found_next_movement = False
+        vector = np.zeros(3)
+
+        while not found_next_movement:
+
+            index_intern += 1
+            if index_intern == len(self.Data_intern):
+                return vector
+
+            has_movement = self.get_from_intern_data(index_intern, "has_movement")
+
+            if has_movement:
+                break
+
+        movement = self.get_from_intern_data(index_intern, "movement")
+
+        start_position = np.zeros(3)
+        end_position = np.zeros(3)
+        coordinates = ["X", "Y", "Z"]
+
+        for index in range(len(coordinates)):
+            value_start = self.get_from_intern_data(index_intern-1, coordinates[index])
+            start_position[index] = value_start
+            value_end = self.get_from_intern_data(index_intern, coordinates[index])
+            end_position[index] = value_end
+
+        feed_rate = self.get_from_intern_data(index_intern, "feed_rate")
+
+        if movement in [0, 1]:
+            start_vector = vec_lin(start_position, end_position, feed_rate)
+        else:
+            arc_center = np.zeros(3)
+            coordinates = ["I", "J", "K"]
+
+            for index in range(len(coordinates)):
+                value = self.get_from_intern_data(index_intern, coordinates[index])
+                arc_center[index] = value
+
+            radius = self.get_from_intern_data(index_intern, "arc_radius")
+            plane = self.get_from_intern_data(index_intern, "active_plane")
+            turns = self.get_from_intern_data(index_intern, "arc_full_turns")
+            start_vector, _ = vec_arc(start_position, end_position, arc_center, radius, movement, feed_rate, plane, turns)
+        
+        return start_vector
     
+    def compute_toolpath(self):
+        for index_all in range(len(self.Data_all)):
+            if self.get_from_all_data(index_all, "program_end_reached"):
+                break
+            
+            what_happens = self.get_from_all_data(index_all, "what_happens")
+
+            match what_happens:
+                case 0:
+                    self.initialize_toolpath()
+                case 1:
+                    self.add_lin_toolpath(index_all)
+                case 2:
+                    self.add_arc_toolpath(index_all)
+                case 3:
+                    return 0
+                case 4:
+                    self.add_pause_toolpath(index_all)
+                case 5:
+                    self.add_dwell_time_tool_path(index_all)
+                case 6:
+                    self.add_tool_change_tool_path(index_all)
+                case 7:
+                    # not relevant for tool path
+                    pass
+                case 8:
+                    # not relevant for tool path
+                    pass
+                case 9:
+                    pass # not implemented jet
+        
+        return 1
+
+    def initialize_toolpath(self):
+
+        position = [0.0, 0.0, 0.0, 0.0, 17.0]
+
+        X = self.get_from_all_data(0, "X")
+        Y = self.get_from_all_data(0, "Y")
+        Z = self.get_from_all_data(0, "Z")
+
+        position[1] = X
+        position[2] = Y
+        position[3] = Z
+
+        self.toolpath.append(position)
+
+    # TODO: work
+    def add_lin_toolpath(self, index_all):
+
+        feed_rate = self.get_from_all_data(index_all, "feed_rate")
+
+        position = self.toolpath[-1]
+
+        time = position[0]
+        new_time = time + 0.05
+
+        X_pos = position[1]
+        Y_pos = position[2]
+        Z_pos = position[3]
+
+        X_end = self.get_from_all_data(0, "X")
+        Y_end = self.get_from_all_data(0, "Y")
+        Z_end = self.get_from_all_data(0, "Z")
+
+        self.toolpath.append([new_time, X_pos, Y_pos, Z_pos, 17.0])
+
+
+
 # end of class
 ######################################################################################################
 # functions
@@ -1578,4 +1743,228 @@ def extract_number(line: str, number_start: int) -> str:
 
 # TODO work and comment
 def vectors_same_direction(v1, v2):
-    pass
+    factor = 0
+
+    if v2[0] != 0:
+            factor = v1[0] / v2[0]
+    else:
+        if v1[0] != 0:
+            return False
+
+    for i in range(1, len(v1)):
+        if v2[i] != 0:
+            factor_new = v1[i] / v2[i]
+            if factor != factor_new:
+                return False
+        else:
+            if v1[i] != 0:
+                return False
+    return True
+
+def vec_lin(    
+        pos_start:  np.ndarray, # [X, Y, Z]
+        pos_end:    np.ndarray, # [X, Y, Z]
+        feed_rate:  float       # [mm/min]
+        ) -> np.ndarray:
+    """
+    Calculates the movement vector for a linear motion.
+
+    Args:
+        pos_start (np.ndarray): Starting position as a NumPy array.
+        pos_end (np.ndarray):   End position as a NumPy array.
+        feed_rate (float):      Feed rate for the motion [mm/min].
+
+    Returns:
+        np.array: The movement vector as a NumPy array.
+    """
+
+    # compute dicspacement vector
+    displacement = pos_end - pos_start
+
+    # if displacement is 0
+    if np.linalg.norm(displacement) == 0:
+        return pos_start * 0
+
+    # Normalize displacement vector
+    normalized_displacement = displacement / np.linalg.norm(displacement)
+
+    # Calculate movement vector
+    movement_vector = normalized_displacement * feed_rate
+
+    return movement_vector
+
+def vec_arc(
+        pos_start:  np.ndarray,     # [X, Y, Z]
+        pos_end:    np.ndarray,     # [X, Y, Z]
+        arc_center: np.ndarray,     # [I, J, K]
+        radius:     float,          # R-value
+        direction:  int,            # 2 -> CW, 3 -> CCW
+        feed_rate:  float,          # [mm/min]
+        plane:      int,            # 17 -> XY, 18 -> XZ, 19 -> YZ
+        turns:      int = 0         # number of full turns
+        ) -> tuple[np.ndarray, np.ndarray]: 
+    """
+    Calculates the movement vectors for arc motion in a specified plane.
+
+    Args:
+        pos_start (np.ndarray):     Start position vector.
+        pos_end (np.ndarray):       End position vector.
+        arc_center (np.ndarray):    Arc center vector.
+        radius (float):             Radius (positive: 0° <= angle <= 180°, negative: 180° < angle <= 360°)
+        direction (int):            Arc direction (2 -> CW, 3 -> CCW).
+        feed_rate (float):          Feed rate in mm/min.
+        plane (int):                Plane identifier (17 -> XY, 18 -> XZ, 19 -> YZ).
+        turns:                      Number of full turns.
+
+    Returns:
+        tuple[np.ndarray, np.ndarray]: Tuple containing starting and ending movement vectors as separate arrays.
+    """
+    # Available planes and their corresponding normal component indices
+    plane_map = {
+                    17: np.array([0, 0, 1]),  # XY plane - Z component
+                    18: np.array([0, 1, 0]),  # XZ plane - Y component
+                    19: np.array([1, 0, 0]),  # YZ plane - X component
+                }
+
+    # Available directions and their multipliers
+    direction_map = {
+                        2: 1,     # Right/CW - positive multiplier
+                        3: -1,    # Left/CCW - negative multiplier
+                    }
+
+    # Check for valid plane
+    if plane not in plane_map:
+        raise ValueError(f"Invalid plane: {plane}. Valid options are {', '.join(str(p) for p in plane_map.keys())}.")
+
+    # Check for valid direction
+    if direction not in direction_map:
+        raise ValueError(f"Invalid direction: {direction}. Valid options are {', '.join(str(d) for d in direction_map.keys())}.")
+
+    # Check for valid turns
+    if turns < 0:
+        raise ValueError(f"Invalid number of turns: {turns}. Value must be positive.")
+    
+    # check if the angle is smaller or bigger as 180°
+    smaller_angle = True
+    if radius < 0:
+        smaller_angle = False
+
+    # compute linear distance
+    linear_distance = pos_end - pos_start
+
+    # compute the vectors from center to start and from center to end
+    center_start = pos_start - arc_center
+    center_end = pos_end - arc_center
+
+    # compute the start and end vectors in the given plane
+    plane_direction_start = compute_normal_vector(center_start, plane, direction)  
+    plane_direction_end = compute_normal_vector(center_end, plane, direction)
+
+    # compute the angle between the vectors in the given plane
+    angle = compute_angle(plane_direction_start, plane_direction_end, smaller_angle)
+
+    # compute the arc-length in the given plane
+    arc_length = (angle / 360.0 + turns) * 2 * math.pi * abs(radius)
+
+    # size the plane-vectors
+    plane_direction_start *= arc_length
+    plane_direction_end *= arc_length
+
+    # add third component
+    third_component = plane_map[plane] * linear_distance
+    direction_start = plane_direction_start + third_component
+    direction_end = plane_direction_end + third_component
+
+    # size the vectors
+    movovment_direction_start = direction_start / np.linalg.norm(direction_start) * feed_rate
+    movovment_direction_end = direction_end / np.linalg.norm(direction_end) * feed_rate
+
+    return movovment_direction_start, movovment_direction_end
+
+def compute_normal_vector(
+        coord_vector: np.ndarray, 
+        plane: int, 
+        direction: int
+        ) -> np.ndarray:
+    """
+    Calculates a normalized normal vector in a specified plane given a coordinate vector and direction.
+
+    Args:
+    coord_vector (np.array):  A 3D NumPy array representing the coordinate vector.
+    plane (int):              Plane identifier (17 -> XY, 18 -> XZ, 19 -> YZ).
+    direction (int):          Direction (2 -> right/CW, 3 -> left/CCW).
+
+    Returns:
+    np.array: The normalized normal vector as a NumPy array.
+
+    Raises:
+    ValueError: If an invalid plane or direction is provided.
+    """
+
+    # Available planes and their corresponding normal component indices
+    plane_map = {
+                    17: np.array([0, 0, 1]),  # XY plane - Z component
+                    18: np.array([0, 1, 0]),  # XZ plane - Y component
+                    19: np.array([1, 0, 0]),  # YZ plane - X component
+                }
+
+    # Available directions and their multipliers
+    direction_map = {
+                        2: 1,     # Right/CW - positive multiplier
+                        3: -1,    # Left/CCW - negative multiplier
+                    }
+
+    # Check for valid plane
+    if plane not in plane_map:
+        raise ValueError(f"Invalid plane: {plane}. Valid options are {', '.join(str(p) for p in plane_map.keys())}.")
+
+    # Check for valid direction
+    if direction not in direction_map:
+        raise ValueError(f"Invalid direction: {direction}. Valid options are {', '.join(str(d) for d in direction_map.keys())}.")
+
+    # Extract normal component based on plane
+    normal_component = plane_map[plane]
+
+    # Calculate cross product for normal vector
+    cross_product = np.cross(coord_vector, normal_component)
+
+    # Determine direction based on input
+    multiplier = direction_map[direction]
+    normal_vector = multiplier * cross_product  
+
+    # normalize normal_vector
+    normalized_normal_vector = normal_vector / np.linalg.norm(normal_vector)
+
+    return normalized_normal_vector
+
+def compute_angle(vec1: np.ndarray, vec2: np.ndarray, smaller_angle: np.bool_) -> float:
+    """
+    Calculates the smaller or bigger angle between two NumPy arrays in degrees.
+
+    Args:
+        vec1 (np.ndarray):              First NumPy array.
+        vec2 (np.ndarray):              Second NumPy array.
+        smaller_angle (bool, optional): Whether to return the smaller angle (True, default) or the bigger angle (False).
+
+    Returns:
+        float: The requested angle (smaller or bigger) between the two vectors in degrees.
+
+    Raises:
+        ValueError: If the input vectors are not valid NumPy arrays or have zero norm.
+    """
+
+    # Handle potential division by zero
+    if np.linalg.norm(vec1) == 0 or np.linalg.norm(vec2) == 0:
+        raise ValueError("Cannot calculate angle for zero-norm vectors.")
+
+    # Calculate cosine of the angle
+    cosine = np.dot(vec1, vec2) / (np.linalg.norm(vec1) * np.linalg.norm(vec2))
+
+    # Ensure cosine value is within valid range (-1, 1)
+    cosine = np.clip(cosine, -1, 1)
+
+    # Calculate the angle in degrees
+    angle_degrees = np.degrees(np.arccos(cosine))
+
+    # Return requested angle
+    return min(angle_degrees, 360 - angle_degrees) if smaller_angle else max(angle_degrees, 360 - angle_degrees)
