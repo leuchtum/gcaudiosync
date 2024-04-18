@@ -1561,24 +1561,104 @@ class GCodeAnalyser:
     # TODO: work
     def add_lin_toolpath(self, index_all):
 
+        time_step = 0.02
+
         feed_rate = self.get_from_all_data(index_all, "feed_rate")
 
         position = self.toolpath[-1]
 
-        time = position[0]
-        new_time = time + 0.05
+        current_time = position[0]
 
         X_pos = position[1]
         Y_pos = position[2]
         Z_pos = position[3]
 
-        X_end = self.get_from_all_data(0, "X")
-        Y_end = self.get_from_all_data(0, "Y")
-        Z_end = self.get_from_all_data(0, "Z")
+        X_end = self.get_from_all_data(index_all, "X")
+        Y_end = self.get_from_all_data(index_all, "Y")
+        Z_end = self.get_from_all_data(index_all, "Z")
 
-        self.toolpath.append([new_time, X_pos, Y_pos, Z_pos, 17.0])
+        dX = X_end - X_pos
+        dY = Y_end - Y_pos
+        dZ = Z_end - Z_pos
+
+        distance = math.sqrt(math.pow(dX,2) + math.pow(dY,2) + math.pow(dZ,2))
+
+        time_needed = distance / feed_rate
+        end_time = current_time + time_needed
+
+        steps = time_needed / time_step
+        
+        i = 1
+        while i < steps:
+            current_time += time_step
+
+            X_pos += dX / steps
+            Y_pos += dY / steps
+            Z_pos += dZ / steps
+
+            self.toolpath.append([current_time, X_pos, Y_pos, Z_pos, 17.0])
+
+            i += 1
+        
+        
+        self.toolpath.append([end_time, X_end, Y_end, Z_end, 17.0])
 
 
+
+    def add_arc_toolpath(self, index_all):
+        time_step = 0.02
+
+        movement = self.get_from_all_data(index_all, "movement")
+        feed_rate = self.get_from_all_data(index_all, "feed_rate")
+
+        position = self.toolpath[-1]
+
+        current_time = position[0]
+
+        X_pos = position[1]
+        Y_pos = position[2]
+        Z_pos = position[3]
+        P0 = np.array([X_pos, Y_pos, Z_pos])
+
+        X_end = self.get_from_all_data(index_all, "X")
+        Y_end = self.get_from_all_data(index_all, "Y")
+        Z_end = self.get_from_all_data(index_all, "Z")
+        P1 = np.array([X_end, Y_end, Z_end])
+
+        radius = self.get_from_all_data(index_all, "arc_radius")
+        turns = self.get_from_all_data(index_all, "arc_full_turns")
+
+        I = self.get_from_all_data(index_all, "I")
+        J = self.get_from_all_data(index_all, "J")
+        K = self.get_from_all_data(index_all, "K")
+        center = np.array([I, J, K])
+
+        smaller_angle = True
+        if radius < 0:
+            smaller_angle = False
+        
+        
+        angle = compute_angle(P0-center, P1-center, smaller_angle)
+
+        distance = 2 * math.pi() * abs(radius) * (angle / 360 + turns)
+
+        time_needed = distance / feed_rate
+        end_time = current_time + time_needed
+
+        steps = time_needed / time_step
+        d_angle = angle / steps
+
+        i = 1
+        while i <= steps:
+            current_time += time_step
+
+            
+
+            self.toolpath.append([current_time, X_pos, Y_pos, Z_pos, 17.0])
+
+            i += 1
+
+        self.toolpath.append([end_time, X_end, Y_end, Z_end, 17.0])
 
 # end of class
 ######################################################################################################

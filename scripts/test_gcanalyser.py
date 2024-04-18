@@ -16,3 +16,4 @@ G_Code.analyse(src_path_1)
 # print visualisation data
 print(G_Code.Data_visualisation)
 print(G_Code.Data_all)
+print(G_Code.toolpath)
