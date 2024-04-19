@@ -1,15 +1,11 @@
 
 
-
-
-
-class GCodeAnalyser:   
+class GCodeLineExtractor:   
     
     # Constructor
     def __init__(self):
-        Extractor = GCodeLineExtractor()
-
-
+        pass
+    
     #################################################################################################
     # Methods
 

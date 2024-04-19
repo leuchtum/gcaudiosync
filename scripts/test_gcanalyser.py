@@ -1,6 +1,6 @@
 
 from pathlib import Path
-from gcaudiosync.gcanalyser.gcanalyser import GCodeAnalyser
+from gcaudiosync.gcanalyser.gcanalyser_old import GCodeAnalyser
 
 # links to the test-files
 src_path = Path("gcode")
@@ -11,9 +11,9 @@ src_path_2 = src_path / "Getriebegehaeuse.tap"
 G_Code = GCodeAnalyser()
 
 # analyse G-Code
-G_Code.analyse(src_path_1)
+# G_Code.analyse(src_path_1)
 
 # print visualisation data
-print(G_Code.Data_visualisation)
-print(G_Code.Data_all)
-print(G_Code.toolpath)
+# print(G_Code.Data_visualisation)
+# print(G_Code.Data_all)
+# print(G_Code.toolpath)
