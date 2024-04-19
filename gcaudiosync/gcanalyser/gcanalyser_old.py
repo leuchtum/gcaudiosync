@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 
 from typing import Union, Any
-from gcaudiosync.gcanalyser.cncparameter import CNC_Parameter
+from gcaudiosync.gcanalyser.cncparameter_old import CNC_Parameter
 
 class GCodeAnalyser:    
 

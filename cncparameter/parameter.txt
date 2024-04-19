@@ -1,0 +1,28 @@
+start_position_X 100.0
+start_position_Y 100.0
+start_position_Z 100.0
+tool_change_position_X 100.0
+tool_change_position_Y 100.0
+tool_change_position_Z 100.0
+
+S_is_absolute 1  ; True if spindle speed is absolute, False if spindle speed is relative
+
+F_max 12000       ; max feed rate in mm/min
+S_max 18000       ; max spindle speed in RPM
+
+max_a_X 40        ; max acceleration/deceleration of X-Axis in mm/s^2
+max_a_Y 40        ; max acceleration/deceleration of Y-Axis in mm/s^2
+max_a_Z 40        ; max acceleration/deceleration of Z-Axis in mm/s^2
+
+tool_change_time 8000     ; [ms]
+
+command_abort                       0
+command_quit                        1
+command_progabort                   2
+command_spindle_start_CW            3
+command_spindle_start_CCW           4
+command_spindle_off                 5
+command_tool_change                 6
+command_cooling_on                  8
+command_cooling_off                 9
+command_end_of_program              30
