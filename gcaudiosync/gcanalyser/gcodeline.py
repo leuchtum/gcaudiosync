@@ -9,6 +9,8 @@ from gcaudiosync.gcanalyser.coolingmanager import Cooling_Manager
 from gcaudiosync.gcanalyser.movementmanager import Movement_Manager
 import gcaudiosync.gcanalyser.vectorfunctions as vecfunc
 
+# source for the g-code interpretation: https://linuxcnc.org/docs/html/gcode/g-code.html
+
 class G_Code_Line:
 
     important = False
