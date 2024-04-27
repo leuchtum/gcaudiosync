@@ -17,8 +17,6 @@ G_Code_Analyser.analyse(src_path_1)
 
 print(G_Code_Analyser.g_code)
 
-print(G_Code_Analyser.CNC_Parameter.F_MAX)
-
 # print visualisation data
 # print(G_Code.Data_visualisation)
 # print(G_Code.Data_all)

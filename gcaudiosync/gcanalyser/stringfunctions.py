@@ -11,6 +11,7 @@ def prepare_line(line: str) -> str:
 
     line = line.strip("\n")                             # remove the \n at the end of the line if it is there
     line = line.replace(" ","")                         # remove all spaces
+    line = line.replace("=","")                         # remove all equal sign
 
     if line.startswith("/"):                            # line was removed
         return ""

@@ -6,8 +6,9 @@ from gcaudiosync.gcanalyser.filefunctions import *
 class CNC_Parameter:
     
     # Machine parameter
-    START_POSITION = np.array([100.0, 100.0, 100.0])
-    TOOL_CHANGE_POSITION = np.array([100.0, 100.0, 100.0])
+    START_POSITION_LINEAR = np.array([100.0, 100.0, 100.0])
+    START_POSITION_ROTATION = np.array([0.0, 0.0, 0.0])
+    TOOL_CHANGE_POSITION_LINEAR = np.array([100.0, 100.0, 100.0])
 
     S_IS_ABSOLUTE = True
 
@@ -61,17 +62,17 @@ class CNC_Parameter:
                             if value == "0":
                                 self.S_IS_ABSOLUTE = False
                         case "START_POSITION_X":
-                            self.START_POSITION[0] = float(value)
+                            self.START_POSITION_LINEAR[0] = float(value)
                         case "START_POSITION_Y":
-                            self.START_POSITION[1] = float(value)
+                            self.START_POSITION_LINEAR[1] = float(value)
                         case "START_POSITION_Z":
-                            self.START_POSITION[2] = float(value)
+                            self.START_POSITION_LINEAR[2] = float(value)
                         case "TOOL_CHANGE_POSITION_X":
-                            self.TOOL_CHANGE_POSITION[0] = float(value)
+                            self.TOOL_CHANGE_POSITION_LINEAR[0] = float(value)
                         case "TOOL_CHANGE_POSITION_Y":
-                            self.TOOL_CHANGE_POSITION[1] = float(value)
+                            self.TOOL_CHANGE_POSITION_LINEAR[1] = float(value)
                         case "TOOL_CHANGE_POSITION_Z":
-                            self.TOOL_CHANGE_POSITION[2] = float(value)
+                            self.TOOL_CHANGE_POSITION_LINEAR[2] = float(value)
                 elif hasattr(self, parameter):
                     setattr(self, parameter, int(value))
                 else:
