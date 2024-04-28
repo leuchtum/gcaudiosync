@@ -1,4 +1,5 @@
 import numpy as np
+import copy
 
 from gcaudiosync.gcanalyser.movement import Movement
 from gcaudiosync.gcanalyser.cncstatus import CNC_Status
@@ -51,4 +52,20 @@ class Movement_Manager:
         return 0 # time
     
     def add_pause(self, index: int, time: int):
+
+        last_movement:Movement = copy.deepcopy(self.movements[-1])
+
+        movement = Movement(line_index = -1, 
+                            movement = 0, 
+                            start_point_linear = last_movement.start_point_linear, 
+                            end_point_linear = last_movement.end_point_linear,
+                            start_point_rotation = last_movement.start_point_rotation,
+                            end_point_rotation = last_movement.end_point_rotation, 
+                            info_arc=None)
+        
+        self.update_last_movement(movement)
+
+        self.movements.append(movement)
+
+    def update_connection_of_movements(self, movement: Movement):
         pass
