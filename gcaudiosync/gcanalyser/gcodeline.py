@@ -3,7 +3,7 @@ import copy
 from gcaudiosync.gcanalyser.cncstatus import CNC_Status, copy_CNC_Status
 from gcaudiosync.gcanalyser.cncparameter import CNC_Parameter
 from gcaudiosync.gcanalyser.pausemanager import Pause_Manager
-from gcaudiosync.gcanalyser.frequencymanager import Frequancy_Manager
+from gcaudiosync.gcanalyser.frequencymanager import Frequency_Manager
 from gcaudiosync.gcanalyser.toolchangemanager import Tool_Change_Manager
 from gcaudiosync.gcanalyser.coolingmanager import Cooling_Manager
 from gcaudiosync.gcanalyser.movementmanager import Movement_Manager
@@ -23,7 +23,7 @@ class G_Code_Line:
                  current_status, 
                  line_info, 
                  CNC_Parameter:CNC_Parameter,
-                 Frequancy_Manager: Frequancy_Manager,
+                 Frequancy_Manager: Frequency_Manager,
                  Pause_Manager: Pause_Manager,
                  Tool_Change_Manager: Tool_Change_Manager,
                  Cooling_Manager: Cooling_Manager,
@@ -35,10 +35,13 @@ class G_Code_Line:
         self.line_status: CNC_Status = copy_CNC_Status(current_status)
 
         while len(line_info) > 0:
+
             command = line_info[0][0]
             number = line_info[0][1]
 
-            if command == "G":
+            if command == "N":
+                line_info.pop(0)    # no further action
+            elif command == "G":
                 line_info.pop(0)
                 self.handle_G(float(number), 
                               line_info, 
@@ -64,7 +67,8 @@ class G_Code_Line:
                 line_info.pop(0)
                 self.handle_F(float(number), CNC_Parameter)
             else:
-                print("gcodeline found this commmand" + command + ". No action defined.")
+                line_info.pop(0)
+                print("gcodeline found this commmand " + command + ". no action defined.")
             
     def handle_G(self, 
                  number, 
@@ -112,9 +116,10 @@ class G_Code_Line:
             case _:  # Unsupported G-code
                 print(f"G{number} found. No action defined.")
 
-    def handle_M(self, number, line_info, 
+    def handle_M(self, number, 
+                 line_info, 
                  CNC_Parameter: CNC_Parameter, 
-                 Frequancy_Manager: Frequancy_Manager,
+                 Frequancy_Manager: Frequency_Manager,
                  Tool_Change_Manager: Tool_Change_Manager,
                  Pause_Manager: Pause_Manager,
                  Cooling_Manager: Cooling_Manager,
@@ -171,7 +176,7 @@ class G_Code_Line:
         else:
             self.line_status.F_value = CNC_Parameter.F_MAX
 
-    def handle_S(self, number, CNC_Parameter:CNC_Parameter, Frequancy_Manager: Frequancy_Manager):
+    def handle_S(self, number, CNC_Parameter:CNC_Parameter, Frequancy_Manager: Frequency_Manager):
 
         if CNC_Parameter.S_IS_ABSOLUTE:
             if number <= CNC_Parameter.S_MAX:
@@ -349,7 +354,7 @@ class G_Code_Line:
         self.important = True
         Pause_Manager.new_pause(self.index, 2)
     
-    def handle_spindle_operation(self, command: str, Frequancy_Manager: Frequancy_Manager):
+    def handle_spindle_operation(self, command: str, Frequancy_Manager: Frequency_Manager):
         self.important = True
 
         if command == "off":
@@ -366,9 +371,10 @@ class G_Code_Line:
                            Movement_Manager = Movement_Manager):
         self.important = True
 
-        for command, number in enumerate(line_info):
-            if command == "T":
-                tool_number = int(number)
+        for index, info in enumerate(line_info):
+            if info[0] == "T":
+                tool_number = int(info[1])
+                line_info.pop(index)
             else:
                 raise Exception("Tool change was called without T-number")
         
@@ -387,7 +393,7 @@ class G_Code_Line:
 
         Cooling_Manager.new_cooling_operation(self.index, command)
     
-    def handle_end_of_program(self, Frequancy_Manager: Frequancy_Manager):
+    def handle_end_of_program(self, Frequancy_Manager: Frequency_Manager):
         self.important = True
         
         self.line_status.spindle_on = False

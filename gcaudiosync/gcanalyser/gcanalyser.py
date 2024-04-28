@@ -3,7 +3,7 @@ from gcaudiosync.gcanalyser.cncparameter import CNC_Parameter
 from gcaudiosync.gcanalyser.cncstatus import CNC_Status
 from gcaudiosync.gcanalyser.gcodeline import G_Code_Line
 from gcaudiosync.gcanalyser.pausemanager import Pause_Manager
-from gcaudiosync.gcanalyser.frequencymanager import Frequancy_Manager
+from gcaudiosync.gcanalyser.frequencymanager import Frequency_Manager
 from gcaudiosync.gcanalyser.toolchangemanager import Tool_Change_Manager
 from gcaudiosync.gcanalyser.coolingmanager import Cooling_Manager
 from gcaudiosync.gcanalyser.movementmanager import Movement_Manager
@@ -20,7 +20,7 @@ class GCodeAnalyser: # must be global object
 
         self.Extractor = LineExtractor()
 
-        self.Frequancy_Manager = Frequancy_Manager()
+        self.Frequancy_Manager = Frequency_Manager()
         self.Pause_Manager = Pause_Manager()
         self.Tool_Change_Manager = Tool_Change_Manager()
         self.Cooling_Manager = Cooling_Manager()
@@ -61,6 +61,7 @@ class GCodeAnalyser: # must be global object
 
             current_cnc_status = copy.deepcopy(current_line.line_status)
 
+        self.update_Manager_time()
             
         # make something like an object for the current line and the last line
         # make an object/list for: events
@@ -78,6 +79,9 @@ class GCodeAnalyser: # must be global object
 
         return 0
     
+    # TODO
+    def update_Manager_time(self):
+        pass
 
 # end of class
 #####################################################################################################

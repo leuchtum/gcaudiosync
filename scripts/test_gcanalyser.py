@@ -13,9 +13,11 @@ src_path_cnc_parameter = Path("cncparameter") / "parameter.txt"
 G_Code_Analyser = GCodeAnalyser(src_path_cnc_parameter)
 
 # analyse G-Code
-G_Code_Analyser.analyse(src_path_1)
+G_Code_Analyser.analyse(src_path_2)
 
 print(G_Code_Analyser.g_code)
+
+print(G_Code_Analyser.Frequancy_Manager.frequencies)
 
 # print visualisation data
 # print(G_Code.Data_visualisation)
