@@ -2,6 +2,8 @@ import numpy as np
 
 class Movement:
 
+    time = 0
+
     start_vector_linear = np.array([0.0, 0.0, 0.0])
     end_vector_linear = np.array([0.0, 0.0, 0.0])
 
@@ -32,3 +34,8 @@ class Movement:
         self.compute_optimal_start_vector()
         self.compute_optimal_end_vector()
         
+    def compute_optimal_start_vector(self):
+        pass
+
+    def compute_optimal_end_vector(self):
+        pass

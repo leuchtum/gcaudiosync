@@ -24,7 +24,6 @@ class GCodeAnalyser: # must be global object
         self.Pause_Manager = Pause_Manager()
         self.Tool_Change_Manager = Tool_Change_Manager()
         self.Cooling_Manager = Cooling_Manager()
-        self.Movement_Manager = Movement_Manager()
 
         self.Events: G_Code_Line = []
 
@@ -38,6 +37,8 @@ class GCodeAnalyser: # must be global object
         self.g_code = filefunc.read_file(g_code_src)
 
         current_cnc_status = CNC_Status(start_position = True, CNC_Parameter = self.CNC_Parameter)
+
+        self.Movement_Manager = Movement_Manager(current_cnc_status)
 
         for index, line in enumerate(self.g_code):
             

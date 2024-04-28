@@ -7,6 +7,7 @@ from gcaudiosync.gcanalyser.frequencymanager import Frequency_Manager
 from gcaudiosync.gcanalyser.toolchangemanager import Tool_Change_Manager
 from gcaudiosync.gcanalyser.coolingmanager import Cooling_Manager
 from gcaudiosync.gcanalyser.movementmanager import Movement_Manager
+from gcaudiosync.gcanalyser.movement import Movement
 import gcaudiosync.gcanalyser.vectorfunctions as vecfunc
 
 # source for the g-code interpretation: https://linuxcnc.org/docs/html/gcode/g-code.html
@@ -79,17 +80,14 @@ class G_Code_Line:
         # Handle different G-codes using a match statement
         match number:
             case 0 | 1:     # Rapid linear movement, Linear movement
-                self.important = True
                 self.line_status.active_movement = number
                 self.handle_linear_movement(line_info, Movement_Manager = Movement_Manager)
             case 2 | 3:     # Arc movement CW, Arc movement CCW
-                self.important = True
                 self.line_status.active_movement = number
                 self.line_status.info_arc[0] = number
                 self.handle_arc_movement(line_info, Movement_Manager = Movement_Manager)
             case 4:         # Dwell
-                self.important = True
-                self.handle_g04(line_info, Pause_Manager)
+                self.handle_g04(line_info, Pause_Manager = Pause_Manager, Movement_Manager = Movement_Manager)
             case 9:         # Exact stop in this line
                 self.line_status.exact_stop = True
             case 17 | 18 | 19:    # Select XY-plane, Select XZ-plane, Select YZ-plane
@@ -126,13 +124,13 @@ class G_Code_Line:
                  Movement_Manager: Movement_Manager):
 
         if number == CNC_Parameter.COMMAND_ABORT:
-            self.handle_abort(Pause_Manager = Pause_Manager)
+            self.handle_abort(Pause_Manager = Pause_Manager, Movement_Manager = Movement_Manager)
 
         elif number == CNC_Parameter.COMMAND_QUIT:
-            self.handle_quit(Pause_Manager = Pause_Manager)
+            self.handle_quit(Pause_Manager = Pause_Manager, Movement_Manager = Movement_Manager)
 
         elif number == CNC_Parameter.COMMAND_PROGABORT:
-            self.handle_progabort(Pause_Manager = Pause_Manager)
+            self.handle_progabort(Pause_Manager = Pause_Manager, Movement_Manager = Movement_Manager)
 
         elif number == CNC_Parameter.COMMAND_SPINDLE_START_CW:
             self.handle_spindle_operation("CW", Frequancy_Manager)
@@ -177,6 +175,8 @@ class G_Code_Line:
             self.line_status.F_value = CNC_Parameter.F_MAX
 
     def handle_S(self, number, CNC_Parameter:CNC_Parameter, Frequancy_Manager: Frequency_Manager):
+        
+        self.important = True
 
         if CNC_Parameter.S_IS_ABSOLUTE:
             if number <= CNC_Parameter.S_MAX:
@@ -192,7 +192,9 @@ class G_Code_Line:
         Frequancy_Manager.new_S(self.index, new_S)
 
     def handle_linear_movement(self, line_info, Movement_Manager: Movement_Manager):
-        
+
+        self.important = True
+
         list_index = 0
 
         while list_index < len(line_info):
@@ -237,11 +239,15 @@ class G_Code_Line:
             else:
                 list_index += 1
 
-        Movement_Manager.add_linear_movement(index = self.index, 
-                                             last_line_status = self.last_line_status,
-                                             line_status = self.line_status)
+        time = Movement_Manager.add_linear_movement(index = self.index, 
+                                                    last_line_status = self.last_line_status, 
+                                                    line_status = self.line_status)
+        
+        self.time += time
 
     def handle_arc_movement(self, line_info, Movement_Manager: Movement_Manager):
+        
+        self.important = True
 
         list_index = 0
 
@@ -318,11 +324,15 @@ class G_Code_Line:
         else:
             self.compute_radius()
 
-        Movement_Manager.add_arc_movement(index = self.index, 
-                                          last_line_status = self.last_line_status,
-                                          line_status = self.line_status)
+        time = Movement_Manager.add_arc_movement(index = self.index, 
+                                                 last_line_status = self.last_line_status, 
+                                                 line_status = self.line_status)
+        
+        self.time += time
 
-    def handle_g04(self, line_info, Pause_Manager: Pause_Manager):
+    def handle_g04(self, line_info, 
+                   Pause_Manager: Pause_Manager,
+                   Movement_Manager: Movement_Manager):
         self.important = True
 
         for index, info in enumerate(line_info):
@@ -341,18 +351,25 @@ class G_Code_Line:
             
         self.time = number
         Pause_Manager.new_dwell(self.index, number)
+        Movement_Manager.add_pause(self.index, number)
 
-    def handle_abort(self, Pause_Manager: Pause_Manager):
+    def handle_abort(self, Pause_Manager: Pause_Manager, Movement_Manager: Movement_Manager):
         self.important = True
+        self.time = -1
         Pause_Manager.new_pause(self.index, 0)
+        Movement_Manager.add_pause(self.index, -1)
 
-    def handle_quit(self, Pause_Manager: Pause_Manager):
+    def handle_quit(self, Pause_Manager: Pause_Manager, Movement_Manager: Movement_Manager):
         self.important = True
+        self.time = -1
         Pause_Manager.new_pause(self.index, 1)
+        Movement_Manager.add_pause(self.index, -1)
     
-    def handle_progabort(self, Pause_Manager: Pause_Manager):
+    def handle_progabort(self, Pause_Manager: Pause_Manager, Movement_Manager: Movement_Manager):
         self.important = True
+        self.time = -1
         Pause_Manager.new_pause(self.index, 2)
+        Movement_Manager.add_pause(self.index, -1)
     
     def handle_spindle_operation(self, command: str, Frequancy_Manager: Frequency_Manager):
         self.important = True
@@ -370,6 +387,7 @@ class G_Code_Line:
                            Tool_Change_Manager: Tool_Change_Manager,
                            Movement_Manager = Movement_Manager):
         self.important = True
+        self.time += CNC_Parameter.TOOL_CHANGE_TIME
 
         for index, info in enumerate(line_info):
             if info[0] == "T":

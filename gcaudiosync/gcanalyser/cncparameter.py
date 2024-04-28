@@ -39,8 +39,8 @@ class CNC_Parameter:
         Extractor = LineExtractor()
 
         if len(parameter) == 0:
-            print("Problem with cnc-parameter file. Using default values.")
-            return None
+            pass
+            # print("Problem with cnc-parameter file. Using default values.")
 
         non_int_parameter = ["S_IS_ABSOLUTE",
                              "START_POSITION_X",
@@ -77,6 +77,4 @@ class CNC_Parameter:
                     setattr(self, parameter, int(value))
                 else:
                     print("CNC-Parameter " + parameter + " does not exist. Check file parameter.txt.")
-
-        return None
     
