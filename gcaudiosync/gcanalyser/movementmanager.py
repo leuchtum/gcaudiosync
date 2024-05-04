@@ -69,3 +69,6 @@ class Movement_Manager:
 
     def update_connection_of_movements(self, movement: Movement):
         pass
+
+    def update_last_movement(self, movement):
+        pass
