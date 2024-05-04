@@ -12,11 +12,11 @@ class Tool_Path_Generator:
         self.tool_path_Y = []
         self.tool_path_Z = []
 
-    def generate_tool_path(self, expected_time_total, Movement_Manager: Movement_Manager):
+    def generate_total_tool_path(self, delta_time, expected_time_total, Movement_Manager: Movement_Manager):
 
-        delta_time = 100    # [ms]
         nof_steps = int(expected_time_total / delta_time)
 
+        # TODO
         for time_step in range(nof_steps):
 
             current_time = time_step * delta_time
@@ -33,10 +33,19 @@ class Tool_Path_Generator:
             self.tool_path_Z.append(current_Z)
 
 
+    def plot_tool_path(self):
+        
+        delta_time = self.tool_path_time[1]
+
         fig, ax = plt.subplots()
 
+        max_X = max(self.tool_path_X) + 20
+        min_X = min(self.tool_path_X) - 20
+        max_Y = max(self.tool_path_Y) + 20 
+        min_Y = min(self.tool_path_Y) - 20
+
         line = ax.plot(self.tool_path_X[0], self.tool_path_Y[0], label=f"tool path")[0]
-        ax.set(xlim = [-110, 110], ylim = [-110, 110], xlabel = "X", ylabel = "Y")
+        ax.set(xlim = [min_X, max_X], ylim = [min_Y, max_Y], xlabel = "X", ylabel = "Y")
         ax.legend()
 
 
@@ -54,4 +63,3 @@ class Tool_Path_Generator:
                                       interval = delta_time)
         plt.show()
 
-        

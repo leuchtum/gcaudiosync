@@ -16,8 +16,6 @@ class G_Code_Line:
 
     important = False
     expected_time = 0
-    expected_start_time = 0
-    expected_end_time = 0
     indices_of_movements = []
 
     def __init__(self, 

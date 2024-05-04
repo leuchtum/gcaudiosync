@@ -173,7 +173,7 @@ class Movement:
 
             total_angle = angle + 360.0 * turns
 
-            portion = self.expected_time / time_in_movement
+            portion = time_in_movement / self.expected_time
 
             current_angle = portion * total_angle
 
@@ -194,7 +194,7 @@ class Movement:
         return position
 
     def print_info(self):
-        print(f"Movement in line {self.line_index}")
+        print(f"Movement in line {self.line_index+1}")
         print(f"Movement: {self.movement}")
         print(f"Start point: {self.start_point_linear}")
         print(f"End point: {self.end_point_linear}")

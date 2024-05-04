@@ -64,9 +64,9 @@ class GCodeAnalyser: # must be global object
             
             self.G_Code_Lines.append(current_line)
             
-            if index >= 1:
-                last_line_status = copy.deepcopy(current_line.last_line_status)
-                self.G_Code_Lines[index-1].line_status = last_line_status
+            # if index >= 1:
+            #   last_line_status = copy.deepcopy(current_line.last_line_status)
+            #   self.G_Code_Lines[index-1].line_status = last_line_status
 
             current_cnc_status = copy.deepcopy(current_line.line_status)
 
@@ -84,9 +84,11 @@ class GCodeAnalyser: # must be global object
 
         return expected_time_total
 
-    def generate_tool_path(self):
-        self.Tool_Path_Generator.generate_tool_path(self.expected_time_total, self.Movement_Manager)
+    def generate_total_tool_path(self, delta_time):
+        self.Tool_Path_Generator.generate_total_tool_path(delta_time, self.expected_time_total, self.Movement_Manager)
 
+    def plot_tool_path(self):
+        self.Tool_Path_Generator.plot_tool_path()
 
 # end of class
 #####################################################################################################

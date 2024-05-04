@@ -30,9 +30,12 @@ class Movement_Manager:
                             info_arc=None,
                             feed_rate = 0)
         
-        self.total_time = 0.0
-        self.movements.append(movement)
+        movement.expected_time = 10.0
+
         self.time_stamps.append(self.total_time)
+        self.total_time = 10.0
+        self.movements.append(movement)
+        
 
     def add_linear_movement(self, 
                             index: int, 
@@ -154,17 +157,7 @@ class Movement_Manager:
 
     # TODO
     def update_vectors_linear_of_movements(self):
-
-        index = 0
-        nof_movements = len(self.movements)
-
-        if index < nof_movements - 1:
-            end_vector = self.movements[index].end_vector_linear
-            start_vector_next = self.movements[index + 1].start_vector_linear
-
-            if not vecfunc.equal(end_vector, start_vector_next):
-                new_start_vector = vecfunc.get_best_start_vector(end_vector, start_vector_next)
-                self.movements[index + 1].start_vector_linear = new_start_vector
+        pass
 
     def get_expected_time(self, line_index: int):
 

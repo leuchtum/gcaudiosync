@@ -1,0 +1,12 @@
+; Rechteckefräsen
+G17
+G54
+M3
+g0 S80
+g0 x-15 y15
+f500
+g1 x-5       
+g2 x0 y10 r5 
+g3 x10 y0 r10
+g1 x70
+m30
