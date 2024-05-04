@@ -15,9 +15,10 @@ import gcaudiosync.gcanalyser.vectorfunctions as vecfunc
 class G_Code_Line:
 
     important = False
-    time = 0
-    start_time = 0
-    end_time = 0
+    expected_time = 0
+    expected_start_time = 0
+    expected_end_time = 0
+    indices_of_movements = []
 
     def __init__(self, 
                  index: int,
@@ -70,7 +71,10 @@ class G_Code_Line:
             else:
                 line_info.pop(0)
                 print("gcodeline found this commmand " + command + ". no action defined.")
-            
+        
+        self.indices_of_movements = Movement_Manager.get_indices_of_movements(self.index)
+        self.expected_time = Movement_Manager.get_expected_time(self.index)
+
     def handle_G(self, 
                  number, 
                  line_info, 
@@ -79,12 +83,18 @@ class G_Code_Line:
 
         # Handle different G-codes using a match statement
         match number:
-            case 0 | 1:     # Rapid linear movement, Linear movement
+            case 0:     # Rapid linear movement
                 self.line_status.active_movement = number
+                self.line_status.feed_rate = CNC_Parameter.F_MAX / 60000.0
+                self.handle_linear_movement(line_info, Movement_Manager = Movement_Manager)
+            case 1:     # linear movement
+                self.line_status.active_movement = number
+                self.line_status.feed_rate = self.line_status.F_value / 60000.0
                 self.handle_linear_movement(line_info, Movement_Manager = Movement_Manager)
             case 2 | 3:     # Arc movement CW, Arc movement CCW
                 self.line_status.active_movement = number
                 self.line_status.info_arc[0] = number
+                self.line_status.feed_rate = self.line_status.F_value / 60000.0
                 self.handle_arc_movement(line_info, Movement_Manager = Movement_Manager)
             case 4:         # Dwell
                 self.handle_g04(line_info, Pause_Manager = Pause_Manager, Movement_Manager = Movement_Manager)
@@ -153,7 +163,7 @@ class G_Code_Line:
             self.handle_cooling_operation("off", Cooling_Manager)
 
         elif number == CNC_Parameter.COMMAND_END_OF_PROGRAM:
-            self.handle_end_of_program(Frequancy_Manager = Frequancy_Manager)
+            self.handle_end_of_program(Frequancy_Manager = Frequancy_Manager, Movement_Manager = Movement_Manager)
 
     def handle_movement_without_G(self, 
                                   line_info, 
@@ -239,11 +249,9 @@ class G_Code_Line:
             else:
                 list_index += 1
 
-        time = Movement_Manager.add_linear_movement(index = self.index, 
-                                                    last_line_status = self.last_line_status, 
-                                                    line_status = self.line_status)
-        
-        self.time += time
+        Movement_Manager.add_linear_movement(index = self.index, 
+                                             last_line_status = self.last_line_status, 
+                                             line_status = self.line_status)
 
     def handle_arc_movement(self, line_info, Movement_Manager: Movement_Manager):
         
@@ -324,11 +332,9 @@ class G_Code_Line:
         else:
             self.compute_radius()
 
-        time = Movement_Manager.add_arc_movement(index = self.index, 
-                                                 last_line_status = self.last_line_status, 
-                                                 line_status = self.line_status)
-        
-        self.time += time
+        Movement_Manager.add_arc_movement(index = self.index, 
+                                          last_line_status = self.last_line_status, 
+                                          line_status = self.line_status)
 
     def handle_g04(self, line_info, 
                    Pause_Manager: Pause_Manager,
@@ -387,7 +393,6 @@ class G_Code_Line:
                            Tool_Change_Manager: Tool_Change_Manager,
                            Movement_Manager = Movement_Manager):
         self.important = True
-        self.time += CNC_Parameter.TOOL_CHANGE_TIME
 
         for index, info in enumerate(line_info):
             if info[0] == "T":
@@ -411,13 +416,14 @@ class G_Code_Line:
 
         Cooling_Manager.new_cooling_operation(self.index, command)
     
-    def handle_end_of_program(self, Frequancy_Manager: Frequency_Manager):
+    def handle_end_of_program(self, Frequancy_Manager: Frequency_Manager, Movement_Manager: Movement_Manager):
         self.important = True
         
         self.line_status.spindle_on = False
         self.line_status.program_end_reached = True
 
         Frequancy_Manager.new_Spindle_Operation(self.index, "off")
+        Movement_Manager.add_pause(self.index, 10)
 
     def compute_arc_center(self):
 

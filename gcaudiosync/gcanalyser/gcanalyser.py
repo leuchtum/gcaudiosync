@@ -7,12 +7,17 @@ from gcaudiosync.gcanalyser.frequencymanager import Frequency_Manager
 from gcaudiosync.gcanalyser.toolchangemanager import Tool_Change_Manager
 from gcaudiosync.gcanalyser.coolingmanager import Cooling_Manager
 from gcaudiosync.gcanalyser.movementmanager import Movement_Manager
+from gcaudiosync.gcanalyser.toolpathgenerator import Tool_Path_Generator
 import gcaudiosync.gcanalyser.filefunctions as filefunc
 
 import copy
 
 class GCodeAnalyser: # must be global object
     
+    expected_time_total = 0
+
+    g_code = []
+
     # Constructor
     def __init__(self, parameter_src):
 
@@ -24,8 +29,13 @@ class GCodeAnalyser: # must be global object
         self.Pause_Manager = Pause_Manager()
         self.Tool_Change_Manager = Tool_Change_Manager()
         self.Cooling_Manager = Cooling_Manager()
+        self.Tool_Path_Generator = Tool_Path_Generator()
 
-        self.Events: G_Code_Line = []
+        self.G_Code_Lines: G_Code_Line = []
+
+        current_cnc_status = CNC_Status(start_position = True, CNC_Parameter = self.CNC_Parameter)
+
+        self.Movement_Manager = Movement_Manager(self.CNC_Parameter, current_cnc_status)
 
     #################################################################################################
     # Methods
@@ -37,8 +47,6 @@ class GCodeAnalyser: # must be global object
         self.g_code = filefunc.read_file(g_code_src)
 
         current_cnc_status = CNC_Status(start_position = True, CNC_Parameter = self.CNC_Parameter)
-
-        self.Movement_Manager = Movement_Manager(current_cnc_status)
 
         for index, line in enumerate(self.g_code):
             
@@ -54,35 +62,31 @@ class GCodeAnalyser: # must be global object
                                        Cooling_Manager = self.Cooling_Manager,
                                        Movement_Manager = self.Movement_Manager)
             
-            self.Events.append(current_line)
+            self.G_Code_Lines.append(current_line)
             
             if index >= 1:
                 last_line_status = copy.deepcopy(current_line.last_line_status)
-                self.Events[index-1].line_status = last_line_status
+                self.G_Code_Lines[index-1].line_status = last_line_status
 
             current_cnc_status = copy.deepcopy(current_line.line_status)
 
-        self.update_Manager_time()
+        self.Movement_Manager.update_vectors_linear_of_movements()
+        self.expected_time_total = self.get_expected_time_total()
             
-        # make something like an object for the current line and the last line
-        # make an object/list for: events
-        # objects in events: lin_movement, arc_movement, dewll, pause, spindle_change, tool_change
-        # objects for synchronisation: dewll_times/pause/tool_change, frequencys, S_change
-        # initialize start position
-
-        # for loop over all lines
-
-            # for loop over all information in the line
-
-            # g -> 
-            # x,y,z,i,j,k,r
-            # m
-
         return 0
-    
-    # TODO
-    def update_Manager_time(self):
-        pass
+
+    def get_expected_time_total(self):
+
+        expected_time_total = 0
+
+        for G_Code_Line in self.G_Code_Lines:
+            expected_time_total += G_Code_Line.expected_time
+
+        return expected_time_total
+
+    def generate_tool_path(self):
+        self.Tool_Path_Generator.generate_tool_path(self.expected_time_total, self.Movement_Manager)
+
 
 # end of class
 #####################################################################################################

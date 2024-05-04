@@ -21,7 +21,7 @@ class CNC_Status:
     F_value = 0.0
     S_value = 0.0
 
-    feed_rate = 0.0
+    feed_rate = 0.0             # [mm/ms]
     spindle_speed = 0.0
     spindle_direction = "CW"
     spindle_on = False
