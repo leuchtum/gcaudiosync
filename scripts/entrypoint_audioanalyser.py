@@ -8,6 +8,6 @@ file_name = "VID_20240221_201705.wav"
 file = root_dir / file_name
 
 rr = RawRecording.from_file(file)
-pr = ProcessedRecording.from_raw(rr)
+pr = ProcessedRecording(rr)
 
 pass
