@@ -14,11 +14,11 @@ src_path_cnc_parameter = Path("cncparameter") / "parameter.txt"
 G_Code_Analyser = GCodeAnalyser(src_path_cnc_parameter)
 
 # analyse G-Code
-G_Code_Analyser.analyse(src_path_3)
+G_Code_Analyser.analyse(src_path_2)
 
 print(f"Expected total time in ms: {G_Code_Analyser.expected_time_total}")
 
-G_Code_Analyser.Movement_Manager.print_info()
+#G_Code_Analyser.Movement_Manager.print_info()
 
 # generate tool path
 G_Code_Analyser.generate_total_tool_path(20)

@@ -1,32 +1,31 @@
 from gcaudiosync.gcanalyser.stringfunctions import *
 
-class LineExtractor:   
+class Line_Extractor:   
     
     # Constructor
     def __init__(self):
-        pass
+        pass    # nothing to do
 
     #################################################################################################
     # Methods
 
-    # TODO: work and comment
-    def extract(self, line):
-        # name + value, always!
+    # Method to extract all commands and numbers in a line. Important: always command + number
+    def extract(self, line: str):
 
-        line = prepare_line(line)
-        extracted_data = []
+        line: str = prepare_line(line)      # Prepare line for the extraction
+        extracted_data:list = []            # Empty list for all the extracted data
 
+        # Extract until no data left
         while len(line) > 0:
-            character = line[0]
 
-            name, line = find_alpha_combo(line)
+            command, line = find_alpha_combo(line)      # Get the alpha combo at front of the line and the line without this combo
 
-            number, line = find_number(line)
-            
-            extracted_data.append([name, number])
+            number, line = find_number(line)            # Get the number at fromt of the line and the line without this number
+
+            extracted_data.append([command, number])    # Add extracted command and number to the extracted data
             
 
         return extracted_data
 
-# end of class
-#####################################################################################################
+# End of class
+###################################################################################################

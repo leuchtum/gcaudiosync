@@ -14,7 +14,7 @@ max_a_X 40        ; max acceleration/deceleration of X-Axis in mm/s^2
 max_a_Y 40        ; max acceleration/deceleration of Y-Axis in mm/s^2
 max_a_Z 40        ; max acceleration/deceleration of Z-Axis in mm/s^2
 
-tool_change_time 8000     ; [ms]
+tool_change_time 1000     ; [ms]
 
 command_abort                       0
 command_quit                        1
