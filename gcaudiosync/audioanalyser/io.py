@@ -4,11 +4,12 @@ from typing import Self
 
 import librosa
 import numpy as np
+import numpy.typing as npt
 
 
 @dataclass
 class RawRecording:
-    data: np.ndarray
+    data: npt.NDArray[np.float32]
     samplerate: float
 
     @classmethod
