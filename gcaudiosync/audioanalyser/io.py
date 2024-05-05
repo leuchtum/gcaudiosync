@@ -14,7 +14,7 @@ class RawRecording:
     @classmethod
     def from_file(cls, file_path: Path, **kwargs) -> Self:
         file_sr = librosa.get_samplerate(file_path)
-        file_duration = librosa.get_duration(filename=file_path)
+        file_duration = librosa.get_duration(path=file_path)
         if "sr" not in kwargs:
             kwargs["sr"] = file_sr
         if "duration" in kwargs and kwargs["duration"] > file_duration:
