@@ -13,7 +13,7 @@ class Setting:
         # Defaults are chosen based on the default values of librosa.stft but
         # not exactly the same.
         # https://librosa.org/doc/latest/generated/librosa.stft.html#librosa.stft
-        n_fft = 512
-        win_length = n_fft // 2  # librosa defaults to win_length=n_fft
-        hop_length = win_length // 4
+        n_fft = 2**14
+        win_length = 2**13
+        hop_length = 2**9
         return cls(n_fft=n_fft, hop_length=hop_length, win_length=win_length)
