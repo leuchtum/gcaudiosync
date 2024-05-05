@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from random import sample
 from typing import Self
 
 import librosa
@@ -23,7 +22,12 @@ class ProcessedRecording:
     def from_raw(cls, rr: RawRecording, setting: Setting | None = None) -> Self:
         if setting is None:
             setting = Setting.default()
-        D = librosa.stft(rr.data, **setting.as_dict())
+        D = librosa.stft(
+            rr.data,
+            n_fft=setting.n_fft,
+            hop_length=setting.hop_length,
+            win_length=setting.win_length,
+        )
         S, P = librosa.magphase(D)
         S_db = librosa.amplitude_to_db(S, ref=np.max)
         A = np.angle(P)

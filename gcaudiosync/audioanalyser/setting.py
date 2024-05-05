@@ -17,6 +17,3 @@ class Setting:
         win_length = n_fft // 2  # librosa defaults to win_length=n_fft
         hop_length = win_length // 4
         return cls(n_fft=n_fft, hop_length=hop_length, win_length=win_length)
-
-    def as_dict(self) -> dict[str, int]:
-        return self.__dict__
