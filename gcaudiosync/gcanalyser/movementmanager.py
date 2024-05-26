@@ -230,6 +230,7 @@ class Movement_Manager:
             self.movements[movement_index].print_info()
             print("")
 
+    # TODO: Dwell times will be adjusted too. this has to change!
     def all_lines_analysed(self):
 
         # Todo: compute all the start and end vectors
@@ -305,11 +306,21 @@ class Movement_Manager:
         self.movements[-1].start_time = new_movement_start_time
         self.movements[-1].time = new_movement_time
 
+    def get_time_stamps(self):
+        time_stamps = []
 
+        g_code_line_index = 0
+        g_code_line_time_stamp = 0
 
+        for index, movement in enumerate(self.movements):
+            if index > 0:
+                new_g_code_line = movement.line_index
+                if new_g_code_line != g_code_line_index:
+                    g_code_line_index = new_g_code_line
+                    g_code_line_time_stamp = movement.start_time
+                    time_stamps.append([g_code_line_index, g_code_line_time_stamp])
 
-
-
+        return time_stamps
 
 # End of class
 #####################################################################################################

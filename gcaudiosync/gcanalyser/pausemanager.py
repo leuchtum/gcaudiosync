@@ -4,7 +4,7 @@ class Pause_Manager:
 
     # counter = 0
 
-    pauses = []         # index, kind of pause (0: abort, 1: quit, 2: PROGABORT, 4: dwell - G04), expected time [ms] (-1 = unknown)
+    pauses = []         # index, kind of pause (0: abort, 1: quit, 2: PROGABORT, 4: dwell - G04), expexted_start_time [ms], expected time [ms] (-1 = unknown)
 
     def __init__(self):
         pass
@@ -15,7 +15,7 @@ class Pause_Manager:
         # self.counter += 1
         # print("Pause_Manager call no. " + str(self.counter) + ": Dewll was added in line " + str(index) + ": " + str(time) + " ms")
 
-        self.pauses.append(np.array([index, 4, time]))
+        self.pauses.append(np.array([index, 4, 0, time]))
 
     def new_pause(self, index:int, kind_of_pause: int):
 
@@ -26,5 +26,16 @@ class Pause_Manager:
         # here it might be good to inform the frequancy manager that the spindle could stand still. not implemented jet
         # or frequency-manager looks over all pauses at the end.
 
-        self.pauses.append(np.array([index, 4, -1]))
+        self.pauses.append(np.array([index, kind_of_pause, 0, -1]))
 
+    def update(self, time_stamps):
+        for pause in self.pauses:
+            time_stamp_index = 0
+            pause_index = pause[0]
+
+            for index in range(time_stamp_index, len(time_stamps)):
+                if time_stamps[index][0] >= pause_index:
+                    time_stamp_index = index
+                    break
+
+            pause[2] = time_stamps[time_stamp_index][1]

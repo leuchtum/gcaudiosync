@@ -76,6 +76,10 @@ class GCodeAnalyser: # must be global object
 
         self.Movement_Manager.all_lines_analysed()
 
+        time_stamps: list = self.Movement_Manager.get_time_stamps()
+        self.Frequency_Manager.update(time_stamps)
+        self.Pause_Manager.update(time_stamps)
+
     # Method to generate the total tool path
     def generate_total_tool_path(self, fps: int):
         # Call method from the Tool_Path_Generator
@@ -89,13 +93,20 @@ class GCodeAnalyser: # must be global object
                                       total_time: int):
         self.Movement_Manager.set_start_time_and_total_time(start_time,
                                                             total_time)
-        # TODO: inform other managers
+        
+        time_stamps = self.Movement_Manager.get_time_stamps()
+        self.Frequency_Manager.update(time_stamps)
+        self.Pause_Manager.update(time_stamps)
 
     def adjust_start_time_of_g_code_line(self,
                                          line_index: int,
                                          start_time: int):
         self.Movement_Manager.adjust_start_time_of_g_code_line(line_index,
                                                                start_time)
+        
+        time_stamps = self.Movement_Manager.get_time_stamps()
+        self.Frequency_Manager.update(time_stamps)
+        self.Pause_Manager.update(time_stamps)
 
     def adjust_end_time_of_g_code_line(self,
                                        line_index: int,
