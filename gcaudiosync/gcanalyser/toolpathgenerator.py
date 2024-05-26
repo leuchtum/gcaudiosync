@@ -10,7 +10,7 @@ class Tool_Path_Generator:
         self.visible_tool_path_length = 200          # visible points of the tool path
         self.string_length = 80
 
-        self.active_g_code_line_index: int = 0
+        self.active_g_code_line_index: int = -1
         self.delta_time: int = 0
         self.fps: float = 0
         self.total_time: int = 0
@@ -121,14 +121,14 @@ class Tool_Path_Generator:
                                      bbox = props_c_code_text_nonactive)
         g_code_text_active = ax.text(0.05, 
                                      -0.25, 
-                                     "".ljust(self.string_length), 
+                                     self.g_code[0].ljust(self.string_length), 
                                      transform = 
                                      ax.transAxes, 
                                      verticalalignment = 'top', 
                                      bbox = props_c_code_text_active)
         g_code_text_under  = ax.text(0.05, 
                                      -0.31, 
-                                     "".ljust(self.string_length), 
+                                     self.g_code[1].ljust(self.string_length) + "\n" + self.g_code[2].ljust(self.string_length), 
                                      transform = ax.transAxes, 
                                      verticalalignment = 'top', 
                                      bbox = props_c_code_text_nonactive)

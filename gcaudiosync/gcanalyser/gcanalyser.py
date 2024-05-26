@@ -74,6 +74,8 @@ class GCodeAnalyser: # must be global object
             # Update the current cnc status
             current_cnc_status = copy.deepcopy(current_line.line_status)
 
+        self.Movement_Manager.all_lines_analysed()
+
     # Method to generate the total tool path
     def generate_total_tool_path(self, fps: int):
         # Call method from the Tool_Path_Generator
@@ -82,22 +84,23 @@ class GCodeAnalyser: # must be global object
     def plot_tool_path(self):
         self.Tool_Path_Generator.plot_tool_path()
 
-    def set_start_time(self, 
-                       start_time: int):
-        pass
-
-    def set_end_time(self,
-                     start_time: int):
-        pass
+    def set_start_time_and_total_time(self, 
+                                      start_time: int,
+                                      total_time: int):
+        self.Movement_Manager.set_start_time_and_total_time(start_time,
+                                                            total_time)
+        # TODO: inform other managers
 
     def adjust_start_time_of_g_code_line(self,
                                          line_index: int,
                                          start_time: int):
-        pass
+        self.Movement_Manager.adjust_start_time_of_g_code_line(line_index,
+                                                               start_time)
 
     def adjust_end_time_of_g_code_line(self,
                                        line_index: int,
-                                       start_time: int):
-        pass
+                                       end_time: int):
+        self.Movement_Manager.adjust_start_time_of_g_code_line(line_index+1,
+                                                               end_time)
 # End of class
 #####################################################################################################

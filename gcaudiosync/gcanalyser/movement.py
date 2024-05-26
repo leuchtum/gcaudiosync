@@ -18,7 +18,6 @@ class Movement:
     def __init__(self,
                  line_index: int,
                  movement: int,
-                 start_time: int,
                  start_position_linear_axes, 
                  end_position_linear_axes,
                  start_position_rotation_axes,
@@ -29,7 +28,6 @@ class Movement:
         # save all parameters
         self.line_index = line_index
         self.movement = movement
-        self.start_time = start_time
         self.start_position_linear_axes = start_position_linear_axes
         self.end_position_linear_axes  = end_position_linear_axes 
         self.start_position_rotation_axes  = start_position_rotation_axes 
@@ -48,7 +46,6 @@ class Movement:
             self.compute_optimal_start_vector_rotation()
             self.compute_optimal_end_vector_linear_axes()
             self.compute_optimal_end_vector_rotation()
-            self.compute_expected_time()
 
     #################################################################################################
     # Methods
@@ -162,10 +159,13 @@ class Movement:
 
         position = np.array([0.0, 0.0, 0.0])
 
+        portion = time_in_movement / self.time
+
         if self.movement == -1:
             position = copy.deepcopy(self.start_position_linear_axes)
         elif self.movement in [0, 1]:
-            position = self.start_position_linear_axes + self.start_vector_linear_axes * time_in_movement
+
+            position = self.start_position_linear_axes + (self.end_position_linear_axes - self.start_position_linear_axes) * portion
         else:
             start_point_linear = copy.deepcopy(self.start_position_linear_axes)
             end_point_linear = copy.deepcopy(self.end_position_linear_axes)
@@ -178,7 +178,6 @@ class Movement:
             end_point_linear[2] = 0
             arc_center[2] = 0
 
-            radius = abs(self.info_arc[4])
             turns = self.info_arc[5]
 
             if self.info_arc[4] >= 0:
@@ -189,8 +188,6 @@ class Movement:
             angle = vecfunc.compute_angle(center_2_start, center_2_end, smaller_angle)
 
             total_angle = angle + 360.0 * turns
-
-            portion = time_in_movement / self.time
 
             current_angle = portion * total_angle
 
@@ -224,6 +221,13 @@ class Movement:
         
         print(f"feed rate [mm/ms]: {self.feed_rate}")
         print(f"Expected time: {self.time}")
+
+    def adjust_start_and_total_time(self, 
+                                    offset: int, 
+                                    factor: float):
+        self.start_time = self.start_time * factor + offset
+        self.time = self.time * factor
+
 
 # End of class
 #####################################################################################################

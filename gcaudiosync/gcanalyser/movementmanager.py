@@ -8,6 +8,7 @@ from gcaudiosync.gcanalyser.cncstatus import CNC_Status
 
 class Movement_Manager:
 
+    start_time : int                = 0         # Time for the start
     total_time: int                 = 0         # Expected total time
     movements: Movement             = []        # Movements
     end_of_program_reached: bool    = False     # Variable for end of program
@@ -21,7 +22,6 @@ class Movement_Manager:
 
         first_movement = Movement(line_index = -1,        # Create first movement
                                   movement = -1, 
-                                  start_time = self.total_time,
                                   start_position_linear_axes    = first_line_status.position_linear_axes, 
                                   end_position_linear_axes      = first_line_status.position_linear_axes,
                                   start_position_rotation_axes  = first_line_status.position_rotation_axes,
@@ -29,9 +29,9 @@ class Movement_Manager:
                                   info_arc = None,
                                   feed_rate = 0.0)
         
-        first_movement.time = 0                    # Time for first movement
+        first_movement.time = 0                                 # Time for first movement
 
-        self.movements.append(first_movement)                # Append first movement
+        self.movements.append(first_movement)                   # Append first movement
         
     #################################################################################################
     # Methods
@@ -49,7 +49,6 @@ class Movement_Manager:
         # Create new movement
         new_movement = Movement(line_index = line_index, 
                                 movement = current_line_status.active_movement, 
-                                start_time = self.total_time,
                                 start_position_linear_axes = last_line_status.position_linear_axes, 
                                 end_position_linear_axes = current_line_status.position_linear_axes,
                                 start_position_rotation_axes = last_line_status.position_rotation_axes,
@@ -61,11 +60,7 @@ class Movement_Manager:
         if current_line_status.exact_stop:
             new_movement.do_exact_stop()
 
-        expected_time = new_movement.time              # Get expected time
-
         self.movements.append(new_movement)                     # Append movement
-
-        self.total_time += expected_time               # Update total time
 
     # Method for arc movement
     def add_arc_movement(self, 
@@ -80,7 +75,6 @@ class Movement_Manager:
         # Create new movement
         new_movement = Movement(line_index = line_index, 
                                 movement = current_line_status.active_movement,
-                                start_time = self.total_time, 
                                 start_position_linear_axes = last_line_status.position_linear_axes, 
                                 end_position_linear_axes = current_line_status.position_linear_axes,
                                 start_position_rotation_axes = last_line_status.position_rotation_axes,
@@ -92,11 +86,7 @@ class Movement_Manager:
         if current_line_status.exact_stop:
             new_movement.do_exact_stop()
 
-        expected_time = new_movement.time              # Get expected time
-
         self.movements.append(new_movement)                     # Append movement
-
-        self.total_time += expected_time               # Update total time
 
     # Method for tool change
     def add_tool_change(self, 
@@ -116,7 +106,6 @@ class Movement_Manager:
         # Create movement to tool
         movement_get_tool = Movement(line_index = line_index, 
                                      movement = 0, 
-                                     start_time = self.total_time,
                                      start_position_linear_axes = current_position_linear_axes, 
                                      end_position_linear_axes = tool_change_position_linear,
                                      start_position_rotation_axes = current_position_rotation_axes,
@@ -126,11 +115,7 @@ class Movement_Manager:
         
         movement_get_tool.do_exact_stop()   # Add exact stop
 
-        expected_time = movement_get_tool.time         # Get expected time
-
         self.movements.append(movement_get_tool)                # Append movement
-
-        self.total_time += expected_time               # Update total time       
         
         self.add_pause(line_index = line_index, 
                        time = self.CNC_Parameter.TOOL_CHANGE_TIME) # Add pause for tool change
@@ -147,7 +132,6 @@ class Movement_Manager:
         # create new movement
         new_movement = Movement(line_index = line_index, 
                                 movement = -1, 
-                                start_time = self.total_time,
                                 start_position_linear_axes = last_movement.end_position_linear_axes, 
                                 end_position_linear_axes = last_movement.end_position_linear_axes,
                                 start_position_rotation_axes = last_movement.end_position_linear_axes,
@@ -161,8 +145,6 @@ class Movement_Manager:
 
         new_movement.time = time                   # Set time
         
-        self.total_time += time                    # Update expected time total
-
         self.movements[-1].do_exact_stop()                  # Add exact stop to last movement
 
         self.movements.append(new_movement)                 # Append movement
@@ -244,10 +226,84 @@ class Movement_Manager:
 
         for movement_index in range(len(self.movements)):
             print(f"Movement no. {movement_index}")
-            print(f"time stamp: {self.time_stamps[movement_index]}")
+            print(f"time stamp: {self.movements[movement_index].start_time}")
             self.movements[movement_index].print_info()
             print("")
 
+    def all_lines_analysed(self):
+
+        # Todo: compute all the start and end vectors
+
+        time = 0
+
+        for movement in self.movements:
+            movement.compute_expected_time()
+            movement.start_time = time
+            time += movement.time
+
+        self.total_time = time
+
+    def set_start_time_and_total_time(self, 
+                                      new_start_time: int,
+                                      new_total_time: int):
+        
+        if self.total_time <= 0:
+            raise Exception("Something went wrong: expected total time <= 0")
+
+        offset = new_start_time
+        factor: float = float(new_total_time) / self.total_time
+
+        self.start_time = new_start_time
+        self.total_time = new_total_time
+
+        for movement in self.movements:
+            movement.adjust_start_and_total_time(offset, factor)
+        
+        self.movements[0].start_time = 0
+        self.movements[0].time = offset
+
+    def adjust_start_time_of_g_code_line(self,
+                                         line_index,
+                                         new_start_time):
+        
+        for movement_index, movement in enumerate(self.movements):
+            if movement.line_index >= line_index:
+                important_movement_index = movement_index
+                break
+        
+        time_before_movement = movement.start_time - self.start_time
+        time_after_movement = self.total_time - time_before_movement
+
+        offset = self.movements[0].time
+
+        factor_before: float = (new_start_time - self.start_time) / time_before_movement
+        factor_after: float = (self.total_time + offset - new_start_time) / time_after_movement
+
+        for index in range(1, important_movement_index-1):
+            new_movement_start_time: float= self.movements[index-1].start_time + self.movements[index-1].time
+            new_movement_time: float = self.movements[index].time * factor_before
+            self.movements[index].start_time = new_movement_start_time
+            self.movements[index].time = new_movement_time
+
+        new_movement_start_time= self.movements[important_movement_index-2].start_time + self.movements[important_movement_index-2].time
+        new_movement_time = new_start_time - new_movement_start_time
+        self.movements[important_movement_index-1].start_time = new_movement_start_time
+        self.movements[important_movement_index-1].time = new_movement_time
+
+        new_movement_time = self.movements[important_movement_index].time * factor_after
+        self.movements[important_movement_index].start_time = new_start_time
+        self.movements[important_movement_index].time = new_movement_time
+
+        for index in range(important_movement_index+1, len(self.movements)-1):
+            new_movement_start_time= self.movements[index-1].start_time + self.movements[index-1].time
+            new_movement_time = self.movements[index].time * factor_after
+            self.movements[index].start_time = new_movement_start_time
+            self.movements[index].time = new_movement_time
+
+        new_movement_start_time = self.movements[-2].start_time + self.movements[-2].time
+        new_movement_time = self.total_time + offset - new_movement_start_time
+        self.movements[-1].start_time = new_movement_start_time
+        self.movements[-1].time = new_movement_time
 
 
 

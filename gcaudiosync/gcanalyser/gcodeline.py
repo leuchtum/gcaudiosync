@@ -65,7 +65,7 @@ class G_Code_Line:
                         break
                     case "S":                                                           # Action with a new S value
                         line_info.pop(info_index)                                           # Delete this command and number
-                        self.handle_S(float(number), CNC_Parameter, Frequency_Manager)      # Call method that handles new S value
+                        self.handle_S(float(number), CNC_Parameter, Movement_Manager, Frequency_Manager)      # Call method that handles new S value
                         break
                     case "G":                                                           # Action for prio G commands
                         if float(number) in prio_G_numbers:                                 # Check if prio
@@ -252,6 +252,7 @@ class G_Code_Line:
     def handle_S(self, 
                  number: float, 
                  CNC_Parameter: CNC_Parameter, 
+                 Movement_Manager: Movement_Manager,
                  Frequency_Manager: Frequency_Manager):
         
         # Check input
@@ -273,6 +274,7 @@ class G_Code_Line:
 
         self.line_status.S_value = new_S                # Set S value in line status
         Frequency_Manager.new_S(self.index, new_S)      # Inform Frequency Manager that S value has changed
+        Movement_Manager.add_pause(self.index, 1)
 
     # Method for linear movement
     def handle_linear_movement(self, 
