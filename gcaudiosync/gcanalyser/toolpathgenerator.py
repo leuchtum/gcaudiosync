@@ -7,59 +7,191 @@ import matplotlib.animation as animation
 class Tool_Path_Generator:
 
     def __init__(self):
-        self.tool_path_time = []
-        self.tool_path_X = []
-        self.tool_path_Y = []
-        self.tool_path_Z = []
+        self.active_g_code_line_index: int = 0
+        self.delta_time: int = 0
+        self.fps: float = 0
+        self.total_time: int = 0
+        self.nof_frames: int = 0
+        self.tool_path_time:list = []
+        self.tool_path_X:list = []
+        self.tool_path_Y:list = []
+        self.tool_path_Z: list = []
+        self.line_index:list = []
+        self.g_code: list = []
 
-    def generate_total_tool_path(self, delta_time, expected_time_total, Movement_Manager: Movement_Manager):
+    # generate all the data needed for the toolpath
+    def generate_total_tool_path(self, 
+                                 fps: int, 
+                                 Movement_Manager: Movement_Manager, 
+                                 g_code: list):
 
-        nof_steps = int(expected_time_total / delta_time)
+        # save parameters
+        self.fps = fps
+        self.g_code = g_code
 
-        # TODO
-        for time_step in range(nof_steps):
-
-            current_time = time_step * delta_time
-
-            current_position = Movement_Manager.get_position_linear(current_time)
-
-            current_X = current_position[0]
-            current_Y = current_position[1]
-            current_Z = current_position[2]
-
-            self.tool_path_time.append(current_time)
-            self.tool_path_X.append(current_X)
-            self.tool_path_Y.append(current_Y)
-            self.tool_path_Z.append(current_Z)
-
-
-    def plot_tool_path(self):
+        # compute time between two frames
+        self.delta_time: float = 1000.0 / self.fps
         
-        delta_time = self.tool_path_time[1]
+        # get total time
+        self.total_time = Movement_Manager.expected_time_total
 
-        fig, ax = plt.subplots()
+        # compute number of frames
+        self.nof_frames = int(self.total_time / self.delta_time)
 
-        max_X = max(self.tool_path_X) + 20
+        # get the active line and position for every frame
+        for time_step in range(self.nof_frames):
+            
+            # compute current time
+            current_time = time_step * self.delta_time
+
+            # get current index and position
+            current_index, current_position = Movement_Manager.get_plot_info(current_time)
+
+            #current_index = Movement_Manager.get_line_index_at_time(current_time)
+            self.line_index.append(current_index)
+            
+            # append the new information
+            self.tool_path_time.append(current_time)
+            self.tool_path_X.append(current_position[0])
+            self.tool_path_Y.append(current_position[1])
+            self.tool_path_Z.append(current_position[2])
+
+    # plot tool path
+    def plot_tool_path(self):
+
+        visible_tool_path_length = 200          # visible points of the tool path
+        
+        # set limits of axes
         min_X = min(self.tool_path_X) - 20
-        max_Y = max(self.tool_path_Y) + 20 
+        max_X = max(self.tool_path_X) + 20
         min_Y = min(self.tool_path_Y) - 20
+        max_Y = max(self.tool_path_Y) + 20 
 
-        line = ax.plot(self.tool_path_X[0], self.tool_path_Y[0], label=f"tool path")[0]
-        ax.set(xlim = [min_X, max_X], ylim = [min_Y, max_Y], xlabel = "X", ylabel = "Y")
-        ax.legend()
+        # get total limits
+        min_total = min(min_X, min_Y)
+        max_total = max(max_X, max_Y)
+        
+        # create a figure and axes
+        fig = plt.figure(figsize = (7,6))
+        ax = plt.axes(xlim=(min_total, max_total), 
+                      ylim=(min_total, max_total))
+        
+        # adjust the plot
+        plt.subplots_adjust(left = 0.1, 
+                            right = 0.75,
+                            top = 0.95,
+                            bottom = 0.3)
+        
+        # set axes
+        ax.set(xlim = [min_X, max_X], 
+               ylim = [min_Y, max_Y], 
+               xlabel = "X", 
+               ylabel = "Y")
+        
+        # show legend
+        # ax.legend()
 
+        # create a toolpath to plot
+        tool_path, = ax.plot(self.tool_path_X[0], 
+                             self.tool_path_X[0], 
+                             # label = "",
+                             )
+        
+        # create the tool position to plot
+        tool_position, = ax.plot(self.tool_path_X[0], 
+                                 self.tool_path_X[0], 
+                                 "o",
+                                 # label = "",          # maybe add the active tool
+                                 color = "red")
+        
+        # create the info box on the right of the plot
+        props_info_right = dict(boxstyle = 'round', facecolor = 'grey', alpha = 0.15) 
+        info_right = ax.text(1.05, 0.8, "", transform = ax.transAxes, verticalalignment='top', bbox = props_info_right)
 
+        # create the info boxes under the plot
+        props_c_code_text_nonactive = dict(boxstyle = 'round', facecolor = 'grey', alpha = 0.15) 
+        props_c_code_text_active = dict(boxstyle = 'round', facecolor = 'red', alpha = 0.15) 
+
+        g_code_text_above  = ax.text(0.05, 
+                                     -0.15, 
+                                     " ", 
+                                     transform = ax.transAxes, 
+                                     verticalalignment = 'top', 
+                                     bbox = props_c_code_text_nonactive)
+        g_code_text_active = ax.text(0.05, 
+                                     -0.25, 
+                                     self.g_code[0], 
+                                     transform = 
+                                     ax.transAxes, 
+                                     verticalalignment = 'top', 
+                                     bbox = props_c_code_text_active)
+        g_code_text_under  = ax.text(0.05, 
+                                     -0.31, 
+                                     self.g_code[1] +"\n" + self.g_code[1], 
+                                     transform = ax.transAxes, 
+                                     verticalalignment = 'top', 
+                                     bbox = props_c_code_text_nonactive)
+
+        # create a update function for the plot
         def update(frame):
+            
+            # set end of visible tool path
+            if frame >= visible_tool_path_length: 
+                end_of_visible_tool_path = frame - visible_tool_path_length
+            else:
+                end_of_visible_tool_path = 0
+            
+            # update tool_position
+            tool_position.set_data(self.tool_path_X[frame], 
+                                   self.tool_path_Y[frame])
 
-            # update the line plot:
-            line.set_xdata(self.tool_path_X[:frame])
-            line.set_ydata(self.tool_path_Y[:frame])
-            return (line)
+            # update tool_path
+            if frame > 0:
+                tool_path.set_data(self.tool_path_X[end_of_visible_tool_path:frame], 
+                                   self.tool_path_Y[end_of_visible_tool_path:frame])
+
+            # update info on the right of the plot
+            info_right.set_text("Time: " + str(round(self.delta_time*frame/1000, 3)) + " s\n" +
+                                "X " + str(self.tool_path_X[frame]) + "\n" +
+                                "Y " + str(self.tool_path_Y[frame]) + "\n" +
+                                "Z " + str(self.tool_path_Z[frame]))
+            
+            # update info under the plot if active line has changed
+            if self.active_g_code_line_index != self.line_index[frame]:
+                self.active_g_code_line_index = self.line_index[frame]
+                active_g_code_line = self.active_g_code_line_index
+
+                g_code_text_active.set_text(self.g_code[active_g_code_line])
+
+                if active_g_code_line == 0:
+                    pass
+                elif active_g_code_line == 1:
+                    g_code_text_above.set_text(" \n" +
+                                               self.g_code[active_g_code_line - 1])
+                    g_code_text_under.set_text(self.g_code[active_g_code_line + 1] + "\n" +
+                                               self.g_code[active_g_code_line + 2])
+                elif active_g_code_line == len(self.g_code) - 2:
+                    g_code_text_above.set_text(self.g_code[active_g_code_line - 2] + "\n" +
+                                               self.g_code[active_g_code_line - 1])
+                    g_code_text_under.set_text(self.g_code[active_g_code_line + 1] + "\n" +
+                                               " ")
+                elif active_g_code_line == len(self.g_code) - 1:
+                    g_code_text_above.set_text(" \n"+
+                                               self.g_code[active_g_code_line-1])
+                    g_code_text_under.set_text(" \n" +
+                                               " ")
+                else:
+                    g_code_text_above.set_text(self.g_code[active_g_code_line-2] + " \n"+
+                                               self.g_code[active_g_code_line-1])
+                    g_code_text_under.set_text(self.g_code[active_g_code_line + 1] + "\n" +
+                                               self.g_code[active_g_code_line + 2])
+
+            return tuple([tool_path]) + tuple([info_right])
 
 
         ani = animation.FuncAnimation(fig = fig, 
                                       func = update, 
                                       frames = len(self.tool_path_time), 
-                                      interval = delta_time)
-        plt.show()
+                                      interval = self.delta_time)
 
+        plt.show()

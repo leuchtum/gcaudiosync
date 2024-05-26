@@ -1,12 +1,36 @@
-import numpy as np
+# importing required libraries 
+import matplotlib
+matplotlib.use('TkAgg',force=True)
+from matplotlib import pyplot as plt 
+import numpy as np 
+import matplotlib.animation as animation 
+from IPython import display 
 
-class TestClass:
-    test_bool: bool = True
+# initializing a figure 
+fig = plt.figure() 
+
+# labeling the x-axis and y-axis 
+axis = plt.axes(xlim=(0, 1000), ylim=(0, 1000)) 
+
+# lists storing x and y values 
+x, y = [], [] 
+
+line, = axis.plot(0, 0) 
 
 
-test = TestClass()
+def animate(frame_number): 
+	x.append(frame_number) 
+	y.append(frame_number) 
+	line.set_xdata(x) 
+	line.set_ydata(y) 
+	return line, 
 
-new_bool = test.test_bool
 
-new_bool = False
-print(test.test_bool)
+anim = animation.FuncAnimation(fig, animate, frames=1000, 
+							interval=20, blit=True) 
+fig.suptitle('Straight Line plot', fontsize=14) 
+
+# saving to m4 using ffmpeg writer 
+writervideo = animation.FFMpegWriter(fps=60) 
+anim.save('increasingStraightLine.mp4', writer=writervideo) 
+plt.close() 

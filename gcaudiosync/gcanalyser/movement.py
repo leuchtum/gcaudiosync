@@ -205,11 +205,11 @@ class Movement:
             position[0] = XY_position[0]
             position[1] = XY_position[1]
 
-            distance_Z = end_point_linear[2] - start_point_linear[2]
-            current_Z = start_point_linear[2] + portion * distance_Z
+            distance_Z = self.end_position_linear_axes[2] - self.start_position_linear_axes[2]
+            current_Z = self.start_position_linear_axes[2] + portion * distance_Z
             position[2] = current_Z
 
-        return position
+        return np.round(position, 3)
 
     # Method to print info of movement # TODO: comment
     def print_info(self):

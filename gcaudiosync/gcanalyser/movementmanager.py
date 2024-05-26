@@ -217,10 +217,9 @@ class Movement_Manager:
 
         return indices
 
-    # Method to get a position at a given time
-    def get_position_linear(self, 
-                            current_time: int):
-        
+    def get_plot_info(self, 
+                      current_time: int):
+
         time_stamp_found = False                            # Variable to check if time stamp was found
 
         # Iterate through all time stamps
@@ -233,6 +232,8 @@ class Movement_Manager:
         # Excaption handeling
         if not time_stamp_found:
             raise Exception(f"No movement found for this time.")
+        
+        current_movement: Movement = self.movements[index]                              # Get current movement
 
         time_in_movement = current_time - self.time_stamps[index]                       # Compute the time in this movement
 
@@ -240,12 +241,11 @@ class Movement_Manager:
         if time_in_movement < 0:
             raise Exception(f"Error: Current time is negative.")
         
-        current_movement: Movement = self.movements[index]                              # Get current movement
-
+        current_index = current_movement.line_index
         current_position_linear_axes = current_movement.get_position_linear_axes_in_movement(time_in_movement)  # Get position
 
-        return current_position_linear_axes
-    
+        return current_index, current_position_linear_axes
+ 
     # Method to print the info of the movement manager with all movements
     def print_info(self):
         print(f"total_time: {self.expected_time_total}")

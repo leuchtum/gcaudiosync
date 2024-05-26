@@ -88,9 +88,9 @@ class GCodeAnalyser: # must be global object
         return expected_time_total
 
     # Method to generate the total tool path
-    def generate_total_tool_path(self, delta_time: int):
+    def generate_total_tool_path(self, fps: int):
         # Call method from the Tool_Path_Generator
-        self.Tool_Path_Generator.generate_total_tool_path(delta_time, self.expected_time_total, self.Movement_Manager)
+        self.Tool_Path_Generator.generate_total_tool_path(fps, self.Movement_Manager, self.g_code)
 
     def plot_tool_path(self):
         self.Tool_Path_Generator.plot_tool_path()
