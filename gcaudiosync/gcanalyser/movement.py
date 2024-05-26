@@ -5,7 +5,8 @@ import gcaudiosync.gcanalyser.vectorfunctions as vecfunc
 
 class Movement:
 
-    expected_time: int = 0          # Expected time for this movement
+    start_time = 0                  # Time when the movement starts
+    time: int = 0                   # Time for this movement
 
     start_vector_linear_axes    = np.array([0.0, 0.0, 0.0])         # Start vector for the linear axes
     end_vector_linear_axes      = np.array([0.0, 0.0, 0.0])         # End vector for the linear axes
@@ -16,32 +17,30 @@ class Movement:
     # Constructor
     def __init__(self,
                  line_index: int,
-                 movement: int = -1,
-                 start_position_linear_axes = np.array([0.0, 0.0, 0.0]), 
-                 end_position_linear_axes = np.array([0.0, 0.0, 0.0]),
-                 start_position_rotation_axes = np.array([0.0, 0.0, 0.0]),
-                 end_position_rotation_axes = np.array([0.0, 0.0, 0.0]),
-                 info_arc = None,
-                 feed_rate: float = 0.0):
+                 movement: int,
+                 start_time: int,
+                 start_position_linear_axes, 
+                 end_position_linear_axes,
+                 start_position_rotation_axes,
+                 end_position_rotation_axes,
+                 info_arc,
+                 feed_rate: float):
         
-        self.line_index = line_index                                # Set line index
-
-        self.movement = movement                                    # Set movement
-
-        self.start_position_linear_axes = start_position_linear_axes        # Set start position for linear axes
-        self.end_position_linear_axes  = end_position_linear_axes           # Set end position for linear axes
-
-        self.start_position_rotation_axes  = start_position_rotation_axes   # Set start position for rotation axes
-        self.end_position_rotation_axes = end_position_rotation_axes        # Set end position for rotation axes
-
+        # save all parameters
+        self.line_index = line_index
+        self.movement = movement
+        self.start_time = start_time
+        self.start_position_linear_axes = start_position_linear_axes
+        self.end_position_linear_axes  = end_position_linear_axes 
+        self.start_position_rotation_axes  = start_position_rotation_axes 
+        self.end_position_rotation_axes = end_position_rotation_axes
         self.info_arc = copy.deepcopy(info_arc)                     # all infos for an arc: 
                                                                     # [direction, I, J, K, R, #turns]
                                                                     # direction: 2 -> CW, 3 -> CCW
                                                                     # I, J, K: absolute arc center in mm
                                                                     # R: radius in mm
                                                                     # #turns: number of turns
-
-        self.feed_rate = feed_rate                          # Set feed rate
+        self.feed_rate = feed_rate
 
         # Check if movement is valid: compute optimal vectors and expected time
         if movement != -1:
@@ -155,7 +154,7 @@ class Movement:
             
             distance = math.sqrt(math.pow(arc_distance, 2) + math.pow(distance_Z, 2))
 
-        self.expected_time = int(distance / target_velocity)
+        self.time = int(distance / target_velocity)
 
     # Method to get the position of linear axes in a movement at a given time # TODO: comment
     def get_position_linear_axes_in_movement(self, 
@@ -191,7 +190,7 @@ class Movement:
 
             total_angle = angle + 360.0 * turns
 
-            portion = time_in_movement / self.expected_time
+            portion = time_in_movement / self.time
 
             current_angle = portion * total_angle
 
@@ -224,7 +223,7 @@ class Movement:
             print(f"Arc info: {self.info_arc}")
         
         print(f"feed rate [mm/ms]: {self.feed_rate}")
-        print(f"Expected time: {self.expected_time}")
+        print(f"Expected time: {self.time}")
 
 # End of class
 #####################################################################################################

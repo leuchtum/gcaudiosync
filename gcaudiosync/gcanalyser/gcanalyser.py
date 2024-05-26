@@ -14,7 +14,7 @@ import copy
 
 class GCodeAnalyser: # must be global object
     
-    expected_time_total = 0
+    total_time = 0
 
     g_code = []
 
@@ -74,19 +74,6 @@ class GCodeAnalyser: # must be global object
             # Update the current cnc status
             current_cnc_status = copy.deepcopy(current_line.line_status)
 
-        # Get expexted time total
-        self.expected_time_total = self.get_expected_time_total()
-
-    # Method to compute the expexted time total       
-    def get_expected_time_total(self):
-
-        expected_time_total:int = 0                             # Define the variable
-
-        for G_Code_Line in self.G_Code_Lines:                   # Go through all the G_Code_Lines
-            expected_time_total += G_Code_Line.expected_time        # Add time of the G_Code_Line to the total time
-
-        return expected_time_total
-
     # Method to generate the total tool path
     def generate_total_tool_path(self, fps: int):
         # Call method from the Tool_Path_Generator
@@ -95,5 +82,22 @@ class GCodeAnalyser: # must be global object
     def plot_tool_path(self):
         self.Tool_Path_Generator.plot_tool_path()
 
+    def set_start_time(self, 
+                       start_time: int):
+        pass
+
+    def set_end_time(self,
+                     start_time: int):
+        pass
+
+    def adjust_start_time_of_g_code_line(self,
+                                         line_index: int,
+                                         start_time: int):
+        pass
+
+    def adjust_end_time_of_g_code_line(self,
+                                       line_index: int,
+                                       start_time: int):
+        pass
 # End of class
 #####################################################################################################

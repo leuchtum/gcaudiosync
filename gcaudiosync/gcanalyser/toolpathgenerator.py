@@ -7,6 +7,9 @@ import matplotlib.animation as animation
 class Tool_Path_Generator:
 
     def __init__(self):
+        self.visible_tool_path_length = 200          # visible points of the tool path
+        self.string_length = 80
+
         self.active_g_code_line_index: int = 0
         self.delta_time: int = 0
         self.fps: float = 0
@@ -33,7 +36,7 @@ class Tool_Path_Generator:
         self.delta_time: float = 1000.0 / self.fps
         
         # get total time
-        self.total_time = Movement_Manager.expected_time_total
+        self.total_time = Movement_Manager.total_time
 
         # compute number of frames
         self.nof_frames = int(self.total_time / self.delta_time)
@@ -58,8 +61,6 @@ class Tool_Path_Generator:
 
     # plot tool path
     def plot_tool_path(self):
-
-        visible_tool_path_length = 200          # visible points of the tool path
         
         # set limits of axes
         min_X = min(self.tool_path_X) - 20
@@ -114,20 +115,20 @@ class Tool_Path_Generator:
 
         g_code_text_above  = ax.text(0.05, 
                                      -0.15, 
-                                     " ", 
+                                     "".ljust(self.string_length), 
                                      transform = ax.transAxes, 
                                      verticalalignment = 'top', 
                                      bbox = props_c_code_text_nonactive)
         g_code_text_active = ax.text(0.05, 
                                      -0.25, 
-                                     self.g_code[0], 
+                                     "".ljust(self.string_length), 
                                      transform = 
                                      ax.transAxes, 
                                      verticalalignment = 'top', 
                                      bbox = props_c_code_text_active)
         g_code_text_under  = ax.text(0.05, 
                                      -0.31, 
-                                     self.g_code[1] +"\n" + self.g_code[1], 
+                                     "".ljust(self.string_length), 
                                      transform = ax.transAxes, 
                                      verticalalignment = 'top', 
                                      bbox = props_c_code_text_nonactive)
@@ -136,8 +137,8 @@ class Tool_Path_Generator:
         def update(frame):
             
             # set end of visible tool path
-            if frame >= visible_tool_path_length: 
-                end_of_visible_tool_path = frame - visible_tool_path_length
+            if frame >= self.visible_tool_path_length: 
+                end_of_visible_tool_path = frame - self.visible_tool_path_length
             else:
                 end_of_visible_tool_path = 0
             
@@ -151,40 +152,42 @@ class Tool_Path_Generator:
                                    self.tool_path_Y[end_of_visible_tool_path:frame])
 
             # update info on the right of the plot
-            info_right.set_text("Time: " + str(round(self.delta_time*frame/1000, 3)) + " s\n" +
-                                "X " + str(self.tool_path_X[frame]) + "\n" +
-                                "Y " + str(self.tool_path_Y[frame]) + "\n" +
-                                "Z " + str(self.tool_path_Z[frame]))
+            time = round(self.delta_time * frame / 1000.0, 3)
+            x_position = self.tool_path_X[frame]
+            y_position = self.tool_path_Y[frame]
+            z_position = self.tool_path_Z[frame]
+            info_right_text = "Time = %05.3f s \nX = %+08.3f mm\nY = %+08.3f mm\nZ = %+08.3f mm" % (time, x_position, y_position, z_position)
+            info_right.set_text(info_right_text)
             
             # update info under the plot if active line has changed
             if self.active_g_code_line_index != self.line_index[frame]:
                 self.active_g_code_line_index = self.line_index[frame]
                 active_g_code_line = self.active_g_code_line_index
 
-                g_code_text_active.set_text(self.g_code[active_g_code_line])
+                g_code_text_active.set_text(self.g_code[active_g_code_line].ljust(self.string_length))
 
                 if active_g_code_line == 0:
                     pass
                 elif active_g_code_line == 1:
-                    g_code_text_above.set_text(" \n" +
-                                               self.g_code[active_g_code_line - 1])
-                    g_code_text_under.set_text(self.g_code[active_g_code_line + 1] + "\n" +
-                                               self.g_code[active_g_code_line + 2])
+                    g_code_text_above.set_text("".ljust(self.string_length) + "\n"  +
+                                               self.g_code[active_g_code_line - 1].ljust(self.string_length))
+                    g_code_text_under.set_text(self.g_code[active_g_code_line + 1].ljust(self.string_length) + "\n" +
+                                               self.g_code[active_g_code_line + 2].ljust(self.string_length))
                 elif active_g_code_line == len(self.g_code) - 2:
-                    g_code_text_above.set_text(self.g_code[active_g_code_line - 2] + "\n" +
-                                               self.g_code[active_g_code_line - 1])
-                    g_code_text_under.set_text(self.g_code[active_g_code_line + 1] + "\n" +
-                                               " ")
+                    g_code_text_above.set_text(self.g_code[active_g_code_line - 2].ljust(self.string_length) + "\n" +
+                                               self.g_code[active_g_code_line - 1].ljust(self.string_length))
+                    g_code_text_under.set_text(self.g_code[active_g_code_line + 1].ljust(self.string_length) + "\n" +
+                                               "".ljust(self.string_length))
                 elif active_g_code_line == len(self.g_code) - 1:
-                    g_code_text_above.set_text(" \n"+
-                                               self.g_code[active_g_code_line-1])
-                    g_code_text_under.set_text(" \n" +
-                                               " ")
+                    g_code_text_above.set_text("".ljust(self.string_length) + "\n"+
+                                               self.g_code[active_g_code_line-1].ljust(self.string_length))
+                    g_code_text_under.set_text("".ljust(self.string_length) + "\n" +
+                                               "".ljust(self.string_length))
                 else:
-                    g_code_text_above.set_text(self.g_code[active_g_code_line-2] + " \n"+
-                                               self.g_code[active_g_code_line-1])
-                    g_code_text_under.set_text(self.g_code[active_g_code_line + 1] + "\n" +
-                                               self.g_code[active_g_code_line + 2])
+                    g_code_text_above.set_text(self.g_code[active_g_code_line-2].ljust(self.string_length) + " \n"+
+                                               self.g_code[active_g_code_line-1].ljust(self.string_length))
+                    g_code_text_under.set_text(self.g_code[active_g_code_line + 1].ljust(self.string_length) + "\n" +
+                                               self.g_code[active_g_code_line + 2].ljust(self.string_length))
 
             return tuple([tool_path]) + tuple([info_right])
 

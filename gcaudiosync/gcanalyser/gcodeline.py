@@ -18,7 +18,7 @@ import gcaudiosync.gcanalyser.vectorfunctions as vecfunc
 class G_Code_Line:
 
     important: bool         = False     # Is this line important for the visualisation: True or False
-    expected_time: int      = 0         # Expexted time in ms
+    #time: int               = 0         # Expexted time in ms
     indices_of_movements    = []        # Indices of the movements at the Movement_Manager
 
     # Constructor
@@ -125,7 +125,7 @@ class G_Code_Line:
                 print(f"gcodeline found this commmand: {command} in line {self.index+1}. no action defined.")  # print info
         
         self.indices_of_movements = Movement_Manager.get_indices_of_movements_for_gcode_line(self.index)   # Get movement indices 
-        self.expected_time = Movement_Manager.get_expected_time_of_gcode_line(self.index)                 # Get expected time
+        #self.time = Movement_Manager.get_expected_time_of_gcode_line(self.index)                 # Get expected time
 
     #################################################################################################
     # Methods
