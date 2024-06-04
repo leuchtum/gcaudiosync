@@ -1,6 +1,6 @@
 import numpy as np
 
-class Cooling_Manager:
+class CoolingManager:
 
     # counter = 0
     cooling = [np.array([0, 0, 0])]        # index_start, index_end, cooling_on

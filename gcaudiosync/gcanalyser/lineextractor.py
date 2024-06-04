@@ -1,6 +1,6 @@
 from gcaudiosync.gcanalyser.stringfunctions import *
 
-class Line_Extractor:   
+class LineExtractor:   
     
     # Constructor
     def __init__(self):

@@ -1,14 +1,17 @@
 import numpy as np
 
-from gcaudiosync.gcanalyser.lineextractor import Line_Extractor
+from gcaudiosync.gcanalyser.lineextractor import LineExtractor
 from gcaudiosync.gcanalyser.filefunctions import *
+from gcaudiosync.gcanalyser.linearaxes import LinearAxes
+from gcaudiosync.gcanalyser.rotationaxes import RotationAxes
+from gcaudiosync.gcanalyser.arcinformation import ArcInformation
 
-class CNC_Parameter:
+class CNCParameter:
     
     # Machine parameter
-    START_POSITION_LINEAR_AXES          = np.array([100.0, 100.0, 100.0])
-    START_POSITION_ROTATION_AXES        = np.array([0.0, 0.0, 0.0])
-    TOOL_CHANGE_POSITION_LINEAR_AXES    = np.array([100.0, 100.0, 100.0])
+    START_POSITION_LINEAR_AXES          = LinearAxes(100.0, 100.0, 100.0)
+    START_POSITION_ROTATION_AXES        = RotationAxes()
+    TOOL_CHANGE_POSITION_LINEAR_AXES    = LinearAxes(100.0, 100.0, 100.0)
 
     S_IS_ABSOLUTE: bool = True      # True if S value is absolute
 
@@ -41,7 +44,7 @@ class CNC_Parameter:
         parameter: str = read_file(parameter_src)    
 
         # Make an Extractor
-        Extractor: Line_Extractor = Line_Extractor()
+        Extractor: LineExtractor = LineExtractor()
 
         # No src for cnc-parameter given
         if len(parameter) == 0:
@@ -73,17 +76,17 @@ class CNC_Parameter:
                             if value == "0":            # 1 is default
                                 self.S_IS_ABSOLUTE = False
                         case "START_POSITION_X":
-                            self.START_POSITION_LINEAR_AXES[0] = float(value)
+                            self.START_POSITION_LINEAR_AXES.X = float(value)
                         case "START_POSITION_Y":
-                            self.START_POSITION_LINEAR_AXES[1] = float(value)
+                            self.START_POSITION_LINEAR_AXES.Y = float(value)
                         case "START_POSITION_Z":
-                            self.START_POSITION_LINEAR_AXES[2] = float(value)
+                            self.START_POSITION_LINEAR_AXES.Z = float(value)
                         case "TOOL_CHANGE_POSITION_X":
-                            self.TOOL_CHANGE_POSITION_LINEAR_AXES[0] = float(value)
+                            self.TOOL_CHANGE_POSITION_LINEAR_AXES.X = float(value)
                         case "TOOL_CHANGE_POSITION_Y":
-                            self.TOOL_CHANGE_POSITION_LINEAR_AXES[1] = float(value)
+                            self.TOOL_CHANGE_POSITION_LINEAR_AXES.Y = float(value)
                         case "TOOL_CHANGE_POSITION_Z":
-                            self.TOOL_CHANGE_POSITION_LINEAR_AXES[2] = float(value)
+                            self.TOOL_CHANGE_POSITION_LINEAR_AXES.Z = float(value)
                 elif hasattr(self, parameter):          # Handle number parameter 
                     setattr(self, parameter, int(value))
                 else:                                   # Handle situation that the parameter does not exist

@@ -1,2 +1,4 @@
+import numpy as np
 
-print(len("".ljust(10)))
+x = np.zeros(3)
+print(type(x))

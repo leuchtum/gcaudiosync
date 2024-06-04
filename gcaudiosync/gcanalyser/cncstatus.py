@@ -1,21 +1,19 @@
 import numpy as np
 import copy
 
-from gcaudiosync.gcanalyser.cncparameter import CNC_Parameter
+from gcaudiosync.gcanalyser.cncparameter import CNCParameter
+from gcaudiosync.gcanalyser.linearaxes import LinearAxes
+from gcaudiosync.gcanalyser.rotationaxes import RotationAxes
+from gcaudiosync.gcanalyser.arcinformation import ArcInformation
 
-class CNC_Status:
+class CNCStatus:
 
     active_movement: int    = 0     # active movement: 0: rapid linear, 1: linear, 2: arc CW, 3: arc CCW
     active_tool: int        = 0     # number of the active tool
 
-    position_linear_axes = np.array([0.0, 0.0, 0.0])        # absolute positions for X, Y, Z in mm
-    position_rotation_axes = np.array([0.0, 0.0, 0.0])      # absolute positions for A, B, C in mm
-    info_arc = np.array([2, 0.0, 0.0, 0.0, 0.0, 0])         # all infos for an arc: 
-                                                            # [direction, I, J, K, R, #turns]
-                                                            # direction: 2 -> CW, 3 -> CCW
-                                                            # I, J, K: absolute arc center in mm
-                                                            # R: radius in mm
-                                                            # #turns: number of turns
+    position_linear_axes = LinearAxes()            # absolute positions for X, Y, Z in mm
+    position_rotation_axes = RotationAxes()        # absolute positions for A, B, C in mm
+    arc_information = ArcInformation()             # all infos for an arc
 
     active_plane: int           = 17        # active plane: XY -> 17, XZ -> 18, YZ -> 19
 
@@ -42,23 +40,22 @@ class CNC_Status:
     # Constructor
     def __init__(self, 
                  start_position = False, 
-                 CNC_Parameter: CNC_Parameter = None):
+                 CNC_Parameter: CNCParameter = None):
 
         # change position if this is the first cnc-status for a g-code
         if start_position:
-            self.position_linear_axes = np.copy(CNC_Parameter.START_POSITION_LINEAR_AXES)
-            self.position_rotation_axes = np.copy(CNC_Parameter.START_POSITION_ROTATION_AXES)
+            self.position_linear_axes = copy.deepcopy(CNC_Parameter.START_POSITION_LINEAR_AXES)
+            self.position_rotation_axes = copy.deepcopy(CNC_Parameter.START_POSITION_ROTATION_AXES)
 
     # end of class CNC_Status
 ###################################################################################################
 # Functions related to CNC_Status
 
 # return a copy  of a CNC_Status with all the important information copied for the next line in the g-code
-def copy_CNC_Status(Source: CNC_Status):
+def copy_CNC_Status(Source: CNCStatus):
 
     new_CNC_Status = copy.deepcopy(Source)
 
     new_CNC_Status.exact_stop = new_CNC_Status.G_61_active
-    new_CNC_Status.info_arc[5] = 0
 
     return new_CNC_Status

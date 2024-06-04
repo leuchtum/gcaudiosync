@@ -1,12 +1,17 @@
 import copy
 
 from gcaudiosync.gcanalyser.movement import Movement
-from gcaudiosync.gcanalyser.cncparameter import CNC_Parameter
+from gcaudiosync.gcanalyser.cncparameter import CNCParameter
 import gcaudiosync.gcanalyser.vectorfunctions as vecfunc
 
-from gcaudiosync.gcanalyser.cncstatus import CNC_Status
+from gcaudiosync.gcanalyser.cncstatus import CNCStatus
+from gcaudiosync.gcanalyser.toolpathinformation import ToolPathInformation
+from gcaudiosync.gcanalyser.linearaxes import LinearAxes
+from gcaudiosync.gcanalyser.rotationaxes import RotationAxes
+from gcaudiosync.gcanalyser.arcinformation import ArcInformation
 
-class Movement_Manager:
+
+class MovementManager:
 
     start_time : int                = 0         # Time for the start
     total_time: int                 = 0         # Expected total time
@@ -15,18 +20,18 @@ class Movement_Manager:
 
     # Constructor
     def __init__(self, 
-                 CNC_Parameter: CNC_Parameter, 
-                 first_line_status: CNC_Status):
+                 CNC_Parameter: CNCParameter, 
+                 first_line_status: CNCStatus):
         
         self.CNC_Parameter = CNC_Parameter          # Get cnc parameter
 
         first_movement = Movement(line_index = -1,        # Create first movement
-                                  movement = -1, 
+                                  movement_type = -1, 
                                   start_position_linear_axes    = first_line_status.position_linear_axes, 
                                   end_position_linear_axes      = first_line_status.position_linear_axes,
                                   start_position_rotation_axes  = first_line_status.position_rotation_axes,
                                   end_position_rotation_axes    = first_line_status.position_rotation_axes, 
-                                  info_arc = None,
+                                  arc_information = None,
                                   feed_rate = 0.0)
         
         first_movement.time = 0                                 # Time for first movement
@@ -39,8 +44,8 @@ class Movement_Manager:
     # Method for linear movement
     def add_linear_movement(self, 
                             line_index: int, 
-                            last_line_status: CNC_Status,
-                            current_line_status: CNC_Status):
+                            last_line_status: CNCStatus,
+                            current_line_status: CNCStatus):
 
         # Check end of program
         if self.end_of_program_reached:
@@ -48,12 +53,12 @@ class Movement_Manager:
                 
         # Create new movement
         new_movement = Movement(line_index = line_index, 
-                                movement = current_line_status.active_movement, 
+                                movement_type = current_line_status.active_movement, 
                                 start_position_linear_axes = last_line_status.position_linear_axes, 
                                 end_position_linear_axes = current_line_status.position_linear_axes,
                                 start_position_rotation_axes = last_line_status.position_rotation_axes,
                                 end_position_rotation_axes = current_line_status.position_rotation_axes, 
-                                info_arc = None,
+                                arc_information = None,
                                 feed_rate = current_line_status.feed_rate)
         
         # Add exact stop if needed
@@ -65,8 +70,8 @@ class Movement_Manager:
     # Method for arc movement
     def add_arc_movement(self, 
                          line_index: int, 
-                         last_line_status: CNC_Status,
-                         current_line_status: CNC_Status):
+                         last_line_status: CNCStatus,
+                         current_line_status: CNCStatus):
 
         # Check end of program
         if self.end_of_program_reached:
@@ -74,12 +79,12 @@ class Movement_Manager:
                 
         # Create new movement
         new_movement = Movement(line_index = line_index, 
-                                movement = current_line_status.active_movement,
+                                movement_type = current_line_status.active_movement,
                                 start_position_linear_axes = last_line_status.position_linear_axes, 
                                 end_position_linear_axes = current_line_status.position_linear_axes,
                                 start_position_rotation_axes = last_line_status.position_rotation_axes,
                                 end_position_rotation_axes = current_line_status.position_rotation_axes, 
-                                info_arc = current_line_status.info_arc,
+                                arc_information = current_line_status.arc_information,
                                 feed_rate = current_line_status.feed_rate)
         
         # Add exact stop if needed
@@ -98,19 +103,19 @@ class Movement_Manager:
         
         last_movement: Movement = copy.deepcopy(self.movements[-1])         # Get last movement
 
-        current_position_linear_axes = last_movement.end_position_linear_axes       # Get current position linear axes
-        current_position_rotation_axes = last_movement.end_position_rotation_axes   # Get current position rotation axes
+        current_position_linear_axes = last_movement.end_position_linear_axes.get_as_array()        # Get current position linear axes
+        current_position_rotation_axes = last_movement.end_position_rotation_axes.get_as_array()    # Get current position rotation axes
 
-        tool_change_position_linear = self.CNC_Parameter.TOOL_CHANGE_POSITION_LINEAR_AXES   # Get tool change position
+        tool_change_position_linear = self.CNC_Parameter.TOOL_CHANGE_POSITION_LINEAR_AXES.get_as_array()    # Get tool change position
 
         # Create movement to tool
         movement_get_tool = Movement(line_index = line_index, 
-                                     movement = 0, 
+                                     movement_type = 0, 
                                      start_position_linear_axes = current_position_linear_axes, 
                                      end_position_linear_axes = tool_change_position_linear,
                                      start_position_rotation_axes = current_position_rotation_axes,
                                      end_position_rotation_axes = current_position_rotation_axes, 
-                                     info_arc = None,
+                                     arc_information = None,
                                      feed_rate = self.CNC_Parameter.F_MAX)
         
         movement_get_tool.do_exact_stop()   # Add exact stop
@@ -131,12 +136,12 @@ class Movement_Manager:
 
         # create new movement
         new_movement = Movement(line_index = line_index, 
-                                movement = -1, 
-                                start_position_linear_axes = last_movement.end_position_linear_axes, 
-                                end_position_linear_axes = last_movement.end_position_linear_axes,
-                                start_position_rotation_axes = last_movement.end_position_linear_axes,
-                                end_position_rotation_axes = last_movement.end_position_rotation_axes, 
-                                info_arc = None,
+                                movement_type = -1, 
+                                start_position_linear_axes = copy.deepcopy(last_movement.end_position_linear_axes), 
+                                end_position_linear_axes = copy.deepcopy(last_movement.end_position_linear_axes),
+                                start_position_rotation_axes = copy.deepcopy(last_movement.end_position_linear_axes),
+                                end_position_rotation_axes = copy.deepcopy(last_movement.end_position_rotation_axes), 
+                                arc_information = None,
                                 feed_rate = 0)
         
         # Check if unknown pause time
@@ -154,7 +159,7 @@ class Movement_Manager:
                            line_index: int):
         
         self.end_of_program_reached = True  # Set variable
-        self.add_pause(line_index, 1)       # Add final pause
+        self.add_pause(line_index, 0)       # Add final pause
 
     # Method to get expected time of one line
     def get_expected_time_of_gcode_line(self, 
@@ -188,8 +193,10 @@ class Movement_Manager:
 
         return indices
 
-    def get_plot_info(self, 
-                      current_time: int):
+    def get_tool_path_information(self, 
+                                  current_time: int):
+
+        tool_path_information = ToolPathInformation()
 
         time_stamp_found = False                            # Variable to check if time stamp was found
 
@@ -213,10 +220,15 @@ class Movement_Manager:
         if time_in_movement < 0:
             raise Exception(f"Error: Current time is negative.")
         
-        current_index = movement.line_index
-        current_position_linear_axes = movement.get_position_linear_axes_in_movement(time_in_movement)  # Get position
+        current__line_index = movement.line_index
+        tool_path_information.line_index = current__line_index
 
-        return current_index, current_position_linear_axes
+        current_position_linear_axes = movement.get_position_linear_axes_in_movement(time_in_movement)  # Get position
+        tool_path_information.position_linear_axes = current_position_linear_axes
+
+        tool_path_information.movement = movement.movement_type
+
+        return tool_path_information
  
     # Method to print the info of the movement manager with all movements
     def print_info(self):
@@ -246,7 +258,8 @@ class Movement_Manager:
 
     def set_start_time_and_total_time(self, 
                                       new_start_time: int,
-                                      new_total_time: int):
+                                      new_total_time: int,      # time between start time end time
+                                      ): 
         
         if self.total_time <= 0:
             raise Exception("Something went wrong: expected total time <= 0")
@@ -263,6 +276,9 @@ class Movement_Manager:
         self.movements[0].start_time = 0
         self.movements[0].time = offset
 
+        self.movements[0].is_adjustable = False
+        self.movements[-1].is_adjustable = False
+
     def adjust_start_time_of_g_code_line(self,
                                          line_index,
                                          new_start_time):
@@ -271,7 +287,30 @@ class Movement_Manager:
             if movement.line_index >= line_index:
                 important_movement_index = movement_index
                 break
+
+        if self.movements[important_movement_index].start_time_is_adjustable:
+            self.movements[important_movement_index].start_time_is_adjustable = False
+        else:
+            pass    # should we do something in this case?
+
+        non_adjustable_index_before = 0
+        for movement_index in range(important_movement_index)[::-1]:
+            if not self.movements[movement_index].start_time_is_adjustable:
+                non_adjustable_index_before = movement_index
+                break
         
+        non_adjustable_index_after = len(self.movements) - 1
+        for movement_index in range(important_movement_index + 1, len(self.movements)):
+            if not self.movements[movement_index].start_time_is_adjustable:
+                non_adjustable_index_after = movement_index
+
+        non_adjustable_movement_before = self.movements[non_adjustable_index_before]
+        non_adjustable_movement_after = self.movements[non_adjustable_index_after]
+
+        time_before_movement = movement.start_time - non_adjustable_movement_before.start_time
+        time_after_movement = non_adjustable_movement_after.start_time - time_before_movement
+
+        # TODO
         time_before_movement = movement.start_time - self.start_time
         time_after_movement = self.total_time - time_before_movement
 
@@ -305,6 +344,13 @@ class Movement_Manager:
         new_movement_time = self.total_time + offset - new_movement_start_time
         self.movements[-1].start_time = new_movement_start_time
         self.movements[-1].time = new_movement_time
+
+    def adjust_end_time_of_g_code_line(self,
+                                       line_index,
+                                       new_end_time):
+        self.adjust_start_time_of_g_code_line(line_index + 1,
+                                              new_end_time)
+
 
     def get_time_stamps(self):
         time_stamps = []

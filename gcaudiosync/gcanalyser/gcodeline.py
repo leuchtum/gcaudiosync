@@ -1,21 +1,22 @@
-import numpy as np
 import copy
 import math
 
-from gcaudiosync.gcanalyser.cncstatus import CNC_Status, copy_CNC_Status
-from gcaudiosync.gcanalyser.lineextractor import Line_Extractor
-from gcaudiosync.gcanalyser.cncparameter import CNC_Parameter
-from gcaudiosync.gcanalyser.pausemanager import Pause_Manager
-from gcaudiosync.gcanalyser.frequencymanager import Frequency_Manager
-from gcaudiosync.gcanalyser.toolchangemanager import Tool_Change_Manager
-from gcaudiosync.gcanalyser.coolingmanager import Cooling_Manager
-from gcaudiosync.gcanalyser.movementmanager import Movement_Manager
-# from gcaudiosync.gcanalyser.movement import Movement
+import numpy as np
+
 import gcaudiosync.gcanalyser.vectorfunctions as vecfunc
+
+from gcaudiosync.gcanalyser.cncparameter import CNCParameter
+from gcaudiosync.gcanalyser.cncstatus import CNCStatus, copy_CNC_Status
+from gcaudiosync.gcanalyser.coolingmanager import CoolingManager
+from gcaudiosync.gcanalyser.frequencymanager import FrequencyManager
+from gcaudiosync.gcanalyser.lineextractor import LineExtractor
+from gcaudiosync.gcanalyser.movementmanager import MovementManager
+from gcaudiosync.gcanalyser.pausemanager import PauseManager
+from gcaudiosync.gcanalyser.toolchangemanager import ToolChangeManager
 
 # Source for the g-code interpretation: https://linuxcnc.org/docs/html/gcode/g-code.html
 
-class G_Code_Line:
+class GCodeLine:
 
     important: bool         = False     # Is this line important for the visualisation: True or False
     #time: int               = 0         # Expexted time in ms
@@ -24,15 +25,15 @@ class G_Code_Line:
     # Constructor
     def __init__(self, 
                  line_index: int,
-                 current_status: CNC_Status, 
+                 current_status: CNCStatus, 
                  line: str, 
-                 Line_Extractor: Line_Extractor,
-                 CNC_Parameter:CNC_Parameter,
-                 Frequency_Manager: Frequency_Manager,
-                 Pause_Manager: Pause_Manager,
-                 Tool_Change_Manager: Tool_Change_Manager,
-                 Cooling_Manager: Cooling_Manager,
-                 Movement_Manager: Movement_Manager):
+                 Line_Extractor: LineExtractor,
+                 CNC_Parameter:CNCParameter,
+                 Frequency_Manager: FrequencyManager,
+                 Pause_Manager: PauseManager,
+                 Tool_Change_Manager: ToolChangeManager,
+                 Cooling_Manager: CoolingManager,
+                 Movement_Manager: MovementManager):
 
         self.index: int     = line_index    # Index of this line in the g-code
 
@@ -40,8 +41,8 @@ class G_Code_Line:
 
         line_info: list     = Line_Extractor.extract(line = line)          # Extract info from line
 
-        self.last_line_status: CNC_Status   = copy.deepcopy(current_status)     # Save the cnc-status of the last line
-        self.line_status: CNC_Status        = copy_CNC_Status(current_status)   # Create a new cnc-status for this line
+        self.last_line_status: CNCStatus   = copy.deepcopy(current_status)     # Save the cnc-status of the last line
+        self.line_status: CNCStatus        = copy_CNC_Status(current_status)   # Create a new cnc-status for this line
 
         # Priorisation so the movements have all important infos
         prio_G_numbers = [9]                                        # Numbers of proi G commands
@@ -134,14 +135,14 @@ class G_Code_Line:
     def handle_G(self, 
                  number: float, 
                  line_info: list, 
-                 Pause_Manager: Pause_Manager,
-                 Movement_Manager: Movement_Manager):
+                 Pause_Manager: PauseManager,
+                 Movement_Manager: MovementManager):
 
         # Handle G commands
         match number:
             case 0:                             # Rapid linear movement
                 self.line_status.active_movement = number                                   # Save movement
-                self.line_status.feed_rate = CNC_Parameter.F_MAX / 60000.0                  # Set feed rate
+                self.line_status.feed_rate = CNCParameter.F_MAX / 60000.0                  # Set feed rate
                 self.handle_linear_movement(line_info, Movement_Manager = Movement_Manager) # Call method to handle the linear movement
             case 1:                             # Linear movement   
                 self.line_status.active_movement = number                                   # Save movement
@@ -149,7 +150,7 @@ class G_Code_Line:
                 self.handle_linear_movement(line_info, Movement_Manager = Movement_Manager) # Call method to handle the linear movement
             case 2 | 3:                         # Arc movement CW, Arc movement CCW
                 self.line_status.active_movement = number                                   # Save movement
-                self.line_status.info_arc[0] = number                                       # Save movement in arc info
+                self.line_status.arc_information.direction = number                         # Save movement in arc info
                 self.line_status.feed_rate = self.line_status.F_value / 60000.0             # Set feed rate
                 self.handle_arc_movement(line_info, Movement_Manager = Movement_Manager)    # Call method to handle the arc movement
             case 4:                             # Dwell
@@ -184,12 +185,12 @@ class G_Code_Line:
     def handle_M(self, 
                  number: float, 
                  line_info: list, 
-                 CNC_Parameter: CNC_Parameter, 
-                 Frequency_Manager: Frequency_Manager,
-                 Tool_Change_Manager: Tool_Change_Manager,
-                 Pause_Manager: Pause_Manager,
-                 Cooling_Manager: Cooling_Manager,
-                 Movement_Manager: Movement_Manager):
+                 CNC_Parameter: CNCParameter, 
+                 Frequency_Manager: FrequencyManager,
+                 Tool_Change_Manager: ToolChangeManager,
+                 Pause_Manager: PauseManager,
+                 Cooling_Manager: CoolingManager,
+                 Movement_Manager: MovementManager):
 
         # Handle M command, self explaining
         match number:
@@ -220,7 +221,7 @@ class G_Code_Line:
     # Method for a movement without a G command
     def handle_movement_without_G(self, 
                                   line_info: list, 
-                                  Movement_Manager: Movement_Manager):
+                                  Movement_Manager: MovementManager):
         
         movement = self.line_status.active_movement     # Get active movement
 
@@ -237,7 +238,7 @@ class G_Code_Line:
     # Method for new F value
     def handle_F(self, 
                  number: float,
-                 CNC_Parameter: CNC_Parameter):
+                 CNC_Parameter: CNCParameter):
         
         # Check number
         if number < 0:
@@ -251,9 +252,9 @@ class G_Code_Line:
     # method for new S value
     def handle_S(self, 
                  number: float, 
-                 CNC_Parameter: CNC_Parameter, 
-                 Movement_Manager: Movement_Manager,
-                 Frequency_Manager: Frequency_Manager):
+                 CNC_Parameter: CNCParameter, 
+                 Movement_Manager: MovementManager,
+                 Frequency_Manager: FrequencyManager):
         
         # Check input
         if number < 0:
@@ -279,7 +280,7 @@ class G_Code_Line:
     # Method for linear movement
     def handle_linear_movement(self, 
                                line_info: list, 
-                               Movement_Manager: Movement_Manager):
+                               Movement_Manager: MovementManager):
 
         self.important = True                           # Set importanve flag
 
@@ -298,19 +299,19 @@ class G_Code_Line:
                 match command:
                     case "X":
                         if self.line_status.absolute_position:
-                            self.line_status.position_linear_axes[0] = float(number)
+                            self.line_status.position_linear_axes.X = float(number)
                         else:
-                            self.line_status.position_linear_axes[0] += float(number)
+                            self.line_status.position_linear_axes.X += float(number)
                     case "Y":
                         if self.line_status.absolute_position:
-                            self.line_status.position_linear_axes[1] = float(number)
+                            self.line_status.position_linear_axes.Y = float(number)
                         else:
-                            self.line_status.position_linear_axes[1] += float(number)
+                            self.line_status.position_linear_axes.Y += float(number)
                     case "Z":
                         if self.line_status.absolute_position:
-                            self.line_status.position_linear_axes[2] = float(number)
+                            self.line_status.position_linear_axes.Z = float(number)
                         else:
-                            self.line_status.position_linear_axes[2] += float(number)
+                            self.line_status.position_linear_axes.Z += float(number)
                     case "A":
                         if self.line_status.absolute_position:
                             self.line_status.position_rotation_axes[0] = float(number)
@@ -336,15 +337,15 @@ class G_Code_Line:
     # Method for arc movement
     def handle_arc_movement(self, 
                             line_info: list, 
-                            Movement_Manager: Movement_Manager):
+                            Movement_Manager: MovementManager):
         
         self.important = True       # Set importanve flag
 
         info_index = 0              # Define index for line_info
 
-        self.line_status.info_arc[1] = self.line_status.position_linear_axes[0]     # Set I to X value
-        self.line_status.info_arc[2] = self.line_status.position_linear_axes[1]     # Set J to Y value
-        self.line_status.info_arc[3] = self.line_status.position_linear_axes[2]     # Set K to Z value
+        self.line_status.arc_information.I = self.line_status.position_linear_axes.X      # Set I to X value
+        self.line_status.arc_information.J = self.line_status.position_linear_axes.Y      # Set J to Y value
+        self.line_status.arc_information.K = self.line_status.position_linear_axes.Z      # Set K to Z value
 
         # Go through line info until everything was seen
         while info_index < len(line_info):
@@ -362,19 +363,19 @@ class G_Code_Line:
                 match command:
                     case "X":
                         if self.line_status.absolute_position:
-                            self.line_status.position_linear_axes[0] = float(number)
+                            self.line_status.position_linear_axes.X = float(number)
                         else:
-                            self.line_status.position_linear_axes[0] += float(number)
+                            self.line_status.position_linear_axes.X += float(number)
                     case "Y":
                         if self.line_status.absolute_position:
-                            self.line_status.position_linear_axes[1] = float(number)
+                            self.line_status.position_linear_axes.Y = float(number)
                         else:
-                            self.line_status.position_linear_axes[1] += float(number)
+                            self.line_status.position_linear_axes.Y += float(number)
                     case "Z":
                         if self.line_status.absolute_position:
-                            self.line_status.position_linear_axes[2] = float(number)
+                            self.line_status.position_linear_axes.Z = float(number)
                         else:
-                            self.line_status.position_linear_axes[2] += float(number)
+                            self.line_status.position_linear_axes.Z += float(number)
                     case "A":
                         if self.line_status.absolute_position:
                             self.line_status.position_rotation_axes[0] = float(number)
@@ -392,25 +393,22 @@ class G_Code_Line:
                             self.line_status.position_rotation_axes[2] += float(number)
                     case "I":
                         if self.line_status.absolute_arc_center:
-                            self.line_status.info_arc[1] = float(number)
+                            self.line_status.arc_information.I = float(number)
                         else:
-                            self.line_status.info_arc[1] +=  float(number)
+                            self.line_status.arc_information.I +=  float(number)
                     case "J":
                         if self.line_status.absolute_arc_center:
-                            self.line_status.info_arc[2] = float(number)
+                            self.line_status.arc_information.J = float(number)
                         else:
-                            self.line_status.info_arc[2] += float(number)
+                            self.line_status.arc_information.J += float(number)
                     case "K":
                         if self.line_status.absolute_arc_center:
-                            self.line_status.info_arc[3] = float(number)
+                            self.line_status.arc_information.K = float(number)
                         else:
-                            self.line_status.info_arc[3] += float(number)
+                            self.line_status.arc_information.K += float(number)
                     case "R":
                         radius_given = True
-                        self.line_status.info_arc[4] = float(number)
-                    case "P":
-                        self.line_status.info_arc[5] = float(number)
-
+                        self.line_status.arc_information.radius = float(number)
             else:                           # Command is not useful for this Method
                 info_index += 1                 # Iterate info index
 
@@ -427,8 +425,8 @@ class G_Code_Line:
     # Method for dwell time
     def handle_g04(self, 
                    line_info: list, 
-                   Pause_Manager: Pause_Manager,
-                   Movement_Manager: Movement_Manager):
+                   Pause_Manager: PauseManager,
+                   Movement_Manager: MovementManager):
         
         self.important = True                   # Set importanve flag
 
@@ -457,24 +455,24 @@ class G_Code_Line:
 
     # Method for abort command
     def handle_abort(self, 
-                     Pause_Manager: Pause_Manager, 
-                     Movement_Manager: Movement_Manager):
+                     Pause_Manager: PauseManager, 
+                     Movement_Manager: MovementManager):
         self.important = True                               # Set importance flag
         Pause_Manager.new_pause(self.index, 0)              # Inform pause manager
         Movement_Manager.add_pause(self.index, -1)          # Inform movement manager
 
     # Method for quit command
     def handle_quit(self, 
-                    Pause_Manager: Pause_Manager, 
-                    Movement_Manager: Movement_Manager):
+                    Pause_Manager: PauseManager, 
+                    Movement_Manager: MovementManager):
         self.important = True                       # Set importanve flag
         Pause_Manager.new_pause(self.index, 1)      # Inform pause manager
         Movement_Manager.add_pause(self.index, -1)  # Inform movement manager
     
     # Method for progabort command
     def handle_progabort(self, 
-                         Pause_Manager: Pause_Manager, 
-                         Movement_Manager: Movement_Manager):
+                         Pause_Manager: PauseManager, 
+                         Movement_Manager: MovementManager):
         self.important = True                           # Set importace flag
         Pause_Manager.new_pause(self.index, 2)          # Inform pause manager
         Movement_Manager.add_pause(self.index, -1)      # Inform movement manager
@@ -482,7 +480,7 @@ class G_Code_Line:
     # Method for a spindle operation
     def handle_spindle_operation(self, 
                                  command: str, 
-                                 Frequency_Manager: Frequency_Manager):
+                                 Frequency_Manager: FrequencyManager):
         
         self.important = True                                       # Set importange flag
 
@@ -498,8 +496,8 @@ class G_Code_Line:
     # Method for a tool change
     def handle_tool_change(self, 
                            line_info: list, 
-                           Tool_Change_Manager: Tool_Change_Manager,
-                           Movement_Manager = Movement_Manager):
+                           Tool_Change_Manager: ToolChangeManager,
+                           Movement_Manager = MovementManager):
         
         self.important = True                                           # Set importance flag
 
@@ -524,7 +522,7 @@ class G_Code_Line:
     # Method for a cooling operation 
     def handle_cooling_operation(self, 
                                  command: str, 
-                                 Cooling_Manager: Cooling_Manager):
+                                 Cooling_Manager: CoolingManager):
         
         self.important = True                                       # Set importance flag
 
@@ -538,8 +536,8 @@ class G_Code_Line:
     
     # Method for end of program command
     def handle_end_of_program(self, 
-                              Frequency_Manager: Frequency_Manager, 
-                              Movement_Manager: Movement_Manager):
+                              Frequency_Manager: FrequencyManager, 
+                              Movement_Manager: MovementManager):
         
         self.important = True                                       # Set importance flag
         
@@ -552,13 +550,13 @@ class G_Code_Line:
     # Method to compute the arc center
     def compute_arc_center(self):
 
-        movement: int = self.line_status.info_arc[0]                            # Get the movement, 2: CW, 3: CCW
-        start_position = np.copy(self.last_line_status.position_linear_axes)    # Get the start position
-        end_position = np.copy(self.line_status.position_linear_axes)           # Get the end position
+        movement: int = self.line_status.arc_information.direction                     # Get the movement, 2: CW, 3: CCW
+        start_position = self.last_line_status.position_linear_axes.get_as_array()     # Get the start position
+        end_position = self.line_status.position_linear_axes.get_as_array()            # Get the end position
 
         mid_point = start_position + (end_position - start_position) * 0.5      # Compute the mid point between start and end position
         
-        radius = self.line_status.info_arc[4]                                   # Get the radius
+        radius = self.line_status.arc_information.radius                        # Get the radius
 
         if self.line_status.active_plane == 17:                                 # Active plane is the XY-plane
             
@@ -594,19 +592,19 @@ class G_Code_Line:
         else:                                               # Active plane is not XY-plane
             raise Exception("G02 and G03 are only available in plane 17 (XY)")
         
-        self.line_status.info_arc[1:4] = arc_center         # Set arc center
+        self.line_status.arc_information.set_arc_center(arc_center)         # Set arc center
 
     # method to compute the radius
     def compute_radius(self):
 
-        end_position = copy.deepcopy(self.line_status.position_linear_axes)     # Get end position
-        arc_center = copy.deepcopy(self.line_status.info_arc[1:4])              # Get arc center
+        end_position = self.line_status.position_linear_axes.get_as_array()         # Get end position
+        arc_center = self.line_status.arc_information.get_arc_center_as_array()     # Get arc center
 
-        if self.line_status.active_plane == 17:                                 # Check if XY-plane is active
+        if self.line_status.active_plane == 17:                                     # Check if XY-plane is active
 
-            radius = np.linalg.norm(end_position - arc_center)                  # Compute radius
+            radius = np.linalg.norm(end_position - arc_center)                      # Compute radius
 
-            self.line_status.info_arc[4] = radius                               # Set radius
+            self.line_status.arc_information.radius = radius                               # Set radius
             
         else:                                                                   # XY-plane is not active
             raise Exception("G02 and G03 are only available in plane 17 (XY)")

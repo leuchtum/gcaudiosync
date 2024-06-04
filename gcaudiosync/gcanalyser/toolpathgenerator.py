@@ -1,10 +1,11 @@
-from gcaudiosync.gcanalyser.movementmanager import Movement_Manager
+from gcaudiosync.gcanalyser.movementmanager import MovementManager
+from gcaudiosync.gcanalyser.toolpathinformation import ToolPathInformation
 
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 
-class Tool_Path_Generator:
+class ToolPathGenerator:
 
     def __init__(self):
         self.visible_tool_path_length = 200          # visible points of the tool path
@@ -25,7 +26,7 @@ class Tool_Path_Generator:
     # generate all the data needed for the toolpath
     def generate_total_tool_path(self, 
                                  fps: int, 
-                                 Movement_Manager: Movement_Manager, 
+                                 Movement_Manager: MovementManager, 
                                  g_code: list):
 
         # save parameters
@@ -47,17 +48,19 @@ class Tool_Path_Generator:
             # compute current time
             current_time = time_step * self.delta_time
 
-            # get current index and position
-            current_index, current_position = Movement_Manager.get_plot_info(current_time)
+            # get tool path information
+            tool_path_information = Movement_Manager.get_tool_path_information(current_time)
+            current_line_index = tool_path_information.line_index
+            current_position_linear_axes = tool_path_information.position_linear_axes
+            current_movement = tool_path_information.movement   # TODO
 
-            #current_index = Movement_Manager.get_line_index_at_time(current_time)
-            self.line_index.append(current_index)
+            self.line_index.append(current_line_index)
             
             # append the new information
             self.tool_path_time.append(current_time)
-            self.tool_path_X.append(current_position[0])
-            self.tool_path_Y.append(current_position[1])
-            self.tool_path_Z.append(current_position[2])
+            self.tool_path_X.append(current_position_linear_axes[0])
+            self.tool_path_Y.append(current_position_linear_axes[1])
+            self.tool_path_Z.append(current_position_linear_axes[2])
 
     # plot tool path
     def plot_tool_path(self):

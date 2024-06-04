@@ -1,6 +1,6 @@
 import numpy as np
 
-class Tool_Change_Manager:
+class ToolChangeManager:
 
     # counter = 0
     tool_changes = []       # index, new tool number
