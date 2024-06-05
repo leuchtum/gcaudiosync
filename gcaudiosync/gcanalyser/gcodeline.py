@@ -914,6 +914,5 @@ class GCodeLine:
             case 19:
                 raise Exception(f"G02 and G03 are only available in plane 19 jet")   # TODO
 
-
 # End of class
 #####################################################################################################
