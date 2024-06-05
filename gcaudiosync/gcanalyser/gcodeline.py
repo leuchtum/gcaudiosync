@@ -617,9 +617,9 @@ class GCodeLine:
                 P_value_found = True                                        # Set flag that P value was found             
                 g_code_line_info.pop(g_code_line_info_index)                # Remove command and number from line_info
                 Pause_Manager.new_dwell(self.g_code_line_index,             # Inform pause manager
-                                        number_for_command)     
+                                        dwell_time)     
                 Movement_Manager.add_pause(self.g_code_line_index,          # Inform movement manager
-                                           number_for_command)  
+                                           dwell_time)  
                 break
                 
         # Handle Error that the P value was not found

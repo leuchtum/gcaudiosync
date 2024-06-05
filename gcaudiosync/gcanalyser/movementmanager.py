@@ -247,7 +247,7 @@ class MovementManager:
 
         # Todo: compute all the start and end vectors
 
-        time = 0
+        time: int = 0
 
         for movement in self.movements:
             movement.compute_expected_time()

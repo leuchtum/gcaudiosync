@@ -13,14 +13,14 @@ class Movement:
     start_time: int = 0             # Time when the movement starts
     time: int = 0                   # Time for this movement
 
-    start_vector_linear_axes    = np.array([0.0, 0.0, 0.0])         # Start vector for the linear axes
-    end_vector_linear_axes      = np.array([0.0, 0.0, 0.0])         # End vector for the linear axes
+    start_vector_linear_axes    = np.array([0.0, 0.0, 0.0]) # Start vector for the linear axes
+    end_vector_linear_axes      = np.array([0.0, 0.0, 0.0]) # End vector for the linear axes
 
-    start_vector_rotation_axes  = np.array([0.0, 0.0, 0.0])         # Start vector for the rotation axes
-    end_vector_rotation_axes    = np.array([0.0, 0.0, 0.0])         # End vector for the rotation axes
+    start_vector_rotation_axes  = np.array([0.0, 0.0, 0.0]) # Start vector for the rotation axes
+    end_vector_rotation_axes    = np.array([0.0, 0.0, 0.0]) # End vector for the rotation axes
 
-    start_time_is_adjustable: bool = True       # shows if the start time of this movement is adjustable
-    time_is_adjustable: bool = True             # shows if the time of this movement is adjustable
+    start_time_is_adjustable: bool = True                   # shows if the start time of this movement is adjustable
+    time_is_adjustable: bool = True                         # shows if the time of this movement is adjustable
 
     # Constructor
     def __init__(self,
