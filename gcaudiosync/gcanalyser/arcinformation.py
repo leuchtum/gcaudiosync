@@ -43,13 +43,14 @@ class ArcInformation:
     #################################################################################################
     # Methods
 
-    def get_arc_center_as_array(self):
+    def get_arc_center_as_array(self) -> np.ndarray:
         """
         Get the coordinates of the arc center as a numpy array.
 
         Returns:
             np.ndarray: An array containing the X, Y, and Z coordinates of the arc center.
         """
+
         arc_center_as_array = np.array([self.I, self.J, self.K])
         return copy.copy(arc_center_as_array)
     
@@ -60,6 +61,7 @@ class ArcInformation:
         Args:
             arc_center (np.ndarray): An array containing the X, Y, and Z coordinates of the arc center.
         """
+
         self.I = arc_center_as_array[0]
         self.J = arc_center_as_array[1]
         self.K = arc_center_as_array[2]
@@ -70,6 +72,7 @@ class ArcInformation:
 
         This method prints the direction, arc center coordinates, and radius of the arc.
         """
+
         print(f"direction: {self.direction}; arc-center (absolut): I = {self.I}, J = {self.J}, K = {self.K}; radius: {self.radius}")
 
 # End of class

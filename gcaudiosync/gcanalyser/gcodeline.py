@@ -814,9 +814,6 @@ class GCodeLine:
         Exception:
             If the active plane is not the XY-plane.
 
-        Returns:
-        --------
-        None
         """
 
         # Get the movement type, 2: CW, 3: CCW

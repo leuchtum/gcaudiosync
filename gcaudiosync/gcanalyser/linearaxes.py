@@ -42,17 +42,19 @@ class LinearAxes:
         Args:
             new_coordinates (np.ndarray): An array containing the X, Y, and Z coordinates.
         """
-        self.X = copy(new_coordinates_as_array[0])
-        self.Y = copy(new_coordinates_as_array[1])
-        self.Z = copy(new_coordinates_as_array[2])
 
-    def get_as_array(self):
+        self.X = float(copy.copy(new_coordinates_as_array[0]))
+        self.Y = float(copy.copy(new_coordinates_as_array[1]))
+        self.Z = float(copy.copy(new_coordinates_as_array[2]))
+
+    def get_as_array(self) -> np.ndarray:
         """
         Get the coordinates as a numpy array.
 
         Returns:
             np.ndarray: An array containing the X, Y, and Z coordinates.
         """
+
         array = np.array([self.X, self.Y, self.Z])
         return copy.copy(array)
     
@@ -62,6 +64,7 @@ class LinearAxes:
 
         This method prints the X, Y, and Z coordinates.
         """
+
         print(f"X = {self.X}, Y = {self.Y}, Z = {self.Z}")
 
 # End of class
