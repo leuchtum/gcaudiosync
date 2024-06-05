@@ -36,11 +36,11 @@ class Movement:
         # save all parameters
         self.line_index                     = line_index
         self.movement_type                  = movement_type
-        self.start_position_linear_axes     = start_position_linear_axes
-        self.end_position_linear_axes       = end_position_linear_axes 
-        self.start_position_rotation_axes   = start_position_rotation_axes 
-        self.end_position_rotation_axes     = end_position_rotation_axes
-        self.arc_information                = arc_information
+        self.start_position_linear_axes     = copy.deepcopy(start_position_linear_axes)
+        self.end_position_linear_axes       = copy.deepcopy(end_position_linear_axes)
+        self.start_position_rotation_axes   = copy.deepcopy(start_position_rotation_axes)
+        self.end_position_rotation_axes     = copy.deepcopy(end_position_rotation_axes)
+        self.arc_information                = copy.deepcopy(arc_information)
         self.feed_rate                      = feed_rate
 
         # Check if movement is valid: compute optimal vectors and expected time
