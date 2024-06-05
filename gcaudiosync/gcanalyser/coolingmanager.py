@@ -1,5 +1,7 @@
 import numpy as np
 
+# TODO: comment, make update function, use update function somewhere
+
 class CoolingManager:
 
     # counter = 0
