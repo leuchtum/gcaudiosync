@@ -1,5 +1,7 @@
 import copy
 
+from typing import List
+
 import gcaudiosync.gcanalyser.filefunctions as filefunc
 
 from gcaudiosync.gcanalyser.cncparameter import CNCParameter
@@ -21,7 +23,7 @@ class GCodeAnalyser:
     -----------
     total_time : int
         Total time of g-code in milliseconds.
-    g_code : list[str]
+    g_code : List[str]
         List to store the original g-code lines.
     CNC_Parameter : CNCParameter
         An object containing the CNC parameters.
@@ -37,7 +39,7 @@ class GCodeAnalyser:
         An object to manage cooling operations.
     Tool_Path_Generator : ToolPathGenerator
         An object to generate the tool path.
-    G_Code_Lines : list[GCodeLine]
+    G_Code_Lines : List[GCodeLine]
         List to store all the GCodeLine objects in order.
     Movement_Manager : MovementManager
         An object to manage movements based on the CNC parameters and current status.
@@ -45,7 +47,7 @@ class GCodeAnalyser:
 
     # Class variables
     total_time: int = 0         # Total time of g-code in milliseconds
-    g_code: list[str] = []      # Original g-code is stored in this list as strings         
+    g_code: List[str] = []      # Original g-code is stored in this list as strings         
     
     # Constructor
     def __init__(self, 
@@ -101,7 +103,7 @@ class GCodeAnalyser:
         """
 
         # Read in the g_code from the specified source file
-        self.g_code: list[str] = filefunc.read_file(g_code_src)
+        self.g_code: List[str] = filefunc.read_file(g_code_src)
         
         # Initialize the CNC status at the beginning of the G-code
         current_cnc_status: CNCStatus = CNCStatus(start_position = True, 
@@ -136,7 +138,7 @@ class GCodeAnalyser:
         self.Movement_Manager.all_lines_analysed()
 
         # Get the time stamps of all movements
-        time_stamps: list[int] = self.Movement_Manager.get_time_stamps()
+        time_stamps: List = self.Movement_Manager.get_time_stamps()
 
         # Update the Frequency_Manager with the time stamps
         self.Frequency_Manager.update(time_stamps)
@@ -198,7 +200,7 @@ class GCodeAnalyser:
                                                             total_time)
         
         # Get the new time stamps of all movements
-        time_stamps: list[int] = self.Movement_Manager.get_time_stamps()
+        time_stamps: List = self.Movement_Manager.get_time_stamps()
         
         # Update the Frequency_Manager with the new time stamps
         self.Frequency_Manager.update(time_stamps)
@@ -229,7 +231,7 @@ class GCodeAnalyser:
                                                                start_time)
         
         # Get the new time stamps of all movements
-        time_stamps: list[int] = self.Movement_Manager.get_time_stamps()
+        time_stamps: List = self.Movement_Manager.get_time_stamps()
         
         # Update the Frequency_Manager with the new time stamps
         self.Frequency_Manager.update(time_stamps)

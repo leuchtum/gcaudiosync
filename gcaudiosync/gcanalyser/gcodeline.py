@@ -410,8 +410,8 @@ class GCodeLine:
         self.cnc_status_current_line.S_value = new_S
 
         # Inform the Frequency Manager that the S value has changed
-        Frequency_Manager.new_S(line_index = self.g_code_line_index, 
-                                new_S = new_S)
+        Frequency_Manager.new_S(g_code_line_index = self.g_code_line_index, 
+                                new_S_value = new_S)
         
         # Add a pause in the Movement Manager
         Movement_Manager.add_pause(line_index = self.g_code_line_index, 
@@ -714,8 +714,8 @@ class GCodeLine:
             self.cnc_status_current_line.spindle_direction = spindle_command
         
         # Inform frequency manager about the spindle operation
-        Frequency_Manager.new_Spindle_Operation(line_index = self.g_code_line_index, 
-                                                command = spindle_command)
+        Frequency_Manager.new_Spindle_Operation(g_code_line_index = self.g_code_line_index, 
+                                                spindle_command = spindle_command)
     
     def handle_tool_change(self, 
                            g_code_line_info: list, 
@@ -799,8 +799,8 @@ class GCodeLine:
         self.cnc_status_current_line.program_end_reached = True
 
         # Inform frequency manager
-        Frequency_Manager.new_Spindle_Operation(line_index = self.g_code_line_index,
-                                                command = "off")
+        Frequency_Manager.new_Spindle_Operation(g_code_line_index = self.g_code_line_index,
+                                                spindle_command = "off")
         
         # Inform movement manager
         Movement_Manager.add_end_of_program(self.g_code_line_index)
