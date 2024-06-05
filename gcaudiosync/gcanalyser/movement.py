@@ -389,6 +389,8 @@ class Movement:
             match self.active_plane:
                 case 17: 
                     # Handle Z coordinate
+                    center_2_start = center_2_start[0:2]
+                    arc_center = arc_center[0:2]
                     XY_position = vecfunc.rotate_2D_vector(center_2_start, arc_center, current_angle)
                     
                     position[0] = XY_position[0]

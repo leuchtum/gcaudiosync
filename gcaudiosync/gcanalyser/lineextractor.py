@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Tuple
 
 from gcaudiosync.gcanalyser.stringfunctions import *
 
@@ -22,7 +22,7 @@ class LineExtractor:
     #################################################################################################
     # Methods
 
-    def extract(self, line: str) -> List[List[str, str]]:
+    def extract(self, line: str) -> List[Tuple[str, str]]:
         """
         Extracts commands and numbers from a G-code line.
 

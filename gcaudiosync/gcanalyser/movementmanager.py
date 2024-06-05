@@ -293,9 +293,9 @@ class MovementManager:
         # Iterate backwards through all movements and find thouse who match the line index
         for movement_index in range(len(self.movements))[::-1]:
 
-            if self.movements[movement_index].line_index < line_index:      # All movements found
+            if self.movements[movement_index].g_code_line_index < line_index:      # All movements found
                 break                                                           # Break loop
-            elif self.movements[movement_index].line_index == line_index:   # Matching line index found
+            elif self.movements[movement_index].g_code_line_index == line_index:   # Matching line index found
                 indices.append(movement_index)                                  # Append index
 
         return indices
@@ -419,7 +419,7 @@ class MovementManager:
                                          new_start_time):
         
         for movement_index, movement in enumerate(self.movements):
-            if movement.line_index >= line_index:
+            if movement.g_code_line_index >= line_index:
                 important_movement_index = movement_index
                 break
 
@@ -506,7 +506,7 @@ class MovementManager:
         # Get all the time stamps
         for index, movement in enumerate(self.movements):
             if index > 0:
-                new_g_code_line = movement.line_index
+                new_g_code_line = movement.g_code_line_index
                 if new_g_code_line != g_code_line_index:
                     g_code_line_index = new_g_code_line
                     g_code_line_time_stamp = movement.start_time
