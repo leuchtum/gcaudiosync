@@ -13,9 +13,9 @@ class FrequencyInformation:
         The expected start time of the segment in milliseconds.
     expected_duration : int
         The expected duration of the segment in milliseconds.
-    frequency : float
+    frequency : int
         The frequency value associated with the segment.
-    spindle_status : str
+    spindle_status : int
         The status of the spindle (0 -> off, 2 -> CW, 3 -> CCW) during the segment.
     """
    
@@ -25,7 +25,7 @@ class FrequencyInformation:
                  line_index_end: int, 
                  expected_time_start: int, 
                  expected_duration: int, 
-                 frequency: float,
+                 frequency: int,
                  spindle_status: int):
     
         self.line_index_start = line_index_start
