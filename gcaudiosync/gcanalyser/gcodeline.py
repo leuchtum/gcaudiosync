@@ -872,9 +872,9 @@ class GCodeLine:
                 # Set Z value
                 arc_center[2] = Z_position                      
             case 18:
-                raise Exception(f"G02 and G03 are not available in plane 18 jet")    # TODO
+                raise Exception(f"G02 and G03 are not available in plane 18")    # TODO
             case 19:
-                raise Exception(f"G02 and G03 are only available in plane 19 jet")   # TODO
+                raise Exception(f"G02 and G03 are only available in plane 19")   # TODO
 
         # Set arc center
         self.cnc_status_current_line.arc_information.set_arc_center(arc_center)         

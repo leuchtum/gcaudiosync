@@ -35,7 +35,7 @@ class LinearAxes:
     # Methods
 
     def set_with_array(self, 
-                       new_coordinates_as_array):
+                       new_coordinates_as_array) -> None:
         """
         Set the coordinates using an array.
 
@@ -58,7 +58,7 @@ class LinearAxes:
         array = np.array([self.X, self.Y, self.Z])
         return copy.copy(array)
     
-    def print(self):
+    def print(self) -> None:
         """
         Print the coordinates.
 
