@@ -47,6 +47,7 @@ class GCodeAnalyser:
     total_time: int = 0         # Total time of g-code in milliseconds
     g_code: list[str] = []      # Original g-code is stored in this list as strings         
     
+    # Constructor
     def __init__(self, 
                  parameter_src: str):
         """

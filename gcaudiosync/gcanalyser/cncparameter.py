@@ -1,13 +1,39 @@
-import numpy as np
-
-from gcaudiosync.gcanalyser.lineextractor import LineExtractor
 from gcaudiosync.gcanalyser.filefunctions import *
 from gcaudiosync.gcanalyser.linearaxes import LinearAxes
+from gcaudiosync.gcanalyser.lineextractor import LineExtractor
 from gcaudiosync.gcanalyser.rotationaxes import RotationAxes
-from gcaudiosync.gcanalyser.arcinformation import ArcInformation
 
 class CNCParameter:
+    """
+    Represents the parameters of a CNC machine.
+
+    This class stores various parameters used in CNC machining operations.
+
+    Attributes:
+        START_POSITION_LINEAR_AXES (LinearAxes): The starting position of the linear axes.
+        START_POSITION_ROTATION_AXES (RotationAxes): The starting position of the rotation axes.
+        TOOL_CHANGE_POSITION_LINEAR_AXES (LinearAxes): The position for tool changes.
+        S_IS_ABSOLUTE (bool): Flag indicating whether the S value is absolute.
+        F_MAX (float): Maximum feed rate in mm/min.
+        S_MAX (float): Maximum spindle speed in RPM.
+        MAX_A_X (float): Maximum acceleration/deceleration of the X-Axis in mm/s^2.
+        MAX_A_Y (float): Maximum acceleration/deceleration of the Y-Axis in mm/s^2.
+        MAX_A_Z (float): Maximum acceleration/deceleration of the Z-Axis in mm/s^2.
+        TOOL_CHANGE_TIME (int): Time taken for a tool change in milliseconds.
+        COMMAND_ABORT (float): M command for aborting.
+        COMMAND_QUIT (float): M command for quitting.
+        COMMAND_PROGABORT (float): M command for program abort.
+        COMMAND_SPINDLE_START_CW (float): M command for starting spindle clockwise.
+        COMMAND_SPINDLE_START_CCW (float): M command for starting spindle counterclockwise.
+        COMMAND_SPINDLE_OFF (float): M command for turning off spindle.
+        COMMAND_TOOL_CHANGE (float): M command for tool change.
+        COMMAND_COOLING_ON (float): M command for turning on cooling.
+        COMMAND_COOLING_OFF (float): M command for turning off cooling.
+        COMMAND_END_OF_PROGRAM (float): M command for end of program.
+    """
     
+    # Class variables
+
     # Machine parameter
     START_POSITION_LINEAR_AXES          = LinearAxes(100.0, 100.0, 100.0)
     START_POSITION_ROTATION_AXES        = RotationAxes()
@@ -39,7 +65,13 @@ class CNCParameter:
     # Constructor
     def __init__(self, 
                  parameter_src: str = ""):
-        
+        """
+        Initializes the CNCParameter object.
+
+        Args:
+            parameter_src (str, optional): The source of the CNC parameters. Defaults to "".
+        """
+
         # Get the parameter from the parameter list
         parameter: str = read_file(parameter_src)    
 
@@ -51,13 +83,15 @@ class CNCParameter:
             print("Using default CNC-parameter.")
 
         # Non number parameter
-        non_number_parameter = ["S_IS_ABSOLUTE",
-                                "START_POSITION_X",
-                                "START_POSITION_Y",
-                                "START_POSITION_Z",
-                                "TOOL_CHANGE_POSITION_X",
-                                "TOOL_CHANGE_POSITION_Y",
-                                "TOOL_CHANGE_POSITION_Z",]
+        non_number_parameter = [
+            "S_IS_ABSOLUTE",
+            "START_POSITION_X",
+            "START_POSITION_Y",
+            "START_POSITION_Z",
+            "TOOL_CHANGE_POSITION_X",
+            "TOOL_CHANGE_POSITION_Y",
+            "TOOL_CHANGE_POSITION_Z",
+        ]
 
         # Go through cnc-parameter
         for line in parameter:
@@ -91,4 +125,9 @@ class CNCParameter:
                     setattr(self, parameter, int(value))
                 else:                                   # Handle situation that the parameter does not exist
                     print("CNC-Parameter " + parameter + " does not exist. Check file parameter.txt.")
-    
+
+    #################################################################################################
+    # Methods
+
+# End of class
+#####################################################################################################
