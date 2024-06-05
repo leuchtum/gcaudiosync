@@ -50,9 +50,9 @@ class ToolPathGenerator:
 
             # get tool path information
             tool_path_information = Movement_Manager.get_tool_path_information(current_time)
-            current_line_index = tool_path_information.line_index
+            current_line_index = tool_path_information.g_code_line_index
             current_position_linear_axes = tool_path_information.position_linear_axes
-            current_movement = tool_path_information.movement   # TODO
+            current_movement = tool_path_information.movement_type   # TODO
 
             self.line_index.append(current_line_index)
             

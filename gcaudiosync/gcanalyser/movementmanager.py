@@ -1,31 +1,49 @@
 import copy
 
-from gcaudiosync.gcanalyser.movement import Movement
-from gcaudiosync.gcanalyser.cncparameter import CNCParameter
+from typing import List, Tuple
+
 import gcaudiosync.gcanalyser.vectorfunctions as vecfunc
 
-from gcaudiosync.gcanalyser.cncstatus import CNCStatus
-from gcaudiosync.gcanalyser.toolpathinformation import ToolPathInformation
-from gcaudiosync.gcanalyser.linearaxes import LinearAxes
-from gcaudiosync.gcanalyser.rotationaxes import RotationAxes
 from gcaudiosync.gcanalyser.arcinformation import ArcInformation
-
+from gcaudiosync.gcanalyser.cncparameter import CNCParameter
+from gcaudiosync.gcanalyser.cncstatus import CNCStatus
+from gcaudiosync.gcanalyser.linearaxes import LinearAxes
+from gcaudiosync.gcanalyser.movement import Movement
+from gcaudiosync.gcanalyser.rotationaxes import RotationAxes
+from gcaudiosync.gcanalyser.toolpathinformation import ToolPathInformation
 
 class MovementManager:
-
-    start_time : int                = 0         # Time for the start
-    total_time: int                 = 0         # Expected total time
-    movements: Movement             = []        # Movements
-    end_of_program_reached: bool    = False     # Variable for end of program
 
     # Constructor
     def __init__(self, 
                  CNC_Parameter: CNCParameter, 
                  first_line_status: CNCStatus):
+        """
+        A class to manage movements in CNC machining.
+
+        Attributes:
+        -----------
+        start_time : int
+            Time for the start.
+        total_time : int
+            Expected total time.
+        movements : List[Movement]
+            List of movements.
+        end_of_program_reached : bool
+            Indicates if the end of the program has been reached.
+        CNC_Parameter : CNCParameter
+            CNC parameter instance.
+        """
+
+        self.start_time : int                = 0         # Time for the start
+        self.total_time: int                 = 0         # Expected total time
+        self.movements: List[Movement]       = []        # Movements
+        self.end_of_program_reached: bool    = False     # Variable for end of program
         
         self.CNC_Parameter = CNC_Parameter          # Get cnc parameter
 
-        first_movement = Movement(g_code_line_index = -1,        # Create first movement
+        # Create first movement
+        first_movement = Movement(g_code_line_index = -1,        
                                   movement_type = -1, 
                                   start_position_linear_axes    = first_line_status.position_linear_axes, 
                                   end_position_linear_axes      = first_line_status.position_linear_axes,
@@ -35,18 +53,31 @@ class MovementManager:
                                   feed_rate = 0.0,
                                   active_plane = 17)
         
-        first_movement.time = 0                                 # Time for first movement
+        # Time for first movement
+        first_movement.time = 0                                 
 
-        self.movements.append(first_movement)                   # Append first movement
+        # Append first movement
+        self.movements.append(first_movement)                   
         
     #################################################################################################
     # Methods
 
-    # Method for linear movement
     def add_linear_movement(self, 
                             line_index: int, 
                             last_line_status: CNCStatus,
-                            current_line_status: CNCStatus):
+                            current_line_status: CNCStatus) -> None:
+        """
+        Adds a linear movement to the list of movements.
+
+        Parameters:
+        -----------
+        line_index : int
+            The line index of the G-code corresponding to this movement.
+        last_line_status : CNCStatus
+            Status of the CNC at the previous line.
+        current_line_status : CNCStatus
+            Status of the CNC at the current line.
+        """
 
         # Check end of program
         if self.end_of_program_reached:
@@ -67,13 +98,25 @@ class MovementManager:
         if current_line_status.exact_stop:
             new_movement.do_exact_stop()
 
-        self.movements.append(new_movement)                     # Append movement
+        # Append movement
+        self.movements.append(new_movement)                     
 
-    # Method for arc movement
     def add_arc_movement(self, 
                          line_index: int, 
                          last_line_status: CNCStatus,
-                         current_line_status: CNCStatus):
+                         current_line_status: CNCStatus) -> None:
+        """
+        Adds an arc movement to the list of movements.
+
+        Parameters:
+        -----------
+        line_index : int
+            The line index of the G-code corresponding to this movement.
+        last_line_status : CNCStatus
+            Status of the CNC at the previous line.
+        current_line_status : CNCStatus
+            Status of the CNC at the current line.
+        """
 
         # Check end of program
         if self.end_of_program_reached:
@@ -94,22 +137,33 @@ class MovementManager:
         if current_line_status.exact_stop:
             new_movement.do_exact_stop()
 
-        self.movements.append(new_movement)                     # Append movement
+        # Append movement
+        self.movements.append(new_movement)                     
 
-    # Method for tool change
     def add_tool_change(self, 
-                        line_index: int):
-        
+                        line_index: int) -> None:
+        """
+        Adds a tool change movement to the list of movements.
+
+        Parameters:
+        -----------
+        line_index : int
+            The line index of the G-code corresponding to this tool change.
+        """
+
         # Check end of program
         if self.end_of_program_reached:
             return
         
-        last_movement: Movement = copy.deepcopy(self.movements[-1])         # Get last movement
+        # Get last movement
+        last_movement: Movement = copy.deepcopy(self.movements[-1])         
 
-        current_position_linear_axes = last_movement.end_position_linear_axes.get_as_array()        # Get current position linear axes
-        current_position_rotation_axes = last_movement.end_position_rotation_axes.get_as_array()    # Get current position rotation axes
+        # Get current positions
+        current_position_linear_axes = last_movement.end_position_linear_axes.get_as_array()        
+        current_position_rotation_axes = last_movement.end_position_rotation_axes.get_as_array() 
 
-        tool_change_position_linear = self.CNC_Parameter.TOOL_CHANGE_POSITION_LINEAR_AXES.get_as_array()    # Get tool change position
+        # Get tool change position
+        tool_change_position_linear = self.CNC_Parameter.TOOL_CHANGE_POSITION_LINEAR_AXES.get_as_array()    
 
         # Create movement to tool
         movement_get_tool = Movement(g_code_line_index = line_index, 
@@ -122,21 +176,35 @@ class MovementManager:
                                      feed_rate = self.CNC_Parameter.F_MAX,
                                      active_plane = 17)
         
-        movement_get_tool.do_exact_stop()   # Add exact stop
+        # Add exact stop
+        movement_get_tool.do_exact_stop()   
 
-        self.movements.append(movement_get_tool)                # Append movement
+        # Append movement
+        self.movements.append(movement_get_tool)                
         
+        # Add pause for tool change
         self.add_pause(line_index = line_index, 
-                       time = self.CNC_Parameter.TOOL_CHANGE_TIME) # Add pause for tool change
+                       time = self.CNC_Parameter.TOOL_CHANGE_TIME) 
 
-    # Method for pause
     def add_pause(self, 
                   line_index: int, 
-                  time: int):
-        
-        default_pause_time = 10000                                  # Default time if unknown
+                  time: int) -> None:
+        """
+        Adds a pause movement to the list of movements.
 
-        last_movement: Movement = copy.deepcopy(self.movements[-1]) # Get last movement
+        Parameters:
+        -----------
+        line_index : int
+            The line index of the G-code corresponding to this pause.
+        time : int
+            The duration of the pause.
+        """
+
+        # Default time if unknown # TODO: make this a variable in the cnc parameter input file
+        default_pause_time = 10000                                  
+
+        # Get last movement
+        last_movement: Movement = copy.deepcopy(self.movements[-1]) 
 
         # create new movement
         new_movement = Movement(g_code_line_index = line_index, 
@@ -153,40 +221,74 @@ class MovementManager:
         if time == -1:
             time = default_pause_time
 
-        new_movement.time = time                   # Set time
+        # Set time
+        new_movement.time = time                   
         
-        self.movements[-1].do_exact_stop()                  # Add exact stop to last movement
+        # Add exact stop to last movement
+        self.movements[-1].do_exact_stop()                  
 
-        self.movements.append(new_movement)                 # Append movement
+        # Append movement
+        self.movements.append(new_movement)                 
     
-    # Method for end of program
     def add_end_of_program(self, 
-                           line_index: int):
-        
+                           line_index: int) -> None:
+        """
+        Marks the end of the program and adds a final pause.
+
+        Parameters:
+        -----------
+        line_index : int
+            The line index of the G-code corresponding to the end of the program.
+        """
         self.end_of_program_reached = True  # Set variable
         self.add_pause(line_index, 0)       # Add final pause
 
-    # Method to get expected time of one line
     def get_expected_time_of_gcode_line(self, 
-                                        line_index: int):
+                                        g_code_line_index: int) -> int:
+        """
+        Computes the expected time for the given line index in the G-code.
 
-        expected_time: int = 0                                          # Set expected time to 0
+        Parameters:
+        -----------
+        line_index : int
+            The line index of the G-code for which the expected time is to be computed.
+
+        Returns:
+        --------
+        int
+            The expected time in milliseconds for the given line index.
+        """
+
+        # Set expected time to 0
+        expected_time: int = 0                                          
 
         # Iterate backwards through all movements and find thouse who match the line index
         for index in range(len(self.movements))[::-1]:
 
-            if self.movements[index].line_index < line_index:           # All movements found
-                break                                                       # Break loop
-            elif self.movements[index].line_index == line_index:        # Found matching line index
-                expected_time += self.movements[index].time        # Update expected time
+            if self.movements[index].line_index < g_code_line_index:       # All movements found
+                break                                                   # Exit loop
+            elif self.movements[index].line_index == g_code_line_index:    # Found matching line index
+                expected_time += self.movements[index].time             # Update expected time
 
         return expected_time
 
-    # Method to get all movement indices of one line
     def get_indices_of_movements_for_gcode_line(self, 
-                                                line_index: int):
+                                                line_index: int) -> List[int]:
+        """
+        Retrieves the indices of all movements corresponding to a given line index in the G-code.
 
-        indices: list = []                                              # Create empty list
+        Parameters:
+        -----------
+        line_index : int
+            The line index of the G-code for which movement indices are to be retrieved.
+
+        Returns:
+        --------
+        List[int]
+            A list containing the indices of all movements corresponding to the given line index.
+        """
+
+        indices: List[int] = []                                              # Create empty list
 
         # Iterate backwards through all movements and find thouse who match the line index
         for movement_index in range(len(self.movements))[::-1]:
@@ -199,44 +301,70 @@ class MovementManager:
         return indices
 
     def get_tool_path_information(self, 
-                                  current_time: int):
+                                  current_time: int) -> ToolPathInformation:
+        """
+        Retrieves tool path information at a specific time.
 
+        Parameters:
+        -----------
+        current_time : int
+            The current time for which tool path information is to be retrieved.
+
+        Returns:
+        --------
+        ToolPathInformation
+            Object containing information about the tool path at the specified time.
+        """
+
+        # Initialize ToolPathInformation object
         tool_path_information = ToolPathInformation()
 
-        time_stamp_found = False                            # Variable to check if time stamp was found
+        # Flag to check if time stamp was found
+        time_stamp_found = False                            
 
         # Iterate through all time stamps
         for movement in self.movements:
             
+            # Get the start and end time of the movement
             movement_start_time = movement.start_time
             movement_end_time = movement_start_time + movement.time
 
-            if current_time >= movement_start_time and current_time < movement_end_time:  # Check if current time is in this time stamp
-                time_stamp_found = True                         # Set variable
-                break                                           # Break loop
+            # Check if current time is in this time stamp
+            if current_time >= movement_start_time and current_time < movement_end_time:  
+                time_stamp_found = True     # Set Flag
+                break                       # Break loop
                 
-        # Excaption handeling
+        # Raise exception if no movement is found for the current time
         if not time_stamp_found:
             raise Exception(f"No movement found for this time.")
         
-        time_in_movement = current_time - movement_start_time   # Compute the time in this movement
+        # Compute the time in this movement
+        time_in_movement = current_time - movement_start_time   
 
-        # Excaption handeling
+        # Raise exception if the computed time within the movement is negative
         if time_in_movement < 0:
             raise Exception(f"Error: Current time is negative.")
         
-        current__line_index = movement.line_index
-        tool_path_information.line_index = current__line_index
+        # Get the current line index
+        current_line_index = movement.g_code_line_index
+        tool_path_information.g_code_line_index = current_line_index
 
+        # Get the positions
         current_position_linear_axes = movement.get_position_linear_axes_in_movement(time_in_movement)  # Get position
         tool_path_information.position_linear_axes = current_position_linear_axes
 
-        tool_path_information.movement = movement.movement_type
+        # Get the movement type
+        tool_path_information.movement_type = movement.movement_type
 
         return tool_path_information
  
-    # Method to print the info of the movement manager with all movements
-    def print_info(self):
+    def print_info(self) -> None:
+        """
+        Prints information about the MovementManager.
+
+        This method prints the total time, the number of movements, and detailed information
+        about each movement in the MovementManager instance.
+        """
         print(f"total_time: {self.total_time}")
         print(f"nof movements: {len(self.movements)}")
         print("")
@@ -261,6 +389,7 @@ class MovementManager:
 
         self.total_time = time
 
+    # TODO
     def set_start_time_and_total_time(self, 
                                       new_start_time: int,
                                       new_total_time: int,      # time between start time end time
@@ -284,6 +413,7 @@ class MovementManager:
         self.movements[0].is_adjustable = False
         self.movements[-1].is_adjustable = False
 
+    # TODO
     def adjust_start_time_of_g_code_line(self,
                                          line_index,
                                          new_start_time):
@@ -350,6 +480,7 @@ class MovementManager:
         self.movements[-1].start_time = new_movement_start_time
         self.movements[-1].time = new_movement_time
 
+    # TODO
     def adjust_end_time_of_g_code_line(self,
                                        line_index,
                                        new_end_time):
@@ -357,12 +488,22 @@ class MovementManager:
                                               new_end_time)
 
 
-    def get_time_stamps(self):
-        time_stamps = []
+    def get_time_stamps(self) -> List[Tuple[int, int]]:
+        """
+        Retrieves time stamps for each G-code line.
+
+        This method iterates through all movements and identifies the time stamps for each G-code line.
+        A time stamp consists of the G-code line index and its corresponding time stamp.
+        
+        Returns:
+        --------
+        List: A list of tuples, where each tuple contains the G-code line index and its time stamp.        """
+        time_stamps: List[Tuple[int, int]] = []
 
         g_code_line_index = 0
         g_code_line_time_stamp = 0
 
+        # Get all the time stamps
         for index, movement in enumerate(self.movements):
             if index > 0:
                 new_g_code_line = movement.line_index
