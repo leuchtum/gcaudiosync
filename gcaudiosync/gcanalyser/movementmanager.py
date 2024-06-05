@@ -53,7 +53,7 @@ class MovementManager:
                 
         # Create new movement
         new_movement = Movement(line_index = line_index, 
-                                movement_type = current_line_status.active_movement, 
+                                movement_type = current_line_status.active_movement_type, 
                                 start_position_linear_axes = last_line_status.position_linear_axes, 
                                 end_position_linear_axes = current_line_status.position_linear_axes,
                                 start_position_rotation_axes = last_line_status.position_rotation_axes,
@@ -79,7 +79,7 @@ class MovementManager:
                 
         # Create new movement
         new_movement = Movement(line_index = line_index, 
-                                movement_type = current_line_status.active_movement,
+                                movement_type = current_line_status.active_movement_type,
                                 start_position_linear_axes = last_line_status.position_linear_axes, 
                                 end_position_linear_axes = current_line_status.position_linear_axes,
                                 start_position_rotation_axes = last_line_status.position_rotation_axes,

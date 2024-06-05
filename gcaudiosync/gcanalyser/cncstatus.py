@@ -8,32 +8,32 @@ from gcaudiosync.gcanalyser.arcinformation import ArcInformation
 
 class CNCStatus:
 
-    active_movement: int    = 0     # active movement: 0: rapid linear, 1: linear, 2: arc CW, 3: arc CCW
-    active_tool: int        = 0     # number of the active tool
+    active_movement_type: int   = 0         # active movement: 0: rapid linear, 1: linear, 2: arc CW, 3: arc CCW
+    active_tool: int            = 0         # number of the active tool
 
-    position_linear_axes = LinearAxes()            # absolute positions for X, Y, Z in mm
-    position_rotation_axes = RotationAxes()        # absolute positions for A, B, C in mm
-    arc_information = ArcInformation()             # all infos for an arc
+    position_linear_axes = LinearAxes()     # absolute positions for X, Y, Z in mm
+    position_rotation_axes = RotationAxes() # absolute positions for A, B, C in mm
+    arc_information = ArcInformation()      # all infos for an arc
 
     active_plane: int           = 17        # active plane: XY -> 17, XZ -> 18, YZ -> 19
 
     absolute_position: bool     = True      # absolute position for X, Y, Z, A, B, C: True or false
     absolute_arc_center: bool   = False     # absolute position for I, J, K: True or False
 
-    cutter_compensation = 40
+    cutter_compensation = 40                # cutter compensation
 
-    F_value: float = 0.0                # F value in m/min
-    S_value: float = 0.0                # S value in RPM
+    F_value: float = 0.0                    # F value in m/min
+    S_value: float = 0.0                    # S value in RPM
 
-    feed_rate: float        = 0.0       # feed rate in mm/ms
-    spindle_speed: float    = 0.0       # spindle speed in RPM
-    spindle_direction: str  = "CW"      # spindle direction: "CW" or "CCW"
-    spindle_on: bool        = False     # spindle on: True or False
+    feed_rate: float        = 0.0           # feed rate in mm/ms
+    spindle_speed: float    = 0.0           # spindle speed in RPM
+    spindle_direction: str  = "CW"          # spindle direction: "CW" or "CCW"
+    spindle_on: bool        = False         # spindle on: True or False
 
-    cooling_on: bool        = False     # cooling on: True or False
+    cooling_on: bool        = False         # cooling on: True or False
 
-    exact_stop: bool        = False     # exact stop: True or false
-    G_61_active: bool       = False     # G61 active: True or false
+    exact_stop: bool        = False         # exact stop: True or false
+    G_61_active: bool       = False         # G61 active: True or false
 
     program_end_reached: bool   = False     # program end reached: True or False
 

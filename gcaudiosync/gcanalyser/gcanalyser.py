@@ -114,9 +114,9 @@ class GCodeAnalyser:
                 break
 
             # Create a G_Code_Line object for the current line
-            current_line: GCodeLine = GCodeLine(line_index = g_code_line_index,
-                                                current_status = current_cnc_status, 
-                                                line = g_code_line, 
+            current_line: GCodeLine = GCodeLine(g_code_line_index = g_code_line_index,
+                                                current_cnc_status = current_cnc_status, 
+                                                g_code_line = g_code_line, 
                                                 Line_Extractor = self.Line_Extractor,
                                                 CNC_Parameter = self.CNC_Parameter,
                                                 Frequency_Manager = self.Frequency_Manager,
@@ -129,7 +129,7 @@ class GCodeAnalyser:
             self.G_Code_Lines.append(current_line)
             
             # Update the current CNC status
-            current_cnc_status = copy.deepcopy(current_line.line_status)
+            current_cnc_status = copy.deepcopy(current_line.cnc_status_current_line)
 
         # Inform the Movement_Manager that all lines have been analyzed
         self.Movement_Manager.all_lines_analysed()

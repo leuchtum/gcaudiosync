@@ -10,23 +10,39 @@ from gcaudiosync.gcanalyser.cncstatus import CNCStatus, copy_CNC_Status
 from gcaudiosync.gcanalyser.coolingmanager import CoolingManager
 from gcaudiosync.gcanalyser.frequencymanager import FrequencyManager
 from gcaudiosync.gcanalyser.lineextractor import LineExtractor
+from gcaudiosync.gcanalyser.movement import Movement
 from gcaudiosync.gcanalyser.movementmanager import MovementManager
 from gcaudiosync.gcanalyser.pausemanager import PauseManager
 from gcaudiosync.gcanalyser.toolchangemanager import ToolChangeManager
 
-# Source for the g-code interpretation: https://linuxcnc.org/docs/html/gcode/g-code.html
-
 class GCodeLine:
+    """
+    Represents a single line of G-code and processes it to update CNC status and manage movements.
 
-    important: bool         = False     # Is this line important for the visualisation: True or False
-    #time: int               = 0         # Expexted time in ms
-    indices_of_movements    = []        # Indices of the movements at the Movement_Manager
+    Source for the G-code interpretation: https://linuxcnc.org/docs/html/gcode/g-code.html
+
+    Attributes:
+    -----------
+    g_code_line_index : int
+        Index of this line in the G-code file.
+    original_g_code_line : str
+        Original G-code line as a string.
+    cnc_status_last_line : CNCStatus
+        The CNC status before processing this line.
+    cnc_status_current_line : CNCStatus
+        The CNC status after processing this line.
+    indices_of_movements : list[int]
+        Indices of the movements in the Movement Manager.
+    """
+
+    # Class variables
+    indices_of_movements: list[int] = []           # Indices of the movements at the Movement_Manager
 
     # Constructor
     def __init__(self, 
-                 line_index: int,
-                 current_status: CNCStatus, 
-                 line: str, 
+                 g_code_line_index: int,
+                 current_cnc_status: CNCStatus, 
+                 g_code_line: str, 
                  Line_Extractor: LineExtractor,
                  CNC_Parameter:CNCParameter,
                  Frequency_Manager: FrequencyManager,
@@ -34,383 +50,526 @@ class GCodeLine:
                  Tool_Change_Manager: ToolChangeManager,
                  Cooling_Manager: CoolingManager,
                  Movement_Manager: MovementManager):
+        """
+        Initializes the GCodeLine object.
 
-        self.index: int     = line_index    # Index of this line in the g-code
+        Parameters:
+        -----------
+        g_code_line_index : int
+            Index of this line in the G-code file.
+        current_cnc_status : CNCStatus
+            The current status of the CNC machine.
+        g_code_line : str
+            The G-code line as a string.
+        Line_Extractor : LineExtractor
+            An instance of the LineExtractor class.
+        CNC_Parameter : CNCParameter
+            An instance of the CNCParameter class.
+        Frequency_Manager : FrequencyManager
+            An instance of the FrequencyManager class.
+        Pause_Manager : PauseManager
+            An instance of the PauseManager class.
+        Tool_Change_Manager : ToolChangeManager
+            An instance of the ToolChangeManager class.
+        Cooling_Manager : CoolingManager
+            An instance of the CoolingManager class.
+        Movement_Manager : MovementManager
+            An instance of the MovementManager class.
+        """
 
-        self.original_line  = line          # Save original line
+        self.g_code_line_index: int = g_code_line_index    # Index of this line in the g-code
+        self.original_g_code_line   = g_code_line          # Save original line
 
-        line_info: list     = Line_Extractor.extract(line = line)          # Extract info from line
+        g_code_line_info: list      = Line_Extractor.extract(line = g_code_line)            # Extract info from line
 
-        self.last_line_status: CNCStatus   = copy.deepcopy(current_status)     # Save the cnc-status of the last line
-        self.line_status: CNCStatus        = copy_CNC_Status(current_status)   # Create a new cnc-status for this line
+        self.cnc_status_last_line: CNCStatus    = copy.deepcopy(current_cnc_status)         # Save the cnc-status of the last line
+        self.cnc_status_current_line: CNCStatus = copy_CNC_Status(current_cnc_status)       # Create a new cnc-status for this line
 
-        # Priorisation so the movements have all important infos
-        prio_G_numbers = [9]                                        # Numbers of proi G commands
-        prio_M_numbers = [CNC_Parameter.COMMAND_SPINDLE_START_CW,   # Numbers of proi M commands
+        # Prioritization  so the movements have all important infos
+        prio_G_numbers = [9]                                        # Numbers of priority  G commands
+        prio_M_numbers = [CNC_Parameter.COMMAND_SPINDLE_START_CW,   # Numbers of priority  M commands
                           CNC_Parameter.COMMAND_SPINDLE_START_CCW, 
                           CNC_Parameter.COMMAND_SPINDLE_OFF]
 
         something_to_find = True
         # Search for: new S and F values, proi G commands and prio M commands
-        while something_to_find and len(line_info) > 0:
-            for info_index in range(len(line_info)):
+        while something_to_find and len(g_code_line_info) > 0:
+            for info_index in range(len(g_code_line_info)):
                 
                 # Get the command (letter) and number from line info
-                command = line_info[info_index][0]
-                number = line_info[info_index][1]
-
+                command = g_code_line_info[info_index][0]
+                number = g_code_line_info[info_index][1]
+                
+                # Process the command
                 match command:
-                    case "F":                                                           # Action with new F value
-                        line_info.pop(info_index)                                           # Delete this command and number
-                        self.handle_F(float(number), CNC_Parameter)                         # Call method that handles new F value
+                    case "F":
+                        g_code_line_info.pop(info_index)                    # Delete this command and number
+                        self.handle_F(float(number), CNC_Parameter)         # Call method that handles new F value
                         break
-                    case "S":                                                           # Action with a new S value
-                        line_info.pop(info_index)                                           # Delete this command and number
-                        self.handle_S(float(number), CNC_Parameter, Movement_Manager, Frequency_Manager)      # Call method that handles new S value
+                    case "S":
+                        g_code_line_info.pop(info_index)                    # Delete this command and number
+                        self.handle_S(float(number),                        # Call method that handles new S value
+                                      CNC_Parameter = CNC_Parameter, 
+                                      Movement_Manager = Movement_Manager, 
+                                      Frequency_Manager = Frequency_Manager)    
                         break
-                    case "G":                                                           # Action for prio G commands
-                        if float(number) in prio_G_numbers:                                 # Check if prio
-                            line_info.pop(info_index)                                                    # Delete this command and number
-                            self.handle_G(float(number),                                        # Call the method that handles G commands
-                                          line_info, 
+                    case "G":
+                        if float(number) in prio_G_numbers:                 # Check if priority
+                            g_code_line_info.pop(info_index)                    # Delete this command and number
+                            self.handle_G(float(number),                        # Call the method that handles G commands
+                                          g_code_line_info, 
                                           Pause_Manager = Pause_Manager,
                                           Movement_Manager = Movement_Manager)
                             break
-                    case "M":                                                           # Action for prio M commands
-                        if float(number) in prio_M_numbers:                                 # Check if prio
-                            line_info.pop(info_index)
-                            self.handle_M(float(number),                                        # Call the method that handles M commands
-                                        line_info, 
-                                        CNC_Parameter = CNC_Parameter, 
-                                        Frequency_Manager = Frequency_Manager, 
-                                        Tool_Change_Manager = Tool_Change_Manager,
-                                        Pause_Manager = Pause_Manager,
-                                        Cooling_Manager = Cooling_Manager,
-                                        Movement_Manager = Movement_Manager)
+                    case "M":
+                        if float(number) in prio_M_numbers:                 # Check if priority
+                            g_code_line_info.pop(info_index)                    # Delete this command and number
+                            self.handle_M(float(number),                        # Call the method that handles M commands
+                                          g_code_line_info, 
+                                          CNC_Parameter = CNC_Parameter, 
+                                          Frequency_Manager = Frequency_Manager, 
+                                          Tool_Change_Manager = Tool_Change_Manager,
+                                          Pause_Manager = Pause_Manager,
+                                          Cooling_Manager = Cooling_Manager,
+                                          Movement_Manager = Movement_Manager)
                             break
                 
-                if info_index == len(line_info)-1:
+                if info_index == len(g_code_line_info)-1:
                     something_to_find = False
 
+        stand_alone_parameter = ["X", "Y", "Z", "A", "B", "C", "I", "J", "K", "R"]   # define stand alone parameter
+
         # Go through rest of the info from this line and take actions
-        while len(line_info) > 0:
+        while len(g_code_line_info) > 0:
 
             # Get the first command (letter) and number from line info
-            command = line_info[0][0]
-            number = line_info[0][1]
+            command = g_code_line_info[0][0]
+            number = g_code_line_info[0][1]
 
             # Take action for the command in charge
-            if command == "N":                      # Action with line number
-                line_info.pop(0)                    # Delete this command and number
-            elif command == "G":                    # Action with a G command
-                line_info.pop(0)                    # Delete this command and number
-                self.handle_G(float(number),        # Call the method that handles G commands
-                              line_info, 
+            if command == "N":
+                g_code_line_info.pop(0)                         # Delete this command and number - no further action with this at the moment
+            elif command == "G":
+                g_code_line_info.pop(0)                         # Delete this command and number
+                self.handle_G(float(number),                    # Call the method that handles G commands
+                              g_code_line_info, 
                               Pause_Manager = Pause_Manager,
                               Movement_Manager = Movement_Manager)
-            elif command == "M":                    # Action with a M command
-                line_info.pop(0)                    # Delete this command and number
-                self.handle_M(float(number),        # Call the method that handles M commands
-                              line_info, 
+            elif command == "M":
+                g_code_line_info.pop(0)                         # Delete this command and number
+                self.handle_M(float(number),                    # Call the method that handles M commands
+                              g_code_line_info, 
                               CNC_Parameter = CNC_Parameter, 
                               Frequency_Manager = Frequency_Manager, 
                               Tool_Change_Manager = Tool_Change_Manager,
                               Pause_Manager = Pause_Manager,
                               Cooling_Manager = Cooling_Manager,
                               Movement_Manager = Movement_Manager)
-            elif command in ["X", "Y", "Z", "A", "B", "C", "I", "J", "K", "R"]:     # Stand alone-parameter -> movement without a G command, do not delete this command and number!
-                self.handle_movement_without_G(line_info,                           # Call method that handles movements without a G command
+            elif command in stand_alone_parameter:     # Stand alone-parameter -> movement without a G command, do not delete this command and number!
+                self.handle_movement_without_G(g_code_line_info,                           # Call method that handles movements without a G command
                                                Movement_Manager = Movement_Manager)
             else:                                                                           # No action defined for this command
-                line_info.pop(0)                                                            # Delete this command and number
-                print(f"gcodeline found this commmand: {command} in line {self.index+1}. no action defined.")  # print info
+                g_code_line_info.pop(0)                                                            # Delete this command and number
+                print(f"gcodeline found this commmand: {command} in line {self.g_code_line_index+1}. no action defined.")  # print info
         
-        self.indices_of_movements = Movement_Manager.get_indices_of_movements_for_gcode_line(self.index)   # Get movement indices 
-        #self.time = Movement_Manager.get_expected_time_of_gcode_line(self.index)                 # Get expected time
+        self.indices_of_movements = Movement_Manager.get_indices_of_movements_for_gcode_line(self.g_code_line_index)   # Get movement indices 
 
     #################################################################################################
     # Methods
 
-    # Method for all G commands
     def handle_G(self, 
-                 number: float, 
-                 line_info: list, 
+                 number_for_command: float, 
+                 g_code_line_info: list, 
                  Pause_Manager: PauseManager,
                  Movement_Manager: MovementManager):
+        """
+        Handles the G-code commands.
 
-        # Handle G commands
-        match number:
-            case 0:                             # Rapid linear movement
-                self.line_status.active_movement = number                                   # Save movement
-                self.line_status.feed_rate = CNCParameter.F_MAX / 60000.0                  # Set feed rate
-                self.handle_linear_movement(line_info, Movement_Manager = Movement_Manager) # Call method to handle the linear movement
-            case 1:                             # Linear movement   
-                self.line_status.active_movement = number                                   # Save movement
-                self.line_status.feed_rate = self.line_status.F_value / 60000.0             # Set feed rate
-                self.handle_linear_movement(line_info, Movement_Manager = Movement_Manager) # Call method to handle the linear movement
-            case 2 | 3:                         # Arc movement CW, Arc movement CCW
-                self.line_status.active_movement = number                                   # Save movement
-                self.line_status.arc_information.direction = number                         # Save movement in arc info
-                self.line_status.feed_rate = self.line_status.F_value / 60000.0             # Set feed rate
-                self.handle_arc_movement(line_info, Movement_Manager = Movement_Manager)    # Call method to handle the arc movement
-            case 4:                             # Dwell
-                self.handle_g04(line_info, Pause_Manager = Pause_Manager, Movement_Manager = Movement_Manager)  # Call method to handle dwell
-            case 9:                             # Exact stop in this line
-                self.line_status.exact_stop = True                                          # Take action
-            case 17 | 18 | 19:                  # Select XY-plane, Select XZ-plane, Select YZ-plane
-                self.line_status.active_plane = int(number)                                 # Take action
-            case 20:                            # Length unit: Inch, not supported
-                raise Exception("Please use metric system, imperial system is not supported.")  # Take action
-            case 21:                            # Length unit: mm
+        Parameters:
+        -----------
+        number_for_command : float
+            The G-code command number.
+        line_info : list
+            The remaining parts of the G-code line after extracting the command.
+        Pause_Manager : PauseManager
+            An instance of the PauseManager class to handle pauses.
+        Movement_Manager : MovementManager
+            An instance of the MovementManager class to handle movements.
+        """
+
+        # Handle G command
+        match number_for_command:
+            case 0: # Rapid linear movement
+                self.cnc_status_current_line.active_movement_type = number_for_command                      # Save movement
+                self.cnc_status_current_line.feed_rate = CNCParameter.F_MAX / 60000.0                       # Set feed rate in [mm/ms]
+                self.handle_linear_movement(g_code_line_info = g_code_line_info,                                   # Call method to handle the linear movement
+                                            Movement_Manager = Movement_Manager)          
+            case 1: # Linear movement   
+                self.cnc_status_current_line.active_movement_type = number_for_command                      # Save movement
+                self.cnc_status_current_line.feed_rate = self.cnc_status_current_line.F_value / 60000.0     # Set feed rate in [mm/ms]
+                self.handle_linear_movement(g_code_line_info = g_code_line_info,                                   # Call method to handle the linear movement
+                                            Movement_Manager = Movement_Manager)
+            case 2 | 3: # Arc movement CW or Arc movement CCW
+                self.cnc_status_current_line.active_movement_type = number_for_command                      # Save movement
+                self.cnc_status_current_line.arc_information.direction = number_for_command                 # Save movement in arc info
+                self.cnc_status_current_line.feed_rate = self.cnc_status_current_line.F_value / 60000.0     # Set feed rate in [mm/ms]
+                self.handle_arc_movement(g_code_line_info = g_code_line_info,                                      # Call method to handle the arc movement
+                                         Movement_Manager = Movement_Manager)
+            case 4: # Dwell
+                self.handle_g04(g_code_line_info = g_code_line_info,                                               # Call method to handle dwell
+                                Pause_Manager = Pause_Manager, 
+                                Movement_Manager = Movement_Manager)
+            case 9: # Exact stop in this line
+                self.cnc_status_current_line.exact_stop = True
+            case 17 | 18 | 19: # Select XY-plane or Select XZ-plane or Select YZ-plane
+                self.cnc_status_current_line.active_plane = int(number_for_command)
+            case 20: # Length unit: Inch, not supported
+                raise Exception(f"Please use metric system, imperial system is not supported.")
+            case 21: # Length unit: mm
                 pass                                                                        # Standard unit, nothing to do
-            case 40 | 41 | 41.1 | 42 | 42.1:    # Cutter compensation
-               self.line_status.cutter_compensation = number                                # Take action
-            case 61:                            # exact stop on for this and following lines
-                self.line_status.exact_stop = True                                          # Take action
-                self.line_status.G_61_active = True                                         # Take action
-            case 64:                            # exact stop off
-                self.line_status.G_61_active = False                                        # Take action
-            case 90:                            # Absolute position for axes
-                self.line_status.absolute_position = True                                   # Take action
-            case 90.1:                          # Absolute position for arc center
-                self.line_status.absolute_arc_center = True                                 # Take action
-            case 91:                            # Relative position for axes
-                self.line_status.absolute_position = False                                  # Take action
-            case 91.1:                          # Relative position for arc center
-                self.line_status.absolute_arc_center = False                                # Take action
-            case _:                             # Unsupported G commands
-                print(f"G{number} found. No action defined.")                               # Take action
+            case 40 | 41 | 41.1 | 42 | 42.1: # Cutter compensation
+               self.cnc_status_current_line.cutter_compensation = number_for_command
+            case 61: # exact stop on for this and following lines
+                self.cnc_status_current_line.exact_stop = True                                         
+                self.cnc_status_current_line.G_61_active = True
+            case 64: # exact stop off
+                self.cnc_status_current_line.G_61_active = False
+            case 90: # Absolute position for axes
+                self.cnc_status_current_line.absolute_position = True
+            case 90.1: # Absolute position for arc center
+                self.cnc_status_current_line.absolute_arc_center = True
+            case 91: # Relative position for axes
+                self.cnc_status_current_line.absolute_position = False
+            case 91.1: # Relative position for arc center
+                self.cnc_status_current_line.absolute_arc_center = False 
+            case _: # Unsupported G commands
+                print(f"G{number_for_command} found. No action defined.")
 
-    # Method for all M commands
     def handle_M(self, 
-                 number: float, 
-                 line_info: list, 
+                 number_for_command: float, 
+                 g_code_line_info: list, 
                  CNC_Parameter: CNCParameter, 
                  Frequency_Manager: FrequencyManager,
                  Tool_Change_Manager: ToolChangeManager,
                  Pause_Manager: PauseManager,
                  Cooling_Manager: CoolingManager,
                  Movement_Manager: MovementManager):
+        """
+        Handles the M-code commands.
+
+        Parameters:
+        -----------
+        number : float
+            The M-code command number.
+        line_info : list
+            The remaining parts of the G-code line after extracting the command.
+        CNC_Parameter : CNCParameter
+            An instance of the CNCParameter class containing CNC parameters.
+        Frequency_Manager : FrequencyManager
+            An instance of the FrequencyManager class to manage frequency operations.
+        Tool_Change_Manager : ToolChangeManager
+            An instance of the ToolChangeManager class to handle tool changes.
+        Pause_Manager : PauseManager
+            An instance of the PauseManager class to handle pauses.
+        Cooling_Manager : CoolingManager
+            An instance of the CoolingManager class to handle cooling operations.
+        Movement_Manager : MovementManager
+            An instance of the MovementManager class to handle movements.
+        """
 
         # Handle M command, self explaining
-        match number:
+        match number_for_command:
             case CNC_Parameter.COMMAND_ABORT:
-                self.handle_abort(Pause_Manager = Pause_Manager, Movement_Manager = Movement_Manager)       # Call method
+                self.handle_abort(Pause_Manager = Pause_Manager, 
+                                  Movement_Manager = Movement_Manager)
             case CNC_Parameter.COMMAND_QUIT:
-                self.handle_quit(Pause_Manager = Pause_Manager, Movement_Manager = Movement_Manager)        # Call method
+                self.handle_quit(Pause_Manager = Pause_Manager, 
+                                 Movement_Manager = Movement_Manager)
             case CNC_Parameter.COMMAND_PROGABORT:
-                self.handle_progabort(Pause_Manager = Pause_Manager, Movement_Manager = Movement_Manager)   # Call method
+                self.handle_progabort(Pause_Manager = Pause_Manager, 
+                                      Movement_Manager = Movement_Manager)
             case CNC_Parameter.COMMAND_SPINDLE_START_CW:
-                self.handle_spindle_operation("CW", Frequency_Manager)              # Call method
+                self.handle_spindle_operation(spindle_command = "CW", 
+                                              Frequency_Manager = Frequency_Manager)
             case CNC_Parameter.COMMAND_SPINDLE_START_CCW:
-                self.handle_spindle_operation("CCW", Frequency_Manager)             # Call method
+                self.handle_spindle_operation(spindle_command = "CCW", 
+                                              Frequency_Manager = Frequency_Manager)
             case CNC_Parameter.COMMAND_SPINDLE_OFF:
-                    self.handle_spindle_operation("off", Frequency_Manager)         # Call method
+                    self.handle_spindle_operation(spindle_command = "off", 
+                                                  Frequency_Manager = Frequency_Manager)
             case CNC_Parameter.COMMAND_TOOL_CHANGE:
-                self.handle_tool_change(line_info,                                  # Call method
+                self.handle_tool_change(g_code_line_info = g_code_line_info,                               
                                         Tool_Change_Manager = Tool_Change_Manager,
                                         Movement_Manager = Movement_Manager)
             case CNC_Parameter.COMMAND_COOLING_ON:
-                self.handle_cooling_operation("on", Cooling_Manager)                # Call method   
+                self.handle_cooling_operation(cooling_command = "on", 
+                                              Cooling_Manager = Cooling_Manager) 
             case CNC_Parameter.COMMAND_COOLING_OFF:
-                self.handle_cooling_operation("off", Cooling_Manager)               # Call method
+                self.handle_cooling_operation(cooling_command = "off", 
+                                              Cooling_Manager = Cooling_Manager)
             case CNC_Parameter.COMMAND_END_OF_PROGRAM:
-                self.handle_end_of_program(Frequency_Manager = Frequency_Manager,   # Call method
+                self.handle_end_of_program(Frequency_Manager = Frequency_Manager,
                                            Movement_Manager = Movement_Manager)
 
-    # Method for a movement without a G command
     def handle_movement_without_G(self, 
-                                  line_info: list, 
+                                  g_code_line_info: list, 
                                   Movement_Manager: MovementManager):
-        
-        movement = self.line_status.active_movement     # Get active movement
+        """
+        Handles movement commands without an explicit G-code.
 
-        self.important = True                           # Set importance flag
+        Parameters:
+        -----------
+        g_code_line_info : list
+            The remaining parts of the G-code line after extracting the command.
+        Movement_Manager : MovementManager
+            An instance of the MovementManager class to handle movements.
+        """
+
+        movement_type = self.cnc_status_current_line.active_movement_type     # Get active movement
 
         # Handle movement
-        if movement in [0, 1]:                          # Linear movement
-            self.handle_linear_movement(line_info,          # Call method to handle linear movement
+        if movement_type in [0, 1]: # Linear movement
+            self.handle_linear_movement(g_code_line_info = g_code_line_info,           # Call method to handle linear movement
                                         Movement_Manager = Movement_Manager)
-        else:                                           # Arc movement
-            self.handle_arc_movement(line_info,             # Call method to handle arc movement
+        else: # Arc movement
+            self.handle_arc_movement(g_code_line_info = g_code_line_info,              # Call method to handle arc movement
                                      Movement_Manager = Movement_Manager)
 
-    # Method for new F value
     def handle_F(self, 
-                 number: float,
+                 F_value: float,
                  CNC_Parameter: CNCParameter):
+        """
+        Handles setting the feed rate (F value) in the G-code line.
+
+        Parameters:
+        -----------
+        number : float
+            The feed rate value to be set.
+        CNC_Parameter : CNCParameter
+            An instance of the CNCParameter class containing CNC parameters.
         
-        # Check number
-        if number < 0:
-            raise Exception(f"Error in gcode line {self.index+1}: Number for F value must be nonnegative.")
+        Raises:
+        -------
+        Exception
+            If the feed rate value is negative.
+        """
 
-        if number <= CNC_Parameter.F_MAX:                   # Number is valid
-            self.line_status.F_value = number                   # Set F value 
-        else:                                               # Number is not valid
-            self.line_status.F_value = CNC_Parameter.F_MAX      # Set F value to F_MAX
+        # Check if the number is nonnegative
+        if F_value < 0:
+            raise Exception(f"Error in gcode line {self.g_code_line_index+1}: Number for F value must be nonnegative.")
 
-    # method for new S value
+        # Validate the feed rate value against the maximum allowed feed rate
+        if F_value <= CNC_Parameter.F_MAX:
+            self.cnc_status_current_line.F_value = F_value                   # Set F value 
+        else:
+            self.cnc_status_current_line.F_value = CNC_Parameter.F_MAX      # Set F value to F_MAX
+
     def handle_S(self, 
-                 number: float, 
+                 S_value: float, 
                  CNC_Parameter: CNCParameter, 
                  Movement_Manager: MovementManager,
                  Frequency_Manager: FrequencyManager):
+        """
+        Handles setting the spindle speed (S value) in the G-code line.
+
+        Parameters:
+        -----------
+        S_value : float
+            The spindle speed value to be set.
+        CNC_Parameter : CNCParameter
+            An instance of the CNCParameter class containing CNC parameters.
+        Movement_Manager : MovementManager
+            An instance of the MovementManager class to manage movements.
+        Frequency_Manager : FrequencyManager
+            An instance of the FrequencyManager class to manage frequency-related operations.
         
-        # Check input
-        if number < 0:
-            raise Exception(f"Error in gcode line {self.index+1}: Number for S value must be nonnegative.")
+        Raises:
+        -------
+        Exception
+            If the spindle speed value is negative or invalid based on CNC parameters.
+        """
 
-        self.important = True                           # Set importance flag
+        # Check if the S value is nonnegative
+        if S_value < 0:
+            raise Exception(f"Error in gcode line {self.g_code_line_index+1}: Number for S value must be nonnegative.")
 
-        # Handle S value
-        if CNC_Parameter.S_IS_ABSOLUTE:                 # S value is absolute
-            if number <= CNC_Parameter.S_MAX:               # S value is valid
-                new_S = number                                  # Set S value
-            else:                                           # S value is not valid
-                new_S = CNC_Parameter.S_MAX                     # Set S value to S_MAX
-        else:                                           # S value is relative
-            if number > 100:                                # Check if number is valid
-                raise Exception(f"Error in gcode line {self.index+1}: Relative S value > 100")
-            new_S = CNC_Parameter.S_MAX * number / 100.0    # Set S value
+        # Determine and set the new S value based on CNC parameters
+        if CNC_Parameter.S_IS_ABSOLUTE:
+            # S value is absolute
+            if S_value <= CNC_Parameter.S_MAX:
+                new_S = S_value                                     # Set the valid S value
+            else:
+                new_S = CNC_Parameter.S_MAX
+        else: 
+            # S value is relative
+            if S_value > 100:
+                raise Exception(f"Error in gcode line {self.g_code_line_index+1}: Relative S value > 100")
+            new_S = CNC_Parameter.S_MAX * S_value / 100.0           # Set the valid S value
 
-        self.line_status.S_value = new_S                # Set S value in line status
-        Frequency_Manager.new_S(self.index, new_S)      # Inform Frequency Manager that S value has changed
-        Movement_Manager.add_pause(self.index, 1)
+        # Update the current line's CNC status with the new S value
+        self.cnc_status_current_line.S_value = new_S
 
-    # Method for linear movement
+        # Inform the Frequency Manager that the S value has changed
+        Frequency_Manager.new_S(line_index = self.g_code_line_index, 
+                                new_S = new_S)
+        
+        # Add a pause in the Movement Manager
+        Movement_Manager.add_pause(line_index = self.g_code_line_index, 
+                                   time = 0)
+
     def handle_linear_movement(self, 
-                               line_info: list, 
+                               g_code_line_info: list, 
                                Movement_Manager: MovementManager):
+        """
+        Handles linear movements specified in the G-code line.
 
-        self.important = True                           # Set importanve flag
+        Parameters:
+        -----------
+        g_code_line_info : list
+            List of tuples where each tuple contains a command (letter) and a corresponding value.
+        Movement_Manager : MovementManager
+            An instance of the MovementManager class to manage movements.
+        """
 
-        info_index = 0                                  # Define index for line_info
+        g_code_line_info_index = 0  # Define index for g_code_line_info
 
-        # Go through line info until everything was seen
-        while info_index < len(line_info):
+        relevant_commands = ["X", "Y", "Z", "A", "B", "C"]  # relevant commands for linear movement
 
-            command = line_info[info_index][0]              # Get command
-            number = line_info[info_index][1]               # Get number
+        # Iterate through line info until all commands are processed
+        while g_code_line_info_index < len(g_code_line_info):
 
-            if command in ["X", "Y", "Z", "A", "B", "C"]:   # Command is useful for this Method
-                line_info.pop(info_index)                       # Remove command and number from line_info
+            command = g_code_line_info[g_code_line_info_index][0]               # Get command
+            number_for_command = g_code_line_info[g_code_line_info_index][1]    # Get number
+
+            if command in relevant_commands:                    # Check if command is relevant for this method
+                g_code_line_info.pop(g_code_line_info_index)    # Remove command and number from g_code_line_info
                 
                 # Set the parameter to absolute value
                 match command:
                     case "X":
-                        if self.line_status.absolute_position:
-                            self.line_status.position_linear_axes.X = float(number)
+                        if self.cnc_status_current_line.absolute_position:
+                            self.cnc_status_current_line.position_linear_axes.X = float(number_for_command)
                         else:
-                            self.line_status.position_linear_axes.X += float(number)
+                            self.cnc_status_current_line.position_linear_axes.X += float(number_for_command)
                     case "Y":
-                        if self.line_status.absolute_position:
-                            self.line_status.position_linear_axes.Y = float(number)
+                        if self.cnc_status_current_line.absolute_position:
+                            self.cnc_status_current_line.position_linear_axes.Y = float(number_for_command)
                         else:
-                            self.line_status.position_linear_axes.Y += float(number)
+                            self.cnc_status_current_line.position_linear_axes.Y += float(number_for_command)
                     case "Z":
-                        if self.line_status.absolute_position:
-                            self.line_status.position_linear_axes.Z = float(number)
+                        if self.cnc_status_current_line.absolute_position:
+                            self.cnc_status_current_line.position_linear_axes.Z = float(number_for_command)
                         else:
-                            self.line_status.position_linear_axes.Z += float(number)
+                            self.cnc_status_current_line.position_linear_axes.Z += float(number_for_command)
                     case "A":
-                        if self.line_status.absolute_position:
-                            self.line_status.position_rotation_axes[0] = float(number)
+                        if self.cnc_status_current_line.absolute_position:
+                            self.cnc_status_current_line.position_rotation_axes.A = float(number_for_command)
                         else:
-                            self.line_status.position_rotation_axes[0] += float(number)
+                            self.cnc_status_current_line.position_rotation_axes.A += float(number_for_command)
                     case "B":
-                        if self.line_status.absolute_position:
-                            self.line_status.position_rotation_axes[1] = float(number)
+                        if self.cnc_status_current_line.absolute_position:
+                            self.cnc_status_current_line.position_rotation_axes.B = float(number_for_command)
                         else:
-                            self.line_status.position_rotation_axes[1] += float(number)
+                            self.cnc_status_current_line.position_rotation_axes.B += float(number_for_command)
                     case "C":
-                        if self.line_status.absolute_position:
-                            self.line_status.position_rotation_axes[2] = float(number)
+                        if self.cnc_status_current_line.absolute_position:
+                            self.cnc_status_current_line.position_rotation_axes.C = float(number_for_command)
                         else:
-                            self.line_status.position_rotation_axes[2] += float(number)
-            else:                                           # Command is not useful for this method
-                info_index += 1                                 # Iterate info_index
+                            self.cnc_status_current_line.position_rotation_axes.C += float(number_for_command)
+            else:                                               # Command is not useful for this method
+                g_code_line_info_index += 1                         # Iterate g_code_line_info_index
 
-        Movement_Manager.add_linear_movement(line_index = self.index,                        # Inform movement manager 
-                                             last_line_status = self.last_line_status, 
-                                             current_line_status = self.line_status)
+        Movement_Manager.add_linear_movement(line_index = self.g_code_line_index,               # Inform movement manager 
+                                             last_line_status = self.cnc_status_last_line, 
+                                             current_line_status = self.cnc_status_current_line)
 
-    # Method for arc movement
     def handle_arc_movement(self, 
-                            line_info: list, 
+                            g_code_line_info: list, 
                             Movement_Manager: MovementManager):
-        
-        self.important = True       # Set importanve flag
+        """
+        Handles arc movements specified in the G-code line.
 
-        info_index = 0              # Define index for line_info
+        Parameters:
+        -----------
+        g_code_line_info : list
+            List of tuples where each tuple contains a command (letter) and a corresponding value.
+        Movement_Manager : MovementManager
+            An instance of the MovementManager class to manage movements.
+        """
 
-        self.line_status.arc_information.I = self.line_status.position_linear_axes.X      # Set I to X value
-        self.line_status.arc_information.J = self.line_status.position_linear_axes.Y      # Set J to Y value
-        self.line_status.arc_information.K = self.line_status.position_linear_axes.Z      # Set K to Z value
+        g_code_line_info_index = 0              # Define index for line_info
 
-        # Go through line info until everything was seen
-        while info_index < len(line_info):
+        relevant_commands = ["X", "Y", "Z", "A", "B", "C", "I", "J", "K", "R", "P"] # relevent commands for linear movement
 
-            command = line_info[info_index][0]  # Get command
-            number = line_info[info_index][1]   # Get number
+        # Initialize arc information with current positions
+        self.cnc_status_current_line.arc_information.I = self.cnc_status_current_line.position_linear_axes.X
+        self.cnc_status_current_line.arc_information.J = self.cnc_status_current_line.position_linear_axes.Y
+        self.cnc_status_current_line.arc_information.K = self.cnc_status_current_line.position_linear_axes.Z
 
-            if command in ["X", "Y", "Z", "A", "B", "C", "I", "J", "K", "R", "P"]:  # Command is useful for this Method
+        radius_given = False    # Variable to store if the radius was given
+
+        # Iterate through line info until all commands are processed
+        while g_code_line_info_index < len(g_code_line_info):
+
+            command = g_code_line_info[g_code_line_info_index][0]               # Get command
+            number_for_command = g_code_line_info[g_code_line_info_index][1]    # Get number
+
+            if command in relevant_commands:  # Command is useful for this Method
                 
-                line_info.pop(info_index)       # Remove command and number from line_info
-                
-                radius_given = False            # Variable to store the information if the radius was given
+                g_code_line_info.pop(g_code_line_info_index)       # Remove command and number from line_info
                 
                 # Set the parameter to absolute value
                 match command:
                     case "X":
-                        if self.line_status.absolute_position:
-                            self.line_status.position_linear_axes.X = float(number)
+                        if self.cnc_status_current_line.absolute_position:
+                            self.cnc_status_current_line.position_linear_axes.X = float(number_for_command)
                         else:
-                            self.line_status.position_linear_axes.X += float(number)
+                            self.cnc_status_current_line.position_linear_axes.X += float(number_for_command)
                     case "Y":
-                        if self.line_status.absolute_position:
-                            self.line_status.position_linear_axes.Y = float(number)
+                        if self.cnc_status_current_line.absolute_position:
+                            self.cnc_status_current_line.position_linear_axes.Y = float(number_for_command)
                         else:
-                            self.line_status.position_linear_axes.Y += float(number)
+                            self.cnc_status_current_line.position_linear_axes.Y += float(number_for_command)
                     case "Z":
-                        if self.line_status.absolute_position:
-                            self.line_status.position_linear_axes.Z = float(number)
+                        if self.cnc_status_current_line.absolute_position:
+                            self.cnc_status_current_line.position_linear_axes.Z = float(number_for_command)
                         else:
-                            self.line_status.position_linear_axes.Z += float(number)
+                            self.cnc_status_current_line.position_linear_axes.Z += float(number_for_command)
                     case "A":
-                        if self.line_status.absolute_position:
-                            self.line_status.position_rotation_axes[0] = float(number)
+                        if self.cnc_status_current_line.absolute_position:
+                            self.cnc_status_current_line.position_rotation_axes.A = float(number_for_command)
                         else:
-                            self.line_status.position_rotation_axes[0] += float(number)
+                            self.cnc_status_current_line.position_rotation_axes.A += float(number_for_command)
                     case "B":
-                        if self.line_status.absolute_position:
-                            self.line_status.position_rotation_axes[1] = float(number)
+                        if self.cnc_status_current_line.absolute_position:
+                            self.cnc_status_current_line.position_rotation_axes.B = float(number_for_command)
                         else:
-                            self.line_status.position_rotation_axes[1] += float(number)
+                            self.cnc_status_current_line.position_rotation_axes.B += float(number_for_command)
                     case "C":
-                        if self.line_status.absolute_position:
-                            self.line_status.position_rotation_axes[2] = float(number)
+                        if self.cnc_status_current_line.absolute_position:
+                            self.cnc_status_current_line.position_rotation_axes.C = float(number_for_command)
                         else:
-                            self.line_status.position_rotation_axes[2] += float(number)
+                            self.cnc_status_current_line.position_rotation_axes.C += float(number_for_command)
                     case "I":
-                        if self.line_status.absolute_arc_center:
-                            self.line_status.arc_information.I = float(number)
+                        if self.cnc_status_current_line.absolute_arc_center:
+                            self.cnc_status_current_line.arc_information.I = float(number_for_command)
                         else:
-                            self.line_status.arc_information.I +=  float(number)
+                            self.cnc_status_current_line.arc_information.I +=  float(number_for_command)
                     case "J":
-                        if self.line_status.absolute_arc_center:
-                            self.line_status.arc_information.J = float(number)
+                        if self.cnc_status_current_line.absolute_arc_center:
+                            self.cnc_status_current_line.arc_information.J = float(number_for_command)
                         else:
-                            self.line_status.arc_information.J += float(number)
+                            self.cnc_status_current_line.arc_information.J += float(number_for_command)
                     case "K":
-                        if self.line_status.absolute_arc_center:
-                            self.line_status.arc_information.K = float(number)
+                        if self.cnc_status_current_line.absolute_arc_center:
+                            self.cnc_status_current_line.arc_information.K = float(number_for_command)
                         else:
-                            self.line_status.arc_information.K += float(number)
+                            self.cnc_status_current_line.arc_information.K += float(number_for_command)
                     case "R":
                         radius_given = True
-                        self.line_status.arc_information.radius = float(number)
-            else:                           # Command is not useful for this Method
-                info_index += 1                 # Iterate info index
+                        self.cnc_status_current_line.arc_information.radius = float(number_for_command)
+            else:                               # Command is not useful for this Method
+                g_code_line_info_index += 1         # Iterate info index
 
         
         if radius_given:
@@ -418,196 +577,343 @@ class GCodeLine:
         else:
             self.compute_radius()           # Compute the radius with a given arc center
 
-        Movement_Manager.add_arc_movement(line_index = self.index,                       # Inform movement manager
-                                          last_line_status = self.last_line_status, 
-                                          current_line_status = self.line_status)
+        Movement_Manager.add_arc_movement(line_index = self.g_code_line_index,                       # Inform movement manager
+                                          last_line_status = self.cnc_status_last_line, 
+                                          current_line_status = self.cnc_status_current_line)
 
-    # Method for dwell time
     def handle_g04(self, 
-                   line_info: list, 
+                   g_code_line_info: list, 
                    Pause_Manager: PauseManager,
                    Movement_Manager: MovementManager):
-        
-        self.important = True                   # Set importanve flag
+        """
+        Handles the G04 dwell command in the G-code line.
+
+        Parameters:
+        -----------
+        line_info : list
+            List of tuples where each tuple contains a command (letter) and a corresponding value.
+        Pause_Manager : PauseManager
+            An instance of the PauseManager class to manage pauses.
+        Movement_Manager : MovementManager
+            An instance of the MovementManager class to manage movements.
+        """
 
         # Search for the P value, should be the first command in the line_info
-        for info_index, info in enumerate(line_info):
+        for g_code_line_info_index, info in enumerate(g_code_line_info):
 
             command = info[0]                       # Get the command
-            number = info[1]                        # Get the number
+            number_for_command = info[1]            # Get the number
+
+            P_value_found = False                   # Initialize flag to track if P value is found
 
             if command == "P":                      # P command found
-                if "." in number:                       # P value is in s
-                    number = int(1000.0 * float(number))    # Set number
-                else:                                   # P value is in ms
-                    number = int(number)                    # Set number
+                dwell_time = 0                          # Initialize the dwell time variable
 
-                P_value = True                          # Set flag that P value was found             
-                line_info.pop(info_index)               # Remove command and number from line_info
-                break                                   # Break loop
+                if "." in number_for_command: # P value is in s
+                    dwell_time = int(1000.0 * float(number_for_command))    # convert to ms
+                else:   # P value is in ms
+                    dwell_time = int(number_for_command)
+
+                P_value_found = True                                        # Set flag that P value was found             
+                g_code_line_info.pop(g_code_line_info_index)                # Remove command and number from line_info
+                Pause_Manager.new_dwell(self.g_code_line_index,             # Inform pause manager
+                                        number_for_command)     
+                Movement_Manager.add_pause(self.g_code_line_index,          # Inform movement manager
+                                           number_for_command)  
+                break
                 
         # Handle Error that the P value was not found
-        if not P_value:                             
-            raise Exception(f"No P value found in combination with a G04 in line {self.index+1}.")
-            
-        Pause_Manager.new_dwell(self.index, number)     # Inform pause manager
-        Movement_Manager.add_pause(self.index, number)  # Inform movement manager
+        if not P_value_found:                             
+            raise Exception(f"No P value found in combination with a G04 in line {self.g_code_line_index+1}.")
 
-    # Method for abort command
     def handle_abort(self, 
                      Pause_Manager: PauseManager, 
                      Movement_Manager: MovementManager):
-        self.important = True                               # Set importance flag
-        Pause_Manager.new_pause(self.index, 0)              # Inform pause manager
-        Movement_Manager.add_pause(self.index, -1)          # Inform movement manager
+        """
+        Handles the abort command in the G-code line.
 
-    # Method for quit command
+        Parameters:
+        -----------
+        Pause_Manager : PauseManager
+            An instance of the PauseManager class to manage pauses.
+        Movement_Manager : MovementManager
+            An instance of the MovementManager class to manage movements.
+        """
+
+        # Inform pause manager to add a new pause with 0 duration, indicating an immediate pause
+        Pause_Manager.new_pause(self.g_code_line_index, 
+                                0)
+
+        # Inform movement manager to add a pause with -1 duration, indicating an abort
+        Movement_Manager.add_pause(self.g_code_line_index, 
+                                   -1)
+
     def handle_quit(self, 
                     Pause_Manager: PauseManager, 
                     Movement_Manager: MovementManager):
-        self.important = True                       # Set importanve flag
-        Pause_Manager.new_pause(self.index, 1)      # Inform pause manager
-        Movement_Manager.add_pause(self.index, -1)  # Inform movement manager
+        """
+        Handles the quit command in the G-code line.
+
+        Parameters:
+        -----------
+        Pause_Manager : PauseManager
+            An instance of the PauseManager class to manage pauses.
+        Movement_Manager : MovementManager
+            An instance of the MovementManager class to manage movements.
+        """
+
+        # Inform pause manager to add a new pause with a duration of 1, indicating a quit command
+        Pause_Manager.new_pause(self.g_code_line_index, 
+                                1)
+
+        # Inform movement manager to add a pause with -1 duration, indicating a quit command
+        Movement_Manager.add_pause(self.g_code_line_index, 
+                                   -1)
     
-    # Method for progabort command
     def handle_progabort(self, 
                          Pause_Manager: PauseManager, 
                          Movement_Manager: MovementManager):
-        self.important = True                           # Set importace flag
-        Pause_Manager.new_pause(self.index, 2)          # Inform pause manager
-        Movement_Manager.add_pause(self.index, -1)      # Inform movement manager
+        """
+        Handles the program abort command in the G-code line.
+
+        Parameters:
+        -----------
+        Pause_Manager : PauseManager
+            An instance of the PauseManager class to manage pauses.
+        Movement_Manager : MovementManager
+            An instance of the MovementManager class to manage movements.
+        """
+        
+        # Inform pause manager to add a new pause with a duration of 2, indicating a program abort command
+        Pause_Manager.new_pause(self.g_code_line_index, 
+                                2)
+
+        # Inform movement manager to add a pause with -1 duration, indicating a program abort command
+        Movement_Manager.add_pause(self.g_code_line_index, 
+                                   -1)
     
-    # Method for a spindle operation
     def handle_spindle_operation(self, 
-                                 command: str, 
+                                 spindle_command: str, 
                                  Frequency_Manager: FrequencyManager):
-        
-        self.important = True                                       # Set importange flag
+        """
+        Handles spindle operation commands in the G-code line.
 
-        # Handle spindle operation
-        if command == "off":                                        
-            self.line_status.spindle_on = False
+        Parameters:
+        -----------
+        spindle_command : str
+            The spindle operation command ("CW", "CCW", or "off").
+        Frequency_Manager : FrequencyManager
+            An instance of the FrequencyManager class to manage spindle operations.
+        """
+        
+        # Update spindle status based on the command
+        if spindle_command == "off":                                        
+            self.cnc_status_current_line.spindle_on = False
         else:
-            self.line_status.spindle_on = True
-            self.line_status.spindle_direction = command
+            self.cnc_status_current_line.spindle_on = True
+            self.cnc_status_current_line.spindle_direction = spindle_command
         
-        Frequency_Manager.new_Spindle_Operation(self.index, command)    # Inform frequency manager
+        # Inform frequency manager about the spindle operation
+        Frequency_Manager.new_Spindle_Operation(line_index = self.g_code_line_index, 
+                                                command = spindle_command)
     
-    # Method for a tool change
     def handle_tool_change(self, 
-                           line_info: list, 
+                           g_code_line_info: list, 
                            Tool_Change_Manager: ToolChangeManager,
-                           Movement_Manager = MovementManager):
+                           Movement_Manager: MovementManager):
+        """
+        Handles tool change commands in the G-code line.
+
+        Parameters:
+        -----------
+        g_code_line_info : list
+            A list containing command and value pairs extracted from the G-code line.
+        Tool_Change_Manager : ToolChangeManager
+            An instance of the ToolChangeManager class to manage tool change operations.
+        Movement_Manager : MovementManager
+            An instance of the MovementManager class to manage movements.
+        """
         
-        self.important = True                                           # Set importance flag
+        T_value_found = False   # Flag to track if T value is found
 
-        T_value_found = False
+        # Search for T value in g_code_line_info
+        for g_code_line_info_index, info in enumerate(g_code_line_info):                        
+            if info[0] == "T": 
+                # T value found                      
 
-        # Search for T value in line_info
-        for info_index, info in enumerate(line_info):                        
-            if info[0] == "T":                                              # T value found
-                tool_number = int(info[1])                                      # Get tool number
-                line_info.pop(info_index)                                       # Remove command and number from line_info
-                T_value_found = True                                            # Set T_value_found True
+                tool_number = int(info[1])                      # Get tool number
+                g_code_line_info.pop(g_code_line_info_index)    # Remove command and number from g_code_line_info
+                T_value_found = True                            # Set T_value_found True
         
         # Case: no T value found
         if not T_value_found:
-            raise Exception(f"Tool change was called without T value in line {self.index}")
+            raise Exception(f"Tool change was called without T value in line {self.g_code_line_index}")
         
-        self.line_status.active_tool = tool_number          # Set tool number
+        # Set active tool number
+        self.cnc_status_current_line.active_tool = tool_number
 
-        Tool_Change_Manager.new_Tool(self.index)            # Inform tool change manager
-        Movement_Manager.add_tool_change(self.index)        # Inform movement manager
+        # Inform tool change manager
+        Tool_Change_Manager.new_Tool(self.g_code_line_index)
 
-    # Method for a cooling operation 
+        # Inform movement manager
+        Movement_Manager.add_tool_change(self.g_code_line_index)
+
     def handle_cooling_operation(self, 
-                                 command: str, 
+                                 cooling_command: str, 
                                  Cooling_Manager: CoolingManager):
-        
-        self.important = True                                       # Set importance flag
+        """
+        Handles cooling operation commands in the G-code line.
 
+        Parameters:
+        -----------
+        cooling_command : str
+            The cooling operation command ('on' or 'off').
+        Cooling_Manager : CoolingManager
+            An instance of the CoolingManager class to manage cooling operations.
+        """
         # Handle command
-        if command == "off":
-            self.line_status.cooling_on = False
+        if cooling_command == "off":
+            self.cnc_status_current_line.cooling_on = False
         else:
-            self.line_status.cooling_on = True
+            self.cnc_status_current_line.cooling_on = True
 
-        Cooling_Manager.new_cooling_operation(self.index, command)  # Inform cooling manager
+        # Inform cooling manager
+        Cooling_Manager.new_cooling_operation(self.g_code_line_index, cooling_command) 
     
-    # Method for end of program command
     def handle_end_of_program(self, 
                               Frequency_Manager: FrequencyManager, 
-                              Movement_Manager: MovementManager):
-        
-        self.important = True                                       # Set importance flag
-        
-        self.line_status.spindle_on = False                         # Update line status
-        self.line_status.program_end_reached = True                 # Update line status
+                              Movement_Manager: MovementManager):        
+        """
+        Handles the end of the G-code program.
 
-        Frequency_Manager.new_Spindle_Operation(self.index, "off")  # Inform frequency manager
-        Movement_Manager.add_end_of_program(self.index)             # Inform movement manager
+        Parameters:
+        -----------
+        Frequency_Manager : FrequencyManager
+            An instance of the FrequencyManager class to manage frequency changes.
+        Movement_Manager : MovementManager
+            An instance of the MovementManager class to manage movements.
+        """
 
-    # Method to compute the arc center
+        # Update line status
+        self.cnc_status_current_line.spindle_on = False                         # TODO: not shure if this is needed
+        self.cnc_status_current_line.program_end_reached = True
+
+        # Inform frequency manager
+        Frequency_Manager.new_Spindle_Operation(line_index = self.g_code_line_index,
+                                                command = "off")
+        
+        # Inform movement manager
+        Movement_Manager.add_end_of_program(self.g_code_line_index)
+
     def compute_arc_center(self):
+        """
+        Computes the center of an arc movement based on the current CNC status.
 
-        movement: int = self.line_status.arc_information.direction                     # Get the movement, 2: CW, 3: CCW
-        start_position = self.last_line_status.position_linear_axes.get_as_array()     # Get the start position
-        end_position = self.line_status.position_linear_axes.get_as_array()            # Get the end position
+        Raises:
+        -------
+        Exception:
+            If the active plane is not the XY-plane.
 
-        mid_point = start_position + (end_position - start_position) * 0.5      # Compute the mid point between start and end position
+        Returns:
+        --------
+        None
+        """
+
+        # Get the movement type, 2: CW, 3: CCW
+        movement_type: int = self.cnc_status_current_line.arc_information.direction
+
+        # Get start and end position
+        start_position_linear_axes = self.cnc_status_last_line.position_linear_axes.get_as_array()
+        end_position_end_position = self.cnc_status_current_line.position_linear_axes.get_as_array()
+
+        # Compute the mid point between start and end position
+        mid_point = start_position_linear_axes + (end_position_end_position - start_position_linear_axes) * 0.5
         
-        radius = self.line_status.arc_information.radius                        # Get the radius
+        # Get the radius
+        radius = self.cnc_status_current_line.arc_information.radius
 
-        if self.line_status.active_plane == 17:                                 # Active plane is the XY-plane
-            
-            Z_position = start_position[2]                                      # Save Z position
-            start_position[2] = 0.0                                             # Set Z value of start position to 0
-            mid_point[2] = 0.0                                                  # Set Z value of end position to 0
+        # Initialize arc center as array
+        arc_center = np.zeros(3)
 
-            start_2_mid_point = mid_point - start_position                      # Compute vector from start to mid point
-            
-            XY_normal_vector = np.array([0.0, 0.0, 1.0])                        # Create normal vector from XY-plane
+        match self.cnc_status_current_line.active_plane:
+            case 17:    # Active plane is the XY-plane
 
-            # Get the direction of the location of the arc-center
-            if (radius >= 0 and movement == 2) or (radius < 0 and movement == 3):
-                direction = "right"
-            elif (radius >= 0 and movement == 3) or (radius < 0 and movement == 2):
-                direction = "left"
-            else:
-                raise Exception("Something wrong here LOL.")
+                # Handle Z value
+                Z_position = start_position_linear_axes[2]  # Save Z position
+                start_position_linear_axes[2] = 0.0         # Set Z value of start position to 0
+                mid_point[2] = 0.0                          # Set Z value of end position to 0
 
-            mid_2_center = vecfunc.compute_normal_vector(vec1 = start_2_mid_point,  # Compute direction from mid point to arc center
-                                                         vec2 = XY_normal_vector, 
-                                                         direction = direction)
+                # Compute vector from start to mid point
+                start_2_mid_point = mid_point - start_position_linear_axes
+                
+                 # Create normal vector from XY-plane
+                XY_normal_vector = np.array([0.0, 0.0, 1.0])
 
-            len_start_2_mid_point = np.linalg.norm(start_2_mid_point)               # Compute distance from start to mid point
+                # Get the direction of the location of the arc-center
+                if (radius >= 0 and movement_type == 2) or (radius < 0 and movement_type == 3):
+                    direction = "right"
+                else:
+                    direction = "left"
 
-            len_mid_2_center = math.sqrt(math.pow(radius, 2) - math.pow(len_start_2_mid_point, 2))  # Compute distance from mid point to center
+                # Compute direction from mid point to arc center
+                mid_2_center = vecfunc.compute_normal_vector(vec1 = start_2_mid_point,  
+                                                             vec2 = XY_normal_vector, 
+                                                             direction = direction)
 
-            mid_2_center = mid_2_center * len_mid_2_center      # Adjust the length of the vector from mid to center
+                # Compute distance from start to mid point
+                len_start_2_mid_point = np.linalg.norm(start_2_mid_point)               
+                
+                # Compute distance from mid point to center
+                len_mid_2_center = math.sqrt(math.pow(radius, 2) - math.pow(len_start_2_mid_point, 2))  
 
-            arc_center = mid_point + mid_2_center               # Compute arc center
-        
-            arc_center[2] = Z_position                      # Set z position
-        else:                                               # Active plane is not XY-plane
-            raise Exception("G02 and G03 are only available in plane 17 (XY)")
-        
-        self.line_status.arc_information.set_arc_center(arc_center)         # Set arc center
+                # Adjust the length of the vector from mid to center
+                mid_2_center = mid_2_center * len_mid_2_center      
 
-    # method to compute the radius
+                # Compute arc center
+                arc_center = mid_point + mid_2_center               
+
+                # Set Z value
+                arc_center[2] = Z_position                      
+            case 18:
+                raise Exception(f"G02 and G03 are not available in plane 18 jet")    # TODO
+            case 19:
+                raise Exception(f"G02 and G03 are only available in plane 19 jet")   # TODO
+
+        # Set arc center
+        self.cnc_status_current_line.arc_information.set_arc_center(arc_center)         
+
     def compute_radius(self):
+        """
+        Computes the radius of the arc based on the current CNC status.
 
-        end_position = self.line_status.position_linear_axes.get_as_array()         # Get end position
-        arc_center = self.line_status.arc_information.get_arc_center_as_array()     # Get arc center
+        This method calculates the radius of the arc based on the end position
+        and the arc center. It ensures that the active plane is the XY-plane (plane 17)
+        before computing the radius.
 
-        if self.line_status.active_plane == 17:                                     # Check if XY-plane is active
+        Raises:
+            Exception: If the active plane is not the XY-plane.
 
-            radius = np.linalg.norm(end_position - arc_center)                      # Compute radius
+        """
 
-            self.line_status.arc_information.radius = radius                               # Set radius
-            
-        else:                                                                   # XY-plane is not active
-            raise Exception("G02 and G03 are only available in plane 17 (XY)")
+        end_position = self.cnc_status_current_line.position_linear_axes.get_as_array()         # Get end position
+        arc_center = self.cnc_status_current_line.arc_information.get_arc_center_as_array()     # Get arc center
+
+        match self.cnc_status_current_line.active_plane:
+            case 17:    # Active plane is the XY-plane
+                # Handle Z value
+                end_position[2] = 0.0
+                arc_center[2] = 0.0
+
+                # Compute radius
+                radius = np.linalg.norm(end_position - arc_center)                      
+
+                # Set radius
+                self.cnc_status_current_line.arc_information.radius = radius
+            case 18:
+                raise Exception(f"G02 and G03 are not available in plane 18 jet")    # TODO
+            case 19:
+                raise Exception(f"G02 and G03 are only available in plane 19 jet")   # TODO
+
 
 # End of class
 #####################################################################################################
