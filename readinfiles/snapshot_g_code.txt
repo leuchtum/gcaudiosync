@@ -1,0 +1,9 @@
+; This is the g-code that identifies a snapshot.
+; Commets in this .txt-file have to start with a ";" as first character 
+; Empty lines will be ignored
+; NXXXX (ine number) before the following g-code lines is allowed
+; The S-value of the snapshot shoult be a number that is not shown up in the rest of the g-code
+
+M3 S1234
+G4 P3.
+M5

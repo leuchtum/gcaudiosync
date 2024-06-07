@@ -3,6 +3,8 @@ import math
 
 import numpy as np
 
+from typing import List
+
 import gcaudiosync.gcanalyser.vectorfunctions as vecfunc
 
 from gcaudiosync.gcanalyser.cncparameter import CNCParameter
@@ -80,7 +82,7 @@ class GCodeLine:
         self.g_code_line_index: int = g_code_line_index    # Index of this line in the g-code
         self.original_g_code_line   = g_code_line          # Save original line
 
-        g_code_line_info: list      = Line_Extractor.extract(line = g_code_line)            # Extract info from line
+        g_code_line_info: List[str] = Line_Extractor.extract(line = g_code_line)            # Extract info from line
 
         self.cnc_status_last_line: CNCStatus    = copy.deepcopy(current_cnc_status)         # Save the cnc-status of the last line
         self.cnc_status_current_line: CNCStatus = copy_CNC_Status(current_cnc_status)       # Create a new cnc-status for this line

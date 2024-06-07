@@ -78,7 +78,7 @@ def find_alpha_combo(line: str):
     return alpha_combo, new_line
     
 # Function to find a number in fromt of a str
-def find_number(line):
+def find_number(line: str):
     
     valid_characters = "0123456789+-."                                  # valid characters
 
