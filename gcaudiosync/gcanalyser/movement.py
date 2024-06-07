@@ -103,7 +103,7 @@ class Movement:
 
         # Set initial values for time and adjustability
         self.start_time: int = 0                      
-        self.time: int = 0                            
+        self.time: int = 0
         self.start_time_is_adjustable: bool = True
         self.time_is_adjustable: bool = True 
 
@@ -414,10 +414,12 @@ class Movement:
         movement type, start and end points, start and end vectors, arc information (if applicable),
         feed rate, and expected time.
         """
+        print(f"Expected time: {self.time} ms")
         print(f"Movement in line {self.g_code_line_index+1}")
+        print(f"g_code_line_index: {self.g_code_line_index}")
         print(f"Movement: {self.movement_type}")
-        print(f"Start point: {self.start_position_linear_axes.print()}")
-        print(f"End point: {self.end_position_linear_axes.print()}")
+        print(f"Start point: {self.start_position_linear_axes.get_as_array()}")
+        print(f"End point: {self.end_position_linear_axes.get_as_array()}")
         print(f"Start vector: {self.start_vector_linear_axes}")
         print(f"End vector: {self.end_vector_linear_axes}")
 
@@ -425,7 +427,6 @@ class Movement:
             print(f"Arc info: {self.arc_information.print()}")
         
         print(f"feed rate [mm/ms]: {self.feed_rate}")
-        print(f"Expected time: {self.time}")
 
     def adjust_start_and_total_time(self, 
                                     offset: int, 

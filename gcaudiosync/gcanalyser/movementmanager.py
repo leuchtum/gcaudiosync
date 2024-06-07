@@ -13,6 +13,22 @@ from gcaudiosync.gcanalyser.rotationaxes import RotationAxes
 from gcaudiosync.gcanalyser.toolpathinformation import ToolPathInformation
 
 class MovementManager:
+    """
+    A class to manage movements in CNC machining.
+
+    Attributes:
+    -----------
+    start_time : int
+        Time for the start.
+    total_time : int
+        Expected total time.
+    movements : List[Movement]
+        List of movements.
+    end_of_program_reached : bool
+        Indicates if the end of the program has been reached.
+    CNC_Parameter : CNCParameter
+        CNC parameter instance.
+    """
 
     # Constructor
     def __init__(self, 
@@ -374,23 +390,25 @@ class MovementManager:
         This method prints the total time, the number of movements, and detailed information
         about each movement in the MovementManager instance.
         """
-        print(f"total_time: {self.total_time}")
-        print(f"nof movements: {len(self.movements)}")
+        print(f"total_time: {self.total_time} ms")
+        print(f"# movements: {len(self.movements)}")
         print("")
 
         for movement_index in range(len(self.movements)):
-            print(f"Movement no. {movement_index}")
-            print(f"time stamp: {self.movements[movement_index].start_time}")
+            print(f"Movement index {movement_index}")
+            print(f"time stamp: {self.movements[movement_index].start_time} ms")
             self.movements[movement_index].print_info()
             print("")
 
-    # TODO: Dwell times will be adjusted too. this has to change!
-    def all_lines_analysed(self):
-
-        # Todo: compute all the start and end vectors
-
+    # Todo: compute all the start and end vectors
+    def all_lines_analysed(self) -> None:
+        """
+        Computes the expected time for all movements, sets their start times,
+        and updates the total time for all movements.
+        """
         time: int = 0
 
+        # Iterate through all movements and get time
         for movement in self.movements:
             movement.compute_expected_time()
             movement.start_time = time
@@ -398,19 +416,35 @@ class MovementManager:
 
         self.total_time = time
 
-    # TODO
     def set_start_time_and_total_time(self, 
-                                      new_start_time: int,
-                                      new_total_time: int,      # time between start time end time, not end time!
-                                      ): 
-        # only first and last movement are allowed to have the flag "start_time_adjustable" to False
+                                      new_start_time: float,
+                                      new_total_time: float) -> int: 
+        """
+        Adjusts the start time and total time for the movements, ensuring constraints are met.
+
+        Parameters:
+        -----------
+        new_start_time : float
+            The new start time for the movements.
+        new_total_time : float
+            The new total duration between the start and end times, not the end time itself.
+
+        Returns:
+        --------
+        int
+            Status code indicating the outcome:
+            0 - Success
+            1 - New total time is zero or less
+            2 - New total time is too short
+        """
 
         if self.total_time <= 0:
-            raise Exception(f"Something went wrong: expected total time <= 0")
+            return 1    # New total time is 0 or less
+            raise Exception(f"Something went wrong: expected total time <= 0")  # Just in case someone wants to add exception handling
 
         # Get nonadjustable and adjustable time
-        nonadjustable_time: int = 0
-        old_adjustable_time: int = 0
+        nonadjustable_time: float = 0
+        old_adjustable_time: float = 0
 
         for movement in self.movements:
             if movement.time_is_adjustable:
@@ -421,13 +455,14 @@ class MovementManager:
 
         # Error case
         if new_adjustable_time <= 0:
-            return 1    # new total time is too short
+            return 2    # New total time is too short
+            raise Exception(f"Something went wrong: new total time is too short")  # Just in case someone wants to add exception handling
         
         # Compute time-factor for nonadjustable times
         factor_for_adjustable_time: float = new_adjustable_time / old_adjustable_time
 
         # Set time for initialization movement
-        self.movements[0].start_time = 0            # for savety
+        self.movements[0].start_time = 0.0          # For savety
         self.movements[0].time = new_start_time
 
         # Iterate through all movements and adjust start time and time
@@ -436,85 +471,147 @@ class MovementManager:
             # Set start time
             self.movements[movement_index].start_time = self.movements[movement_index-1].start_time + self.movements[movement_index-1].time
 
-            # adjust time if possible
+            # Adjust time if possible
             if self.movements[movement_index].time_is_adjustable:
                 self.movements[movement_index].time *= factor_for_adjustable_time
 
-
-    # TODO
-    def adjust_start_time_of_g_code_line(self,
-                                         line_index,
-                                         new_start_time):
+        # Save times
+        self.start_time = new_start_time
+        self.total_time = new_total_time
         
+        return 0    # Everything is fine
+    
+    def adjust_start_time_of_g_code_line(self,
+                                         g_code_line_index: int,
+                                         new_start_time: float) -> int:
+        """
+        Adjusts the start time of a specific G-code line.
+
+        Parameters:
+        -----------
+        g_code_line_index : int
+            The index of the G-code line to be adjusted.
+        new_start_time : float
+            The new start time for the specified G-code line.
+
+        Returns:
+        --------
+        int
+            Status code indicating the outcome:
+            0 - Success
+            1 - No movement with the specified index found
+            2 - New total adjustable time is too short
+        """
+         
+        # Get index of important movement in this g_code_line and Error handling
+        important_movement_index: int = 0
         for movement_index, movement in enumerate(self.movements):
-            if movement.g_code_line_index >= line_index:
+            if movement.g_code_line_index >= g_code_line_index:
                 important_movement_index = movement_index
                 break
-
-        if self.movements[important_movement_index].start_time_is_adjustable:
-            self.movements[important_movement_index].start_time_is_adjustable = False
-        else:
-            pass    # should we do something in this case?
-
-        non_adjustable_index_before = 0
+        if important_movement_index == 0:
+            return 1    # no movement with this index found
+            raise Exception(f"Something went wrong: no movement with this index")   # Just in case someone wants to add exception handling
+                
+        # Get index of previous movement with nonadjustable start time
+        previous_important_movement_index: int = 0
         for movement_index in range(important_movement_index)[::-1]:
             if not self.movements[movement_index].start_time_is_adjustable:
-                non_adjustable_index_before = movement_index
+                previous_important_movement_index = movement_index
                 break
         
-        non_adjustable_index_after = len(self.movements) - 1
-        for movement_index in range(important_movement_index + 1, len(self.movements)):
+        # Get index of next movement with nonadjustable start time
+        next_important_movement_index: int = len(self.movements)
+        for movement_index in range(important_movement_index+1, len(self.movements)):
             if not self.movements[movement_index].start_time_is_adjustable:
-                non_adjustable_index_after = movement_index
+                next_important_movement_index = movement_index
+                break
 
-        non_adjustable_movement_before = self.movements[non_adjustable_index_before]
-        non_adjustable_movement_after = self.movements[non_adjustable_index_after]
+        # Get important times before the important movement
+        old_total_time_before: float = self.movements[important_movement_index].start_time - self.movements[previous_important_movement_index].start_time
+        new_total_time_before: float = new_start_time - self.movements[previous_important_movement_index].start_time
+        nonadjustable_time_before: float = 0
+        old_adjustable_time_before: float = 0
 
-        time_before_movement = movement.start_time - non_adjustable_movement_before.start_time
-        time_after_movement = non_adjustable_movement_after.start_time - time_before_movement
+        for movement_index in range(previous_important_movement_index, important_movement_index):
+            if not self.movements[movement_index].time_is_adjustable:
+                nonadjustable_time_before += self.movements[movement_index].time
 
-        # TODO
-        time_before_movement = movement.start_time - self.start_time
-        time_after_movement = self.total_time - time_before_movement
+        old_adjustable_time_before = old_total_time_before - nonadjustable_time_before
+        new_adjustable_time_before = new_total_time_before - nonadjustable_time_before
 
-        offset = self.movements[0].time
+        # Get important times after the important movement
+        old_total_time_after: float = self.movements[next_important_movement_index].start_time - self.movements[important_movement_index].start_time
+        new_total_time_after: float = self.movements[next_important_movement_index].start_time - new_start_time
+        nonadjustable_time_after: float = 0
+        old_adjustable_time_after: float = 0
 
-        factor_before: float = (new_start_time - self.start_time) / time_before_movement
-        factor_after: float = (self.total_time + offset - new_start_time) / time_after_movement
+        for movement_index in range(important_movement_index, next_important_movement_index):
+            if not self.movements[movement_index].time_is_adjustable:
+                nonadjustable_time_after += self.movements[movement_index].time
 
-        for index in range(1, important_movement_index-1):
-            new_movement_start_time: float= self.movements[index-1].start_time + self.movements[index-1].time
-            new_movement_time: float = self.movements[index].time * factor_before
-            self.movements[index].start_time = new_movement_start_time
-            self.movements[index].time = new_movement_time
+        old_adjustable_time_after = old_total_time_after - nonadjustable_time_after
+        new_adjustable_time_after = new_total_time_after - nonadjustable_time_after
 
-        new_movement_start_time= self.movements[important_movement_index-2].start_time + self.movements[important_movement_index-2].time
-        new_movement_time = new_start_time - new_movement_start_time
-        self.movements[important_movement_index-1].start_time = new_movement_start_time
-        self.movements[important_movement_index-1].time = new_movement_time
+        # Error handeling
+        if new_adjustable_time_before <= 0 or new_adjustable_time_after <= 0:
+            return 2    # New total adjustable time is too short
+            raise Exception(f"Something went wrong: new total adjustable time is too short")    # Just in case someone wants to add exception handling
+        
+        # Adjust all the times and start times before the important movement
+        factor_for_previous_adjustable_time: float = new_adjustable_time_before / old_adjustable_time_before
+        for movement_index in range(previous_important_movement_index, important_movement_index):
+            
+            # Adjust time if possible
+            if self.movements[movement_index].time_is_adjustable:
+                self.movements[movement_index].time *= factor_for_previous_adjustable_time
 
-        new_movement_time = self.movements[important_movement_index].time * factor_after
-        self.movements[important_movement_index].start_time = new_start_time
-        self.movements[important_movement_index].time = new_movement_time
+            # Set start time of next movement
+            self.movements[movement_index+1].start_time = self.movements[movement_index].start_time + self.movements[movement_index].time
 
-        for index in range(important_movement_index+1, len(self.movements)-1):
-            new_movement_start_time= self.movements[index-1].start_time + self.movements[index-1].time
-            new_movement_time = self.movements[index].time * factor_after
-            self.movements[index].start_time = new_movement_start_time
-            self.movements[index].time = new_movement_time
+        # Adjust all the times and start times after the important movement
+        factor_for_after_adjustable_time: float = new_adjustable_time_after / old_adjustable_time_after
+        for movement_index in range(important_movement_index, next_important_movement_index):
 
-        new_movement_start_time = self.movements[-2].start_time + self.movements[-2].time
-        new_movement_time = self.total_time + offset - new_movement_start_time
-        self.movements[-1].start_time = new_movement_start_time
-        self.movements[-1].time = new_movement_time
+            # Adjust time if possible
+            if self.movements[movement_index].time_is_adjustable:
+                self.movements[movement_index].time *= factor_for_after_adjustable_time
 
-    # TODO
+            # Set start time of next movement
+            if movement_index != next_important_movement_index-1:
+                self.movements[movement_index+1].start_time = self.movements[movement_index].start_time + self.movements[movement_index].time
+
+        # Set flag of important movement
+        self.movements[important_movement_index].start_time_is_adjustable = False
+
+        return 0 # Everything went fine
+
     def adjust_end_time_of_g_code_line(self,
-                                       line_index,
-                                       new_end_time):
-        self.adjust_start_time_of_g_code_line(line_index + 1,
-                                              new_end_time)
+                                       g_code_line_index: int,
+                                       new_end_time: float):
+        """
+        Adjusts the end time of a specific G-code line.
 
+        Parameters:
+        -----------
+        g_code_line_index : int
+            The index of the G-code line to be adjusted.
+        new_start_time : float
+            The new start time for the specified G-code line.
+
+        Returns:
+        --------
+        int
+            Status code indicating the outcome:
+            0 - Success
+            1 - No movement with the specified index found
+            2 - New total adjustable time is too short
+        """
+
+        return_value = self.adjust_start_time_of_g_code_line(g_code_line_index + 1,
+                                                             new_end_time)
+
+        return return_value
 
     def get_time_stamps(self) -> List[Tuple[int, int]]:
         """

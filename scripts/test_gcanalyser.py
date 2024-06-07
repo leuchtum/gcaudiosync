@@ -14,10 +14,12 @@ src_path_cnc_parameter = Path("cncparameter") / "parameter.txt"
 G_Code_Analyser = GCodeAnalyser(src_path_cnc_parameter)
 
 # analyse G-Code
-G_Code_Analyser.analyse(src_path_1)
+G_Code_Analyser.analyse(src_path_3)
 
-G_Code_Analyser.set_start_time_and_total_time(1000, 40000)
-# G_Code_Analyser.adjust_start_time_of_g_code_line(15, 15000)
+G_Code_Analyser.set_start_time_and_total_time(1000, 32000)
+G_Code_Analyser.adjust_start_time_of_g_code_line(3, 7000)
+G_Code_Analyser.adjust_start_time_of_g_code_line(8, 25000)
+G_Code_Analyser.adjust_start_time_of_g_code_line(5, 13000)
 # G_Code_Analyser.adjust_end_time_of_g_code_line(20, 20000)
 
 G_Code_Analyser.Movement_Manager.print_info()

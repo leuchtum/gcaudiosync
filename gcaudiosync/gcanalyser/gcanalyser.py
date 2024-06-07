@@ -191,16 +191,14 @@ class GCodeAnalyser:
         """
 
         # Inform the Movement_Manager of the start time and total time
-        self.Movement_Manager.set_start_time_and_total_time(start_time,
-                                                            total_time)
+        self.Movement_Manager.set_start_time_and_total_time(new_start_time = start_time,
+                                                            new_total_time = total_time)
         
         # Get the new time stamps of all movements
         time_stamps: List = self.Movement_Manager.get_time_stamps()
         
-        # Update the Frequency_Manager with the new time stamps
+        # Update the Managers with the new time stamps
         self.Frequency_Manager.update(time_stamps)
-        
-        # Update the Pause_Manager with the new time stamps
         self.Pause_Manager.update(time_stamps)
 
     def adjust_start_time_of_g_code_line(self,
@@ -228,10 +226,8 @@ class GCodeAnalyser:
         # Get the new time stamps of all movements
         time_stamps: List = self.Movement_Manager.get_time_stamps()
         
-        # Update the Frequency_Manager with the new time stamps
+        # Update the Managers with the new time stamps
         self.Frequency_Manager.update(time_stamps)
-        
-        # Update the Pause_Manager with the new time stamps
         self.Pause_Manager.update(time_stamps)
 
     def adjust_end_time_of_g_code_line(self,
