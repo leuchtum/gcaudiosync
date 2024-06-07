@@ -17,8 +17,8 @@ G_Code_Analyser = GCodeAnalyser(src_path_cnc_parameter)
 G_Code_Analyser.analyse(src_path_1)
 
 G_Code_Analyser.set_start_time_and_total_time(1000, 40000)
-G_Code_Analyser.adjust_start_time_of_g_code_line(15, 15000)
-G_Code_Analyser.adjust_end_time_of_g_code_line(20, 20000)
+# G_Code_Analyser.adjust_start_time_of_g_code_line(15, 15000)
+# G_Code_Analyser.adjust_end_time_of_g_code_line(20, 20000)
 
 G_Code_Analyser.Movement_Manager.print_info()
 

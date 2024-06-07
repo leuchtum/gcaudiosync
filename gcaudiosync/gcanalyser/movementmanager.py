@@ -16,8 +16,7 @@ class MovementManager:
 
     # Constructor
     def __init__(self, 
-                 CNC_Parameter: CNCParameter, 
-                 first_line_status: CNCStatus):
+                 CNC_Parameter: CNCParameter):
         """
         A class to manage movements in CNC machining.
 
@@ -42,6 +41,10 @@ class MovementManager:
         
         self.CNC_Parameter = CNC_Parameter          # Get cnc parameter
 
+        # Create the initial CNC_Status object for the initialization of the MovementManager object
+        first_line_status = CNCStatus(start_position = True, 
+                                      CNC_Parameter = self.CNC_Parameter)
+
         # Create first movement
         first_movement = Movement(g_code_line_index = -1,        
                                   movement_type = -1, 
@@ -53,8 +56,10 @@ class MovementManager:
                                   feed_rate = 0.0,
                                   active_plane = 17)
         
-        # Time for first movement
-        first_movement.time = 0                                 
+        # Time for first movement and set flags
+        first_movement.time = 0
+        first_movement.time_is_adjustable = False
+        first_movement.start_time_is_adjustable = False          
 
         # Append first movement
         self.movements.append(first_movement)                   
@@ -200,8 +205,8 @@ class MovementManager:
             The duration of the pause.
         """
 
-        # Default time if unknown # TODO: make this a variable in the cnc parameter input file
-        default_pause_time = 10000                                  
+        # Default time if unknown
+        default_pause_time = self.CNC_Parameter.DEFAULT_PAUSE_TIME                                  
 
         # Get last movement
         last_movement: Movement = copy.deepcopy(self.movements[-1]) 
@@ -221,8 +226,9 @@ class MovementManager:
         if time == -1:
             time = default_pause_time
 
-        # Set time
-        new_movement.time = time                   
+        # Set time and set flags
+        new_movement.time = time      
+        new_movement.time_is_adjustable = False             
         
         # Add exact stop to last movement
         self.movements[-1].do_exact_stop()                  
@@ -242,6 +248,9 @@ class MovementManager:
         """
         self.end_of_program_reached = True  # Set variable
         self.add_pause(line_index, 0)       # Add final pause
+        
+        # Set flags of last movement
+        self.movements[-1].start_time_is_adjustable = False
 
     def get_expected_time_of_gcode_line(self, 
                                         g_code_line_index: int) -> int:
@@ -392,26 +401,45 @@ class MovementManager:
     # TODO
     def set_start_time_and_total_time(self, 
                                       new_start_time: int,
-                                      new_total_time: int,      # time between start time end time
+                                      new_total_time: int,      # time between start time end time, not end time!
                                       ): 
-        
+        # only first and last movement are allowed to have the flag "start_time_adjustable" to False
+
         if self.total_time <= 0:
-            raise Exception("Something went wrong: expected total time <= 0")
+            raise Exception(f"Something went wrong: expected total time <= 0")
 
-        offset = new_start_time
-        factor: float = float(new_total_time) / self.total_time
-
-        self.start_time = new_start_time
-        self.total_time = new_total_time
+        # Get nonadjustable and adjustable time
+        nonadjustable_time: int = 0
+        old_adjustable_time: int = 0
 
         for movement in self.movements:
-            movement.adjust_start_and_total_time(offset, factor)
-        
-        self.movements[0].start_time = 0
-        self.movements[0].time = offset
+            if movement.time_is_adjustable:
+                old_adjustable_time += movement.time
 
-        self.movements[0].is_adjustable = False
-        self.movements[-1].is_adjustable = False
+        nonadjustable_time = self.total_time - old_adjustable_time
+        new_adjustable_time = new_total_time - nonadjustable_time
+
+        # Error case
+        if new_adjustable_time <= 0:
+            return 1    # new total time is too short
+        
+        # Compute time-factor for nonadjustable times
+        factor_for_adjustable_time: float = new_adjustable_time / old_adjustable_time
+
+        # Set time for initialization movement
+        self.movements[0].start_time = 0            # for savety
+        self.movements[0].time = new_start_time
+
+        # Iterate through all movements and adjust start time and time
+        for movement_index in range(1, len(self.movements)):
+            
+            # Set start time
+            self.movements[movement_index].start_time = self.movements[movement_index-1].start_time + self.movements[movement_index-1].time
+
+            # adjust time if possible
+            if self.movements[movement_index].time_is_adjustable:
+                self.movements[movement_index].time *= factor_for_adjustable_time
+
 
     # TODO
     def adjust_start_time_of_g_code_line(self,

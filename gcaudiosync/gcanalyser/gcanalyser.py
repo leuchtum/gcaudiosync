@@ -75,13 +75,8 @@ class GCodeAnalyser:
         # Initialize the list to store G_Code_Line objects in order
         self.G_Code_Lines = []      
 
-        # Create the initial CNC_Status object for the initialization of the MovementManager object
-        current_cnc_status = CNCStatus(start_position = True, 
-                                       CNC_Parameter = self.CNC_Parameter)
-
         # Create the Movement_Manager object (we need only one for the whole program)
-        self.Movement_Manager = MovementManager(self.CNC_Parameter, 
-                                                 current_cnc_status)
+        self.Movement_Manager = MovementManager(self.CNC_Parameter)
 
     #################################################################################################
     # Methods
