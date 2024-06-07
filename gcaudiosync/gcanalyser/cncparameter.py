@@ -16,9 +16,13 @@ class CNCParameter:
         S_IS_ABSOLUTE (bool): Flag indicating whether the S value is absolute.
         F_MAX (float): Maximum feed rate in mm/min.
         S_MAX (float): Maximum spindle speed in RPM.
-        MAX_A_X (float): Maximum acceleration/deceleration of the X-Axis in mm/s^2.
-        MAX_A_Y (float): Maximum acceleration/deceleration of the Y-Axis in mm/s^2.
-        MAX_A_Z (float): Maximum acceleration/deceleration of the Z-Axis in mm/s^2.
+        MAX_ACCELERATION_X (float): Maximum acceleration of the X-Axis in mm/s^2.
+        MAX_ACCELERATION_Y (float): Maximum acceleration of the Y-Axis in mm/s^2.
+        MAX_ACCELERATION_Z (float): Maximum acceleration of the Z-Axis in mm/s^2.
+        MAX_DECELERATION_X (float): Maximum deceleration of the X-Axis in mm/s^2.
+        MAX_DECELERATION_Y (float): Maximum deceleration of the Y-Axis in mm/s^2.
+        MAX_DECELERATION_Z (float): Maximum deceleration of the Z-Axis in mm/s^2.
+        DEFAULT_PAUSE_TIME (int): Default time for a pause in ms.
         TOOL_CHANGE_TIME (int): Time taken for a tool change in milliseconds.
         COMMAND_ABORT (float): M command for aborting.
         COMMAND_QUIT (float): M command for quitting.
@@ -48,7 +52,15 @@ class CNCParameter:
     MAX_A_Y: float = 40.0           # max acceleration/deceleration of Y-Axis in mm/s^2
     MAX_A_Z: float = 40.0           # max acceleration/deceleration of Z-Axis in mm/s^2
 
-    TOOL_CHANGE_TIME: int = 8000    # [ms]
+    MAX_ACCELERATION_X: float = 40.0    # Maximum acceleration of the X-Axis in mm/s^2.
+    MAX_ACCELERATION_Y: float = 40.0    # Maximum acceleration of the Y-Axis in mm/s^2.
+    MAX_ACCELERATION_Z: float = 40.0    # Maximum acceleration of the Z-Axis in mm/s^2.
+    MAX_DECELERATION_X: float = 40.0    # Maximum deceleration of the X-Axis in mm/s^2.
+    MAX_DECELERATION_Y: float = 40.0    # Maximum deceleration of the Y-Axis in mm/s^2.
+    MAX_DECELERATION_Z: float = 40.0    # Maximum deceleration of the Z-Axis in mm/s^2.
+
+    DEFAULT_PAUSE_TIME: int = 10000     # Time for a pause in ms.
+    TOOL_CHANGE_TIME: int = 8000        # Time for a tool change in ms.
 
     # M commands
     COMMAND_ABORT: float                = 0.0

@@ -104,7 +104,7 @@ class Movement:
         # Set initial values for time and adjustability
         self.start_time: int = 0                      
         self.time: int = 0                            
-        self.start_time_is_adjustable: bool = True     
+        self.start_time_is_adjustable: bool = True
         self.time_is_adjustable: bool = True 
 
         # Check if movement is valid: compute optimal vectors and expected time
