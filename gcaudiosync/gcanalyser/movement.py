@@ -110,9 +110,9 @@ class Movement:
         # Check if movement is valid: compute optimal vectors and expected time
         if movement_type != -1:
             self.compute_optimal_start_vector_linear_axes() 
-            self.compute_optimal_start_vector_rotation()
+            self.compute_optimal_start_vector_rotation()        # Not implemented
             self.compute_optimal_end_vector_linear_axes()
-            self.compute_optimal_end_vector_rotation()
+            self.compute_optimal_end_vector_rotation()          # Not implemented
         else:
             self.time_is_adjustable = False
 
@@ -427,26 +427,6 @@ class Movement:
             print(f"Arc info: {self.arc_information.print()}")
         
         print(f"feed rate [mm/ms]: {self.feed_rate}")
-
-    def adjust_start_and_total_time(self, 
-                                    offset: int, 
-                                    factor: float) -> None:
-        """
-        Adjust the start time and total time of the movement.
-
-        This method adjusts the start time and total time of the movement
-        based on the provided offset and scaling factor.
-
-        Parameters:
-        -----------
-        offset : int
-            The offset to add to the start time.
-        factor : float
-            The scaling factor to apply to both the start time and total time.
-        """
-
-        self.start_time = self.start_time * factor + offset
-        self.time = self.time * factor
 
 # End of class
 #####################################################################################################
