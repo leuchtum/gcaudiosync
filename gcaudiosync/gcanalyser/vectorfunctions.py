@@ -30,36 +30,38 @@ def equal(vec1, vec2):
 
         return True
 
+# TODO: comment
 def same_direction(vec1, vec2):
 
     if len(vec1) != len(vec2):
         raise Exception("Vectors must have the same length")
     
-    factor_found = False
-    factor = 0
+    if np.dot(normalize(vec1), normalize(vec2)) > 0.999:
+        return True
+    else:
+        return False
+    
+# TODO: comment
+def opposite_direction(vec1, vec2):
+    if len(vec1) != len(vec2):
+        raise Exception("Vectors must have the same length")
+    
+    if np.dot(normalize(vec1), normalize(vec2)) < -0.999:
+        return True
+    else:
+        return False
 
-    for index in range(len(vec1)):
-        if not(vec1[index] != 0 and vec2[index] != 0):
-            if not vec1[index] == vec2[index]:
-                return False
-        else:
-            new_factor = vec1[index] / vec2[index]
-            if factor_found and factor != new_factor:
-                return False
-            elif not factor_found:
-                factor = new_factor
-    return True
-
+# TODO: comment
 def get_factor(vec1, vec2):
+    # factor = vec1 / vec2
 
     if len(vec1) != len(vec2):
         raise Exception("Vectors must have the same length")
     
-    if not same_direction(vec1, vec2):
-        raise Exception("Vectors are not pointing in the same direction")
+    if not same_direction(vec1, vec2) and not opposite_direction(vec1, vec2):
+        raise Exception("Vectors are not pointing in the same or opposite direction")
     
     factor = 0
-    factor_found = False
 
     for index in range(len(vec1)):
         if vec1[index] != 0:
@@ -68,6 +70,7 @@ def get_factor(vec1, vec2):
     
     return factor
 
+# TODO: comment
 def compute_angle(vec1: np.ndarray, vec2: np.ndarray, smaller_angle: np.bool_) -> float:
     """
     Calculates the smaller or bigger angle between two NumPy arrays in degrees.
@@ -100,6 +103,7 @@ def compute_angle(vec1: np.ndarray, vec2: np.ndarray, smaller_angle: np.bool_) -
     # Return requested angle
     return min(angle_degrees, 360 - angle_degrees) if smaller_angle else max(angle_degrees, 360 - angle_degrees)
 
+# TODO: comment
 def rotate_2D_vector(center_2_point, center, angle):
 
     rotation_matrix = np.array([[math.cos(math.radians(angle)), -math.sin(math.radians(angle))], 
@@ -109,5 +113,11 @@ def rotate_2D_vector(center_2_point, center, angle):
 
     return new_vec
 
-def get_best_start_vector(vec_end, vec_start_next):
-    pass
+# TODO: comment
+def normalize(vec):
+    
+    if np.linalg.norm(vec) == 0:
+        return vec
+    
+    vec = vec / np.linalg.norm(vec)
+    return vec

@@ -239,33 +239,85 @@ class Movement:
         self.end_vector_linear_axes = np.array([0.0, 0.0, 0.0])
         self.end_vector_rotation_axes = np.array([0.0, 0.0, 0.0])
 
-    def compute_expected_time(self) -> None:
-        """
-        Compute the expected time for the movement.
-
-        This method calculates the expected time required for the movement based on the movement type,
-        start and end positions, and feed rate.
-
-        For linear movements (movement types 0 and 1), the distance between start and end positions is used
-        to calculate the time.
-
-        For circular movements (movement types 2 and 3), the arc length is computed based on the radius and angle
-        between start and end positions, along with the linear distance in the Z-axis, if applicable.
-
-        Raises:
-        -------
-        Exception:
-            If the target velocity is 0.
-
-        Returns:
-        --------
-        None
-        """
+    # TODO: comment
+    def compute_expected_time(self,
+                              max_acceleration: np.array,
+                              max_deceleration: np.array) -> None:
 
         if self.movement_type == -1:
             # No movement at all
             return
+        elif self.movement_type in [0, 1]:
+            self.compute_expected_time_linear_movement_type(max_acceleration, max_deceleration)
+        elif self.movement_type in [2, 3]:
+            self.compute_expected_time_arc_movement_type(max_acceleration, max_deceleration)
+        else:
+            raise Exception(f"Unknown movement type: {self.movement_type}")
+
+    # TODO: comment
+    def compute_expected_time_linear_movement_type(self,
+                                                   max_acceleration: np.array,
+                                                   max_deceleration: np.array):
+
+        # Get start and end position
+        start_position_linear_axes = self.start_position_linear_axes.get_as_array()
+        end_position_linear_axes = self.end_position_linear_axes.get_as_array()
+
+        # Get start and end vector
+        start_velocity_vector_linear_axes = copy.copy(self.start_vector_linear_axes)
+        end_velocity_vector_linear_axes = copy.copy(self.end_vector_linear_axes)
+
+        # Get and check target velocity
+        target_velocity = self.feed_rate
+        if target_velocity == 0:
+            raise Exception(f"F value is 0 in line {self.g_code_line_index+1}.")
         
+        # Compute distance vector and distance
+        distance_vector_linear_axes = (end_position_linear_axes - start_position_linear_axes)
+        distance = np.linalg.norm(end_position_linear_axes - start_position_linear_axes)
+
+        # Check if distance > 0
+        if not distance > 0:
+            self.time = 0
+            return
+
+        target_velocity_vector_linear_axes = distance_vector_linear_axes / distance * target_velocity
+
+        # Copmute delta velocity from start to target
+        delta_velocity_start = target_velocity_vector_linear_axes - start_velocity_vector_linear_axes
+        delta_velocity_start = np.absolute(delta_velocity_start)
+
+        # Compute acceleration time and distance
+        acceleration_times = np.divide(delta_velocity_start, max_acceleration)
+        acceleration_time = max(acceleration_times)
+        important_axe_acceleration = np.argmax(acceleration_times)
+        distance_acceleration = 0.5*max_acceleration[important_axe_acceleration]*acceleration_time**2 + start_velocity_vector_linear_axes[important_axe_acceleration]*acceleration_time
+        
+        # Copmute delta velocity from target to end
+        delta_velocity_end = target_velocity_vector_linear_axes - end_velocity_vector_linear_axes
+        delta_velocity_end = np.absolute(delta_velocity_end)
+
+        # Compute acceleration time and distance
+        deceleration_times = np.divide(delta_velocity_end, max_deceleration)
+        deceleration_time = max(deceleration_times)
+        important_axe_acceleration = np.argmax(deceleration_times)
+        distance_acceleration = 0.5*max_deceleration[important_axe_acceleration]*deceleration_time**2 + end_velocity_vector_linear_axes[important_axe_acceleration]*deceleration_time
+        
+        # Compute distance with target velocity and check value
+        distance_target_velocity = distance - distance_acceleration - distance_acceleration
+        target_velocity_time = 0
+        if distance_target_velocity <= 0:
+            pass        # TODO: well, here we would need to change the start and end vectors of this movement. but this would affect everything else. so we ignore it for the moment. the easiest way to adapt would be to compute this at the creation of the movement and adapt the start and end vectors there :)
+        else:
+            target_velocity_time = distance_target_velocity / target_velocity
+
+        # Compute time
+        self.time = acceleration_time + target_velocity_time + deceleration_time
+
+    # TODO: comment
+    def compute_expected_time_arc_movement_type(self,
+                                                max_acceleration: np.array,
+                                                max_deceleration: np.array):
         # Get start and end position
         start_position_linear_axes = self.start_position_linear_axes.get_as_array()
         end_position_linear_axes = self.end_position_linear_axes.get_as_array()
@@ -276,46 +328,41 @@ class Movement:
             raise Exception(f"F value is 0 in line {self.g_code_line_index+1}.")
         
         # Compute distance
-        distance = 0
+        arc_center = self.arc_information.get_arc_center_as_array()
+        distance_Z = 0
 
-        if self.movement_type in [0, 1]:    # Linear movement
-            distance = np.linalg.norm(end_position_linear_axes - start_position_linear_axes)
-        else:                               # Arc movement
-            arc_center = self.arc_information.get_arc_center_as_array()
-            distance_Z = 0
+        # Check plane
+        match self.active_plane:
+            case 17:
+                # Get Z distance
+                distance_Z = end_position_linear_axes[2] - start_position_linear_axes[2]
 
-            # Check plane
-            match self.active_plane:
-                case 17:
-                    # Get Z distance
-                    distance_Z = end_position_linear_axes[2] - start_position_linear_axes[2]
+                # Handle Z coordinate
+                start_position_linear_axes[2] = 0.0
+                end_position_linear_axes[2] = 0.0
+                arc_center [2] = 0.0
 
-                    # Handle Z coordinate
-                    start_position_linear_axes[2] = 0.0
-                    end_position_linear_axes[2] = 0.0
-                    arc_center [2] = 0.0
+            case 18:
+                raise Exception(f"G02 and G03 are not available in plane 18")    # TODO
+            case 19:
+                raise Exception(f"G02 and G03 are only available in plane 19")   # TODO
 
-                case 18:
-                    raise Exception(f"G02 and G03 are not available in plane 18")    # TODO
-                case 19:
-                    raise Exception(f"G02 and G03 are only available in plane 19")   # TODO
+        center_2_start = start_position_linear_axes - arc_center
+        center_2_end = end_position_linear_axes - arc_center
 
-            center_2_start = start_position_linear_axes - arc_center
-            center_2_end = end_position_linear_axes - arc_center
+        radius = abs(self.arc_information.radius)
 
-            radius = abs(self.arc_information.radius)
+        # Check if smaller or bigger angle is used
+        smaller_angle = True
+        if self.arc_information.radius >= 0:
+            pass
+        else:
+            smaller_angle = False
 
-            # Check if smaller or bigger angle is used
-            smaller_angle = True
-            if self.arc_information.radius >= 0:
-                pass
-            else:
-                smaller_angle = False
-
-            angle: float = vecfunc.compute_angle(center_2_start, center_2_end, smaller_angle)
-            circumference: float = 2.0*math.pi*radius
-            arc_distance: float = angle / 360.0 * circumference 
-            distance = math.sqrt(math.pow(arc_distance, 2) + math.pow(distance_Z, 2))
+        angle: float = vecfunc.compute_angle(center_2_start, center_2_end, smaller_angle)
+        circumference: float = 2.0*math.pi*radius
+        arc_distance: float = angle / 360.0 * circumference 
+        distance = math.sqrt(math.pow(arc_distance, 2) + math.pow(distance_Z, 2))
 
         # Compute time
         self.time = int(distance / target_velocity)

@@ -1,5 +1,5 @@
 import numpy as np
 
-Liste = [5, 8, 42, 55, 6, 7]
+import gcaudiosync.gcanalyser.vectorfunctions as vecfunc
 
-print(Liste[2:6])
+print(3**4)

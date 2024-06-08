@@ -1,4 +1,5 @@
 import copy
+import numpy as np
 
 from typing import List, Tuple
 
@@ -55,7 +56,12 @@ class MovementManager:
         self.movements: List[Movement]       = []        # Movements
         self.end_of_program_reached: bool    = False     # Variable for end of program
         
-        self.CNC_Parameter = CNC_Parameter          # Get cnc parameter
+        self.CNC_Parameter = CNC_Parameter              # Get cnc parameter
+
+        # Get max acceleration and deceleration
+        self.max_acceleration = np.zeros(3)
+        self.max_deceleration = np.zeros(3)
+        self.get_acceleration_and_deceleration()
 
         # Create the initial CNC_Status object for the initialization of the MovementManager object
         first_line_status = CNCStatus(start_position = True, 
@@ -400,21 +406,52 @@ class MovementManager:
             self.movements[movement_index].print_info()
             print("")
 
-    # Todo: compute all the start and end vectors
+    # TODO: comment
     def all_lines_analysed(self) -> None:
-        """
-        Computes the expected time for all movements, sets their start times,
-        and updates the total time for all movements.
-        """
+
+        self.copmpute_start_and_end_vectors()
+        self.update_movement_times_and_copmpute_total_time()
+
+    # TODO: comment 
+    def update_movement_times_and_copmpute_total_time(self) -> None:
         time: int = 0
 
         # Iterate through all movements and get time
         for movement in self.movements:
-            movement.compute_expected_time()
+            movement.compute_expected_time(self.max_acceleration,
+                                           self.max_deceleration)
             movement.start_time = time
             time += movement.time
 
         self.total_time = time
+
+    # TODO: comment
+    def copmpute_start_and_end_vectors(self) -> None:
+        
+        # Iterate through all movements and compute the start and end vectors
+        for movement_index in range(len(self.movements)-1):
+
+            start_and_end_vector = np.zeros(3)
+
+            # Get old start and end vector
+            end_vector_linear_axes_current_movement = copy.copy(self.movements[movement_index].end_vector_linear_axes)
+            start_vector_linear_axes_next_movement = copy.copy(self.movements[movement_index+1].start_vector_linear_axes)
+
+            # Compute start and end vector
+            if vecfunc.same_direction(end_vector_linear_axes_current_movement,
+                                      start_vector_linear_axes_next_movement):
+                factor = vecfunc.get_factor(end_vector_linear_axes_current_movement,
+                                            start_vector_linear_axes_next_movement)
+                if factor >= 1:
+                    start_and_end_vector = start_vector_linear_axes_next_movement
+                else:
+                    start_and_end_vector = end_vector_linear_axes_current_movement
+            else:
+                pass
+            
+            # Set start and end vector
+            self.movements[movement_index].end_vector_linear_axes = copy.copy(start_and_end_vector)
+            self.movements[movement_index+1].start_vector_linear_axes = copy.copy(start_and_end_vector)
 
     def set_start_time_and_total_time(self, 
                                       new_start_time: float,
@@ -638,6 +675,22 @@ class MovementManager:
                     time_stamps.append([g_code_line_index, g_code_line_time_stamp])
 
         return time_stamps
+
+    # TODO: comment
+    def get_acceleration_and_deceleration(self):
+
+        # Acceleration
+        max_A_X = self.CNC_Parameter.MAX_ACCELERATION_X
+        max_A_Y = self.CNC_Parameter.MAX_ACCELERATION_Y
+        max_A_Z = self.CNC_Parameter.MAX_ACCELERATION_Z
+        self.max_acceleration = np.array([max_A_X, max_A_Y, max_A_Z])
+
+        # Deceleration
+        max_D_X = self.CNC_Parameter.MAX_DECELERATION_X
+        max_D_Y = self.CNC_Parameter.MAX_DECELERATION_Y
+        max_D_Z = self.CNC_Parameter.MAX_DECELERATION_Z
+        self.max_deceleration = np.array([max_D_X, max_D_Y, max_D_Z])
+
 
 # End of class
 #####################################################################################################
