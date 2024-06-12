@@ -51,16 +51,16 @@ class MovementManager:
             CNC parameter instance.
         """
 
-        self.start_time : int                = 0         # Time for the start
-        self.total_time: int                 = 0         # Expected total time
-        self.movements: List[Movement]       = []        # Movements
-        self.end_of_program_reached: bool    = False     # Variable for end of program
+        self.start_time : float             = 0         # Time for the start
+        self.total_time: float              = 0         # Expected total time
+        self.movements: List[Movement]      = []        # Movements
+        self.end_of_program_reached: bool   = False     # Variable for end of program
         
-        self.CNC_Parameter = CNC_Parameter              # Get cnc parameter
+        self.CNC_Parameter: CNCParameter    = CNC_Parameter              # Get cnc parameter
 
         # Get max acceleration and deceleration
-        self.max_acceleration = np.zeros(3)
-        self.max_deceleration = np.zeros(3)
+        self.max_acceleration: np.array     = np.zeros(3)
+        self.max_deceleration: np.array     = np.zeros(3)
         self.get_acceleration_and_deceleration()
 
         # Create the initial CNC_Status object for the initialization of the MovementManager object
@@ -186,11 +186,11 @@ class MovementManager:
         last_movement: Movement = copy.deepcopy(self.movements[-1])         
 
         # Get current positions
-        current_position_linear_axes = last_movement.end_position_linear_axes.get_as_array()        
-        current_position_rotation_axes = last_movement.end_position_rotation_axes.get_as_array() 
+        current_position_linear_axes = last_movement.end_position_linear_axes
+        current_position_rotation_axes = last_movement.end_position_rotation_axes
 
         # Get tool change position
-        tool_change_position_linear = self.CNC_Parameter.TOOL_CHANGE_POSITION_LINEAR_AXES.get_as_array()    
+        tool_change_position_linear = self.CNC_Parameter.TOOL_CHANGE_POSITION_LINEAR_AXES
 
         # Create movement to tool
         movement_get_tool = Movement(g_code_line_index = line_index, 
@@ -200,7 +200,7 @@ class MovementManager:
                                      start_position_rotation_axes = current_position_rotation_axes,
                                      end_position_rotation_axes = current_position_rotation_axes, 
                                      arc_information = None,
-                                     feed_rate = self.CNC_Parameter.F_MAX,
+                                     feed_rate = self.CNC_Parameter.F_MAX/60000.0,
                                      active_plane = 17)
         
         # Add exact stop
@@ -236,10 +236,10 @@ class MovementManager:
         # create new movement
         new_movement = Movement(g_code_line_index = line_index, 
                                 movement_type = -1, 
-                                start_position_linear_axes = copy.deepcopy(last_movement.end_position_linear_axes), 
-                                end_position_linear_axes = copy.deepcopy(last_movement.end_position_linear_axes),
-                                start_position_rotation_axes = copy.deepcopy(last_movement.end_position_linear_axes),
-                                end_position_rotation_axes = copy.deepcopy(last_movement.end_position_rotation_axes), 
+                                start_position_linear_axes = last_movement.end_position_linear_axes, 
+                                end_position_linear_axes = last_movement.end_position_linear_axes,
+                                start_position_rotation_axes = last_movement.end_position_linear_axes,
+                                end_position_rotation_axes = last_movement.end_position_rotation_axes, 
                                 arc_information = None,
                                 feed_rate = 0,
                                 active_plane = 17)
@@ -444,8 +444,10 @@ class MovementManager:
                                             start_vector_linear_axes_next_movement)
                 if factor >= 1:
                     start_and_end_vector = start_vector_linear_axes_next_movement
-                else:
+                elif factor > 0:
                     start_and_end_vector = end_vector_linear_axes_current_movement
+                else: 
+                    pass
             else:
                 pass
             

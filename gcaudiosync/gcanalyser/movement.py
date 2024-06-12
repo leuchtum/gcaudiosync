@@ -3,6 +3,7 @@ import copy
 import math
 
 import gcaudiosync.gcanalyser.vectorfunctions as vecfunc
+import gcaudiosync.gcanalyser.numericalmethods as nummet
 
 from gcaudiosync.gcanalyser.arcinformation import ArcInformation
 from gcaudiosync.gcanalyser.linearaxes import LinearAxes
@@ -30,9 +31,9 @@ class Movement:
         Information about the arc, if applicable.
     feed_rate : float
         The feed rate for the movement.
-    start_time : int
+    start_time : float
         Time when the movement starts.
-    time : int
+    time : float
         Time duration for this movement.
     start_time_is_adjustable : bool
         Indicates if the start time of this movement is adjustable.
@@ -85,27 +86,27 @@ class Movement:
         """
 
         # Save all parameters
-        self.g_code_line_index              = g_code_line_index
-        self.movement_type                  = movement_type
-        self.start_position_linear_axes     = copy.deepcopy(start_position_linear_axes)
-        self.end_position_linear_axes       = copy.deepcopy(end_position_linear_axes)
-        self.start_position_rotation_axes   = copy.deepcopy(start_position_rotation_axes)
-        self.end_position_rotation_axes     = copy.deepcopy(end_position_rotation_axes)
-        self.arc_information                = copy.deepcopy(arc_information)
-        self.feed_rate                      = feed_rate
-        self.active_plane                   = active_plane
+        self.g_code_line_index: int                     = g_code_line_index
+        self.movement_type: int                         = movement_type
+        self.start_position_linear_axes: LinearAxes     = copy.deepcopy(start_position_linear_axes)
+        self.end_position_linear_axes: LinearAxes       = copy.deepcopy(end_position_linear_axes)
+        self.start_position_rotation_axes: RotationAxes = copy.deepcopy(start_position_rotation_axes)
+        self.end_position_rotation_axes: RotationAxes   = copy.deepcopy(end_position_rotation_axes)
+        self.arc_information: ArcInformation            = copy.deepcopy(arc_information)
+        self.feed_rate: float                           = feed_rate
+        self.active_plane: int                          = active_plane
 
         # Create all the vectors
-        self.start_vector_linear_axes    = np.array([0.0, 0.0, 0.0])  
-        self.end_vector_linear_axes      = np.array([0.0, 0.0, 0.0])  
-        self.start_vector_rotation_axes  = np.array([0.0, 0.0, 0.0]) 
-        self.end_vector_rotation_axes    = np.array([0.0, 0.0, 0.0]) 
+        self.start_vector_linear_axes: np.array     = np.array([0.0, 0.0, 0.0])  
+        self.end_vector_linear_axes: np.array       = np.array([0.0, 0.0, 0.0])  
+        self.start_vector_rotation_axes: np.array   = np.array([0.0, 0.0, 0.0]) 
+        self.end_vector_rotation_axes: np.array     = np.array([0.0, 0.0, 0.0]) 
 
         # Set initial values for time and adjustability
-        self.start_time: int = 0                      
-        self.time: int = 0
+        self.start_time: float              = 0                      
+        self.time: float                    = 0
         self.start_time_is_adjustable: bool = True
-        self.time_is_adjustable: bool = True 
+        self.time_is_adjustable: bool       = True 
 
         # Check if movement is valid: compute optimal vectors and expected time
         if movement_type != -1:
@@ -142,12 +143,15 @@ class Movement:
         start_position_linear_axes = self.start_position_linear_axes.get_as_array()
         end_position_linear_axes = self.end_position_linear_axes.get_as_array()
 
+        # Initialize start vector
+        start_vector_linear_axes = np.zeros(3)
+
         if self.movement_type in [0, 1]:    # Linear movement
             # Compute start vector 
             start_vector_linear = end_position_linear_axes - start_position_linear_axes
             vector_length = np.linalg.norm(start_vector_linear)
             if vector_length > 0:
-                self.start_vector_linear_axes = start_vector_linear / vector_length * self.feed_rate
+                start_vector_linear_axes = start_vector_linear / vector_length * self.feed_rate
             else:
                 pass
         else:                               # Arc movement
@@ -159,13 +163,15 @@ class Movement:
                     arc_center_2_start = start_position_linear_axes - arc_center
                     
                     if self.movement_type == 2:
-                        self.start_vector_linear_axes = vecfunc.compute_normal_vector(arc_center_2_start, XY_normal_vector, "right") * self.feed_rate
+                        start_vector_linear_axes = vecfunc.compute_normal_vector(arc_center_2_start, XY_normal_vector, "right") * self.feed_rate
                     else: 
-                        self.start_vector_linear_axes = vecfunc.compute_normal_vector(arc_center_2_start, XY_normal_vector, "left") * self.feed_rate
+                        start_vector_linear_axes = vecfunc.compute_normal_vector(arc_center_2_start, XY_normal_vector, "left") * self.feed_rate
                 case 18:
                     raise Exception(f"G02 and G03 are not available in plane 18")    # TODO
                 case 19:
-                    raise Exception(f"G02 and G03 are only available in plane 19")   # TODO
+                    raise Exception(f"G02 and G03 are not available in plane 19")   # TODO
+
+        self.start_vector_linear_axes = start_vector_linear_axes
 
     # TODO
     def compute_optimal_start_vector_rotation(self) -> None:
@@ -217,7 +223,7 @@ class Movement:
                 case 18:
                     raise Exception(f"G02 and G03 are not available in plane 18")    # TODO
                 case 19:
-                    raise Exception(f"G02 and G03 are only available in plane 19")   # TODO
+                    raise Exception(f"G02 and G03 are not available in plane 19")   # TODO
                 
     # TODO
     def compute_optimal_end_vector_rotation(self) -> None:
@@ -264,8 +270,8 @@ class Movement:
         end_position_linear_axes = self.end_position_linear_axes.get_as_array()
 
         # Get start and end vector
-        start_velocity_vector_linear_axes = copy.copy(self.start_vector_linear_axes)
-        end_velocity_vector_linear_axes = copy.copy(self.end_vector_linear_axes)
+        start_velocity_vector_linear_axes = np.absolute(copy.copy(self.start_vector_linear_axes))
+        end_velocity_vector_linear_axes = np.absolute(copy.copy(self.end_vector_linear_axes))
 
         # Get and check target velocity
         target_velocity = self.feed_rate
@@ -273,7 +279,7 @@ class Movement:
             raise Exception(f"F value is 0 in line {self.g_code_line_index+1}.")
         
         # Compute distance vector and distance
-        distance_vector_linear_axes = (end_position_linear_axes - start_position_linear_axes)
+        distance_vector_linear_axes = np.absolute(end_position_linear_axes - start_position_linear_axes)
         distance = np.linalg.norm(end_position_linear_axes - start_position_linear_axes)
 
         # Check if distance > 0
@@ -303,13 +309,13 @@ class Movement:
         important_axe_acceleration = np.argmax(deceleration_times)
         distance_acceleration = 0.5*max_deceleration[important_axe_acceleration]*deceleration_time**2 + end_velocity_vector_linear_axes[important_axe_acceleration]*deceleration_time
         
-        # Compute distance with target velocity and check value
+        # Compute and check distance with target velocity
         distance_target_velocity = distance - distance_acceleration - distance_acceleration
-        target_velocity_time = 0
-        if distance_target_velocity <= 0:
-            pass        # TODO: well, here we would need to change the start and end vectors of this movement. but this would affect everything else. so we ignore it for the moment. the easiest way to adapt would be to compute this at the creation of the movement and adapt the start and end vectors there :)
-        else:
-            target_velocity_time = distance_target_velocity / target_velocity
+        if distance_target_velocity < 0:
+            distance_target_velocity = 0    # TODO: well, here we would need to change the start and end vectors of this movement. but this would affect everything else. so we ignore it for the moment. the easiest way to adapt would be to compute this at the creation of the movement and adapt the start and end vectors there :)
+        
+        # Compute time with target velocity
+        target_velocity_time = distance_target_velocity / target_velocity
 
         # Compute time
         self.time = acceleration_time + target_velocity_time + deceleration_time
@@ -317,56 +323,164 @@ class Movement:
     # TODO: comment
     def compute_expected_time_arc_movement_type(self,
                                                 max_acceleration: np.array,
-                                                max_deceleration: np.array):
+                                                max_deceleration: np.array) -> int:
+        # Simplified computation: Acceleration or deceleration linear until the start or end velocity for the velocity of the arc movement is reached.
+        # Does not check if acceleration is enought for the arc movement
+
         # Get start and end position
         start_position_linear_axes = self.start_position_linear_axes.get_as_array()
         end_position_linear_axes = self.end_position_linear_axes.get_as_array()
+
+        # Get arc center
+        arc_center = self.arc_information.get_arc_center_as_array()
+
+        # Shift start and end position into the center, happens in active plane (does not matter for the computation of the time)
+        start_position_linear_axes = start_position_linear_axes - arc_center
+        end_position_linear_axes = end_position_linear_axes - arc_center
+        # From here on: X = 0 and Y = 0 is the center of the arc!
+
+        # Get start and end vector
+        start_velocity_vector_linear_axes = copy.copy(self.start_vector_linear_axes)
+        end_velocity_vector_linear_axes = copy.copy(self.end_vector_linear_axes)
 
         # Get and check target velocity
         target_velocity = self.feed_rate
         if target_velocity == 0:
             raise Exception(f"F value is 0 in line {self.g_code_line_index+1}.")
         
-        # Compute distance
-        arc_center = self.arc_information.get_arc_center_as_array()
-        distance_Z = 0
-
-        # Check plane
-        match self.active_plane:
-            case 17:
-                # Get Z distance
-                distance_Z = end_position_linear_axes[2] - start_position_linear_axes[2]
-
-                # Handle Z coordinate
-                start_position_linear_axes[2] = 0.0
-                end_position_linear_axes[2] = 0.0
-                arc_center [2] = 0.0
-
-            case 18:
-                raise Exception(f"G02 and G03 are not available in plane 18")    # TODO
-            case 19:
-                raise Exception(f"G02 and G03 are only available in plane 19")   # TODO
-
-        center_2_start = start_position_linear_axes - arc_center
-        center_2_end = end_position_linear_axes - arc_center
-
+        # Get the radius
         radius = abs(self.arc_information.radius)
-
+            
         # Check if smaller or bigger angle is used
         smaller_angle = True
-        if self.arc_information.radius >= 0:
+        if self.arc_information.radius > 0:
             pass
-        else:
+        elif self.arc_information.radius < 0:
             smaller_angle = False
+        else:
+            raise Exception(f"Radius of arc movement is 0.")
+        
+        # Initialize time
+        time = 0
 
-        angle: float = vecfunc.compute_angle(center_2_start, center_2_end, smaller_angle)
-        circumference: float = 2.0*math.pi*radius
-        arc_distance: float = angle / 360.0 * circumference 
-        distance = math.sqrt(math.pow(arc_distance, 2) + math.pow(distance_Z, 2))
+        # Match the active plane
+        match self.active_plane:
+            case 17:
+                # Save stuff for Z Axis
+                distance_vector_Z = end_position_linear_axes[2] - start_position_linear_axes[2]
+                start_velocity_Z = start_velocity_vector_linear_axes[2]
+                end_velocity_Z = end_velocity_vector_linear_axes[2]
 
-        # Compute time
-        self.time = int(distance / target_velocity)
+                # Compute start and end velocity for the arc movement
+                start_velocity_arc_movement = np.linalg.norm(start_velocity_vector_linear_axes[0:2])
+                end_velocity_arc_movement = np.linalg.norm(end_velocity_vector_linear_axes[0:2])
 
+                # Create 2D arrays for further computation of the arc
+                start_position_linear_axes = start_position_linear_axes[0:2]
+                end_position_linear_axes = end_position_linear_axes[0:2]
+
+                # Compute angle of movement
+                angle = 0.0
+                if (start_position_linear_axes == end_position_linear_axes).all():
+                    angle = 360.0
+                else:
+                    angle: float = vecfunc.compute_small_or_big_angle_in_degree(start_position_linear_axes, 
+                                                                                end_position_linear_axes, 
+                                                                                smaller_angle)
+
+                # Compute distances
+                circumference: float = 2.0*math.pi*radius
+                arc_distance: float = angle / 360.0 * circumference 
+                distance_Z = abs(distance_vector_Z)
+                distance = math.sqrt(math.pow(arc_distance, 2) + math.pow(distance_Z, 2))
+
+                # Compute target velocities
+                target_velocity_Z = target_velocity * distance_Z / distance
+                target_velocity_arc_movement = target_velocity * arc_distance / distance
+
+                # Compute start times for the arc movement
+                start_time_X_Y = 0.0
+                delta_velocity_start_arc_movement = target_velocity_arc_movement - start_velocity_arc_movement
+                acceleration_start_arc_movement = min(max_acceleration[0:2])
+                if delta_velocity_start_arc_movement > 0:
+                    start_time_X_Y = delta_velocity_start_arc_movement / acceleration_start_arc_movement
+
+                # Compute start time for the Z axis
+                start_time_Z = 0.0
+                delta_velocity_start_Z = abs(target_velocity_Z -  start_velocity_Z)
+                if delta_velocity_start_Z > 0:
+                    start_time_Z = delta_velocity_start_Z / max_acceleration[2]
+
+                # Compute start time
+                start_time = max(start_time_X_Y, start_time_Z)
+
+                # Compute and check start distance
+                start_distance_percentage = 0
+                if start_time > 0:
+                    if start_time_Z >= start_time_X_Y:
+                        start_distance_Z = acceleration_start_arc_movement * start_time**2 + start_velocity_vector_linear_axes[2] * start_time
+                        start_distance_percentage = start_distance_Z / distance_vector_Z
+                    else:
+                        start_distance_X_Y = acceleration_start_arc_movement * start_time**2 + start_velocity_arc_movement * start_time
+                        start_distance_percentage = start_distance_X_Y / arc_distance
+                
+                    # Check start_distance_percentage
+                    if start_distance_percentage > 1:
+                        return 1
+
+                # Compute end times for the arc movement
+                end_time_X_Y = 0.0
+                delta_velocity_end_arc_movement = target_velocity_arc_movement - end_velocity_arc_movement
+                deceleration_end_arc_movement = min(max_deceleration[0:2])
+                if delta_velocity_end_arc_movement > 0:
+                    end_time_X_Y = delta_velocity_end_arc_movement / deceleration_end_arc_movement
+
+                # Compute end time for the Z axis
+                end_time_Z = 0.0
+                delta_velocity_end_Z = abs(target_velocity_Z -  end_velocity_Z)
+                if delta_velocity_end_Z > 0:
+                    end_time_Z = delta_velocity_end_Z / max_deceleration[2]
+                
+                # Compute end time
+                end_time = max(end_time_X_Y, end_time_Z)
+
+                # Compute and check end distance
+                end_distance_percentage = 0
+                if end_time > 0:
+                    if end_time_Z >= end_time_X_Y:
+                        end_distance_Z = deceleration_end_arc_movement * end_time**2 + end_velocity_vector_linear_axes[2] * end_time
+                        end_distance_percentage = end_distance_Z / distance_vector_Z
+                    else:
+                        end_distance_X_Y = deceleration_end_arc_movement * end_time**2 + end_velocity_arc_movement * end_time
+                        end_distance_percentage = end_distance_X_Y / arc_distance
+                
+                    # Check end_distance_percentage
+                    if end_distance_percentage > 1:
+                        return 2
+
+                # Check start and end distance percentage
+                if start_distance_percentage + end_distance_percentage > 1:
+                    return 3
+
+                # Compute time with target velocity
+                distance_target_velocity = distance * (1 - start_distance_percentage - end_distance_percentage)
+
+                # Compute time with target velocity
+                target_velocity_time = distance_target_velocity / target_velocity
+
+                # Compute total time
+                time = target_velocity_time + start_time + end_time
+
+            case 18:
+                raise Exception(f"G02 and G03 are not available in plane 18")   # TODO
+            case 19:
+                raise Exception(f"G02 and G03 are not available in plane 19")   # TODO
+
+
+        self.time = time
+
+        return 0
+    
     def get_position_linear_axes_in_movement(self, 
                                              time_in_movement: int) -> np.ndarray:
         """
@@ -400,41 +514,36 @@ class Movement:
             position = start_position_linear_axes + (end_position_linear_axes - start_position_linear_axes) * portion
         else:                               # Arc movement
             # Get positions of arc
-            start_point_linear: LinearAxes = copy.deepcopy(start_position_linear_axes)
-            end_point_linear: LinearAxes = copy.deepcopy(end_position_linear_axes)
             arc_center = self.arc_information.get_arc_center_as_array()
 
             # Compute vectors
-            center_2_start = start_point_linear - arc_center
-            center_2_end = end_point_linear - arc_center
+            center_2_start = start_position_linear_axes - arc_center
+            center_2_end = end_position_linear_axes - arc_center
 
             match self.active_plane:
                 case 17: 
                     # Handle Z coordinate
-                    start_point_linear[2] = 0
-                    end_point_linear[2] = 0
+                    start_position_linear_axes[2] = 0
+                    end_position_linear_axes[2] = 0
                     arc_center[2] = 0
-                case 18:
-                    raise Exception(f"G02 and G03 are not available in plane 18")    # TODO
-                case 19:
-                    raise Exception(f"G02 and G03 are only available in plane 19")   # TODO
-                
-            # Check angle
-            smaller_angle = True
-            if self.arc_information.radius >= 0:
-                pass
-            else:
-                smaller_angle = False
 
-            # Compute angele
-            angle = vecfunc.compute_angle(center_2_start, center_2_end, smaller_angle)
-            current_angle = portion * angle
-            if self.movement_type == 2:
-                current_angle *= -1
+                    # Check angle
+                    smaller_angle = True
+                    if self.arc_information.radius >= 0:
+                        pass
+                    else:
+                        smaller_angle = False
 
-            # Check plane
-            match self.active_plane:
-                case 17: 
+                    # Compute angele
+                    angle = 0.0
+                    if (start_position_linear_axes == end_position_linear_axes).all():
+                        angle = 360.0
+                    else:
+                        angle = vecfunc.compute_small_or_big_angle_in_degree(center_2_start, center_2_end, smaller_angle)
+                    current_angle = portion * angle
+                    if self.movement_type == 2:
+                        current_angle *= -1
+
                     # Handle Z coordinate
                     center_2_start = center_2_start[0:2]
                     arc_center = arc_center[0:2]
@@ -449,7 +558,7 @@ class Movement:
                 case 18:
                     raise Exception(f"G02 and G03 are not available in plane 18")    # TODO
                 case 19:
-                    raise Exception(f"G02 and G03 are only available in plane 19")   # TODO
+                    raise Exception(f"G02 and G03 are not available in plane 19")   # TODO
 
         return np.round(position, 3)
 

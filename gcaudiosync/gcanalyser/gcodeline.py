@@ -46,7 +46,7 @@ class GCodeLine:
                  current_cnc_status: CNCStatus, 
                  g_code_line: str, 
                  Line_Extractor: LineExtractor,
-                 CNC_Parameter:CNCParameter,
+                 CNC_Parameter: CNCParameter,
                  Frequency_Manager: FrequencyManager,
                  Pause_Manager: PauseManager,
                  Tool_Change_Manager: ToolChangeManager,
@@ -88,8 +88,8 @@ class GCodeLine:
         self.cnc_status_current_line: CNCStatus = copy_CNC_Status(current_cnc_status)       # Create a new cnc-status for this line
 
         # Prioritization  so the movements have all important infos
-        prio_G_numbers = [9]                                        # Numbers of priority  G commands
-        prio_M_numbers = [CNC_Parameter.COMMAND_SPINDLE_START_CW,   # Numbers of priority  M commands
+        prio_G_numbers = [9, 17, 18, 19]                            # Numbers of priority G commands
+        prio_M_numbers = [CNC_Parameter.COMMAND_SPINDLE_START_CW,   # Numbers of priority M commands
                           CNC_Parameter.COMMAND_SPINDLE_START_CCW, 
                           CNC_Parameter.COMMAND_SPINDLE_OFF]
 
@@ -155,6 +155,7 @@ class GCodeLine:
                 g_code_line_info.pop(0)                         # Delete this command and number
                 self.handle_G(float(number),                    # Call the method that handles G commands
                               g_code_line_info, 
+                              CNC_Parameter = CNC_Parameter,
                               Pause_Manager = Pause_Manager,
                               Movement_Manager = Movement_Manager)
             elif command == "M":
@@ -182,6 +183,7 @@ class GCodeLine:
     def handle_G(self, 
                  number_for_command: float, 
                  g_code_line_info: list, 
+                 CNC_Parameter: CNCParameter,
                  Pause_Manager: PauseManager,
                  Movement_Manager: MovementManager):
         """
@@ -203,22 +205,22 @@ class GCodeLine:
         match number_for_command:
             case 0: # Rapid linear movement
                 self.cnc_status_current_line.active_movement_type = number_for_command                      # Save movement
-                self.cnc_status_current_line.feed_rate = CNCParameter.F_MAX / 60000.0                       # Set feed rate in [mm/ms]
-                self.handle_linear_movement(g_code_line_info = g_code_line_info,                                   # Call method to handle the linear movement
+                self.cnc_status_current_line.feed_rate = CNC_Parameter.F_MAX / 60000.0                      # Set feed rate in [mm/ms]
+                self.handle_linear_movement(g_code_line_info = g_code_line_info,                            # Call method to handle the linear movement
                                             Movement_Manager = Movement_Manager)          
             case 1: # Linear movement   
                 self.cnc_status_current_line.active_movement_type = number_for_command                      # Save movement
                 self.cnc_status_current_line.feed_rate = self.cnc_status_current_line.F_value / 60000.0     # Set feed rate in [mm/ms]
-                self.handle_linear_movement(g_code_line_info = g_code_line_info,                                   # Call method to handle the linear movement
+                self.handle_linear_movement(g_code_line_info = g_code_line_info,                            # Call method to handle the linear movement
                                             Movement_Manager = Movement_Manager)
             case 2 | 3: # Arc movement CW or Arc movement CCW
                 self.cnc_status_current_line.active_movement_type = number_for_command                      # Save movement
                 self.cnc_status_current_line.arc_information.direction = number_for_command                 # Save movement in arc info
                 self.cnc_status_current_line.feed_rate = self.cnc_status_current_line.F_value / 60000.0     # Set feed rate in [mm/ms]
-                self.handle_arc_movement(g_code_line_info = g_code_line_info,                                      # Call method to handle the arc movement
+                self.handle_arc_movement(g_code_line_info = g_code_line_info,                               # Call method to handle the arc movement
                                          Movement_Manager = Movement_Manager)
             case 4: # Dwell
-                self.handle_g04(g_code_line_info = g_code_line_info,                                               # Call method to handle dwell
+                self.handle_g04(g_code_line_info = g_code_line_info,                                        # Call method to handle dwell
                                 Pause_Manager = Pause_Manager, 
                                 Movement_Manager = Movement_Manager)
             case 9: # Exact stop in this line
@@ -300,7 +302,8 @@ class GCodeLine:
                     self.handle_spindle_operation(spindle_command = "off", 
                                                   Frequency_Manager = Frequency_Manager)
             case CNC_Parameter.COMMAND_TOOL_CHANGE:
-                self.handle_tool_change(g_code_line_info = g_code_line_info,                               
+                self.handle_tool_change(g_code_line_info = g_code_line_info,
+                                        CNC_Parameter = CNC_Parameter,
                                         Tool_Change_Manager = Tool_Change_Manager,
                                         Movement_Manager = Movement_Manager)
             case CNC_Parameter.COMMAND_COOLING_ON:
@@ -504,9 +507,15 @@ class GCodeLine:
         relevant_commands = ["X", "Y", "Z", "A", "B", "C", "I", "J", "K", "R", "P"] # relevent commands for linear movement
 
         # Initialize arc information with current positions
-        self.cnc_status_current_line.arc_information.I = self.cnc_status_current_line.position_linear_axes.X
-        self.cnc_status_current_line.arc_information.J = self.cnc_status_current_line.position_linear_axes.Y
-        self.cnc_status_current_line.arc_information.K = self.cnc_status_current_line.position_linear_axes.Z
+        match self.cnc_status_current_line.active_plane:
+            case 17:
+                self.cnc_status_current_line.arc_information.I = self.cnc_status_current_line.position_linear_axes.X
+                self.cnc_status_current_line.arc_information.J = self.cnc_status_current_line.position_linear_axes.Y
+                # K not relevant for this arc movement
+            case 18:
+                raise Exception(f"G02 and G03 are not available in plane 18")    # TODO
+            case 19:
+                raise Exception(f"G02 and G03 are not available in plane 19")   # TODO
 
         radius_given = False    # Variable to store if the radius was given
 
@@ -553,20 +562,23 @@ class GCodeLine:
                         else:
                             self.cnc_status_current_line.position_rotation_axes.C += float(number_for_command)
                     case "I":
-                        if self.cnc_status_current_line.absolute_arc_center:
-                            self.cnc_status_current_line.arc_information.I = float(number_for_command)
-                        else:
-                            self.cnc_status_current_line.arc_information.I +=  float(number_for_command)
+                        if not self.cnc_status_current_line.active_plane == 19:
+                            if self.cnc_status_current_line.absolute_arc_center:
+                                self.cnc_status_current_line.arc_information.I = float(number_for_command)
+                            else:
+                                self.cnc_status_current_line.arc_information.I +=  float(number_for_command)
                     case "J":
-                        if self.cnc_status_current_line.absolute_arc_center:
-                            self.cnc_status_current_line.arc_information.J = float(number_for_command)
-                        else:
-                            self.cnc_status_current_line.arc_information.J += float(number_for_command)
+                        if not self.cnc_status_current_line.active_plane == 18:
+                            if self.cnc_status_current_line.absolute_arc_center:
+                                self.cnc_status_current_line.arc_information.J = float(number_for_command)
+                            else:
+                                self.cnc_status_current_line.arc_information.J += float(number_for_command)
                     case "K":
-                        if self.cnc_status_current_line.absolute_arc_center:
-                            self.cnc_status_current_line.arc_information.K = float(number_for_command)
-                        else:
-                            self.cnc_status_current_line.arc_information.K += float(number_for_command)
+                        if not self.cnc_status_current_line.active_plane == 17:
+                            if self.cnc_status_current_line.absolute_arc_center:
+                                self.cnc_status_current_line.arc_information.K = float(number_for_command)
+                            else:
+                                self.cnc_status_current_line.arc_information.K += float(number_for_command)
                     case "R":
                         radius_given = True
                         self.cnc_status_current_line.arc_information.radius = float(number_for_command)
@@ -721,6 +733,7 @@ class GCodeLine:
     
     def handle_tool_change(self, 
                            g_code_line_info: list, 
+                           CNC_Parameter: CNCParameter,
                            Tool_Change_Manager: ToolChangeManager,
                            Movement_Manager: MovementManager):
         """
@@ -759,6 +772,9 @@ class GCodeLine:
 
         # Inform movement manager
         Movement_Manager.add_tool_change(self.g_code_line_index)
+
+        # Update current line
+        self.cnc_status_current_line.position_linear_axes = copy.deepcopy(CNC_Parameter.TOOL_CHANGE_POSITION_LINEAR_AXES)
 
     def handle_cooling_operation(self, 
                                  cooling_command: str, 

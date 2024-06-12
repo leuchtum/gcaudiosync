@@ -10,9 +10,9 @@ class RotationAxes:
                  B: float = 0.0,
                  C: float = 0.0):
         
-        self.A = A
-        self.B = B
-        self.C = C
+        self.A: float = A
+        self.B: float = B
+        self.C: float = C
 
     #################################################################################################
     # Methods
@@ -39,7 +39,7 @@ class RotationAxes:
         """
 
         array = np.array([self.A, self.B, self.C])
-        return copy(array)
+        return copy.copy(array)
     
     def print(self):
         """

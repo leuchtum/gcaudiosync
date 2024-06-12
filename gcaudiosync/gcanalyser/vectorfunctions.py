@@ -1,4 +1,5 @@
 import numpy as np
+import copy
 import math
 
 def compute_normal_vector(vec1, 
@@ -64,14 +65,32 @@ def get_factor(vec1, vec2):
     factor = 0
 
     for index in range(len(vec1)):
-        if vec1[index] != 0:
+        if vec2[index] != 0:
             factor = vec1[index] / vec2[index]
             break
     
     return factor
 
 # TODO: comment
-def compute_angle(vec1: np.ndarray, vec2: np.ndarray, smaller_angle: np.bool_) -> float:
+def compute_smaller_angle_in_degree(vec1: np.ndarray, vec2: np.ndarray) -> float:
+
+    # Handle potential division by zero
+    if np.linalg.norm(vec1) == 0 or np.linalg.norm(vec2) == 0:
+        raise ValueError("Cannot calculate angle for zero-norm vectors.")
+
+    # Calculate cosine of the angle
+    cosine = np.dot(vec1, vec2) / (np.linalg.norm(vec1) * np.linalg.norm(vec2))
+
+    # Ensure cosine value is within valid range (-1, 1)
+    cosine = np.clip(cosine, -1, 1)
+
+    # Calculate the angle in degrees
+    angle_degrees = np.degrees(np.arccos(cosine))
+
+    return angle_degrees
+
+# TODO: comment
+def compute_small_or_big_angle_in_degree(vec1: np.ndarray, vec2: np.ndarray, smaller_angle: np.bool_) -> float:
     """
     Calculates the smaller or bigger angle between two NumPy arrays in degrees.
 
@@ -87,21 +106,28 @@ def compute_angle(vec1: np.ndarray, vec2: np.ndarray, smaller_angle: np.bool_) -
         ValueError: If the input vectors are not valid NumPy arrays or have zero norm.
     """
 
-    # Handle potential division by zero
-    if np.linalg.norm(vec1) == 0 or np.linalg.norm(vec2) == 0:
-        raise ValueError("Cannot calculate angle for zero-norm vectors.")
-
-    # Calculate cosine of the angle
-    cosine = np.dot(vec1, vec2) / (np.linalg.norm(vec1) * np.linalg.norm(vec2))
-
-    # Ensure cosine value is within valid range (-1, 1)
-    cosine = np.clip(cosine, -1, 1)
-
-    # Calculate the angle in degrees
-    angle_degrees = np.degrees(np.arccos(cosine))
+    smaller_angle_degrees = compute_smaller_angle_in_degree(vec1 = vec1, vec2 = vec2)
 
     # Return requested angle
-    return min(angle_degrees, 360 - angle_degrees) if smaller_angle else max(angle_degrees, 360 - angle_degrees)
+    return smaller_angle_degrees if smaller_angle else 360 - smaller_angle_degrees
+
+def compute_small_or_big_angle(vec1: np.ndarray, vec2: np.ndarray, smaller_angle: np.bool_) -> float:
+    angle_degree = compute_smaller_angle_in_degree(vec1, vec2)
+
+    return angle_degree / 360.0 * 2 * math.pi
+
+# TODO: comment
+def compute_angle_from_X_axis(vec: np.array) -> float:
+
+    if len(vec) != 2:
+        raise Exception(f"Vector must be 2D")
+    
+    smaller_angle_degree = compute_smaller_angle_in_degree(vec1 = np.array([1, 0]), vec2 = copy.copy(vec))
+
+    if vec[1] >= 0:
+        return smaller_angle_degree
+    else:
+        return 360 - smaller_angle_degree
 
 # TODO: comment
 def rotate_2D_vector(center_2_point, center, angle):
@@ -114,8 +140,10 @@ def rotate_2D_vector(center_2_point, center, angle):
     return new_vec
 
 # TODO: comment
-def normalize(vec):
+def normalize(vec_in):
     
+    vec = copy.copy(vec_in)
+
     if np.linalg.norm(vec) == 0:
         return vec
     
