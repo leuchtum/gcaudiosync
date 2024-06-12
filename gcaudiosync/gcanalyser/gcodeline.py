@@ -120,6 +120,7 @@ class GCodeLine:
                             g_code_line_info.pop(info_index)                    # Delete this command and number
                             self.handle_G(float(number),                        # Call the method that handles G commands
                                           g_code_line_info, 
+                                          CNC_Parameter = CNC_Parameter,
                                           Pause_Manager = Pause_Manager,
                                           Movement_Manager = Movement_Manager)
                             break
