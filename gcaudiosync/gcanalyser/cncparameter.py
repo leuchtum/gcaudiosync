@@ -1,3 +1,5 @@
+import numpy as np
+
 from gcaudiosync.gcanalyser.filefunctions import *
 from gcaudiosync.gcanalyser.linearaxes import LinearAxes
 from gcaudiosync.gcanalyser.lineextractor import LineExtractor
@@ -55,8 +57,8 @@ class CNCParameter:
     MAX_DECELERATION_Y: float = 0.004    # Maximum deceleration of the Y-Axis in mm/ms^2.
     MAX_DECELERATION_Z: float = 0.004    # Maximum deceleration of the Z-Axis in mm/ms^2.
 
-    DEFAULT_PAUSE_TIME: int = 10000     # Time for a pause in ms.
-    TOOL_CHANGE_TIME: int = 8000        # Time for a tool change in ms.
+    DEFAULT_PAUSE_TIME: float = 10000.0     # Time for a pause in ms.
+    TOOL_CHANGE_TIME: float = 8000.0        # Time for a tool change in ms.
 
     # M commands
     COMMAND_ABORT: float                = 0.0
@@ -148,5 +150,20 @@ class CNCParameter:
     #################################################################################################
     # Methods
 
+    # TODO: comment
+    def get_acceleration_as_array(self) -> np.array:
+        max_A_X = self.MAX_ACCELERATION_X
+        max_A_Y = self.MAX_ACCELERATION_Y
+        max_A_Z = self.MAX_ACCELERATION_Z
+
+        return np.array([max_A_X, max_A_Y, max_A_Z])
+    
+    # TODO: comment
+    def get_deceleration_as_array(self) -> np.array:
+        max_D_X = self.MAX_DECELERATION_X
+        max_D_Y = self.MAX_DECELERATION_Y
+        max_D_Z = self.MAX_DECELERATION_Z
+
+        return np.array([max_D_X, max_D_Y, max_D_Z])
 # End of class
 #####################################################################################################

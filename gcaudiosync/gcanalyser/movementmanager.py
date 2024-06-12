@@ -59,24 +59,24 @@ class MovementManager:
         self.CNC_Parameter: CNCParameter    = CNC_Parameter              # Get cnc parameter
 
         # Get max acceleration and deceleration
-        self.max_acceleration: np.array     = np.zeros(3)
-        self.max_deceleration: np.array     = np.zeros(3)
-        self.get_acceleration_and_deceleration()
+        self.max_acceleration: np.array     = self.CNC_Parameter.get_acceleration_as_array()
+        self.max_deceleration: np.array     = self.CNC_Parameter.get_deceleration_as_array()
 
         # Create the initial CNC_Status object for the initialization of the MovementManager object
-        first_line_status = CNCStatus(start_position = True, 
-                                      CNC_Parameter = self.CNC_Parameter)
+        first_line_status: CNCStatus = CNCStatus(start_position = True, 
+                                                 CNC_Parameter = self.CNC_Parameter)
 
         # Create first movement
-        first_movement = Movement(g_code_line_index = -1,        
-                                  movement_type = -1, 
-                                  start_position_linear_axes    = first_line_status.position_linear_axes, 
-                                  end_position_linear_axes      = first_line_status.position_linear_axes,
-                                  start_position_rotation_axes  = first_line_status.position_rotation_axes,
-                                  end_position_rotation_axes    = first_line_status.position_rotation_axes, 
-                                  arc_information = None,
-                                  feed_rate = 0.0,
-                                  active_plane = 17)
+        first_movement: Movement = Movement(g_code_line_index = -1,        
+                                            movement_type = -1, 
+                                            start_position_linear_axes    = first_line_status.position_linear_axes, 
+                                            end_position_linear_axes      = first_line_status.position_linear_axes,
+                                            start_position_rotation_axes  = first_line_status.position_rotation_axes,
+                                            end_position_rotation_axes    = first_line_status.position_rotation_axes, 
+                                            arc_information = None,
+                                            feed_rate = 0.0,
+                                            active_plane = 17,
+                                            CNC_Parameter = self.CNC_Parameter)
         
         # Time for first movement and set flags
         first_movement.time = 0
@@ -111,15 +111,16 @@ class MovementManager:
             return
                 
         # Create new movement
-        new_movement = Movement(g_code_line_index = line_index, 
-                                movement_type = current_line_status.active_movement_type, 
-                                start_position_linear_axes = last_line_status.position_linear_axes, 
-                                end_position_linear_axes = current_line_status.position_linear_axes,
-                                start_position_rotation_axes = last_line_status.position_rotation_axes,
-                                end_position_rotation_axes = current_line_status.position_rotation_axes, 
-                                arc_information = None,
-                                feed_rate = current_line_status.feed_rate,
-                                active_plane = current_line_status.active_plane)
+        new_movement: Movement = Movement(g_code_line_index = line_index, 
+                                          movement_type = current_line_status.active_movement_type, 
+                                          start_position_linear_axes = last_line_status.position_linear_axes, 
+                                          end_position_linear_axes = current_line_status.position_linear_axes,
+                                          start_position_rotation_axes = last_line_status.position_rotation_axes,
+                                          end_position_rotation_axes = current_line_status.position_rotation_axes, 
+                                          arc_information = None,
+                                          feed_rate = current_line_status.feed_rate,
+                                          active_plane = current_line_status.active_plane,
+                                          CNC_Parameter = self.CNC_Parameter)
         
         # Add exact stop if needed
         if current_line_status.exact_stop:
@@ -150,15 +151,16 @@ class MovementManager:
             return
                 
         # Create new movement
-        new_movement = Movement(g_code_line_index = line_index, 
-                                movement_type = current_line_status.active_movement_type,
-                                start_position_linear_axes = last_line_status.position_linear_axes, 
-                                end_position_linear_axes = current_line_status.position_linear_axes,
-                                start_position_rotation_axes = last_line_status.position_rotation_axes,
-                                end_position_rotation_axes = current_line_status.position_rotation_axes, 
-                                arc_information = current_line_status.arc_information,
-                                feed_rate = current_line_status.feed_rate,
-                                active_plane = current_line_status.active_plane)
+        new_movement: Movement = Movement(g_code_line_index = line_index, 
+                                          movement_type = current_line_status.active_movement_type,
+                                          start_position_linear_axes = last_line_status.position_linear_axes, 
+                                          end_position_linear_axes = current_line_status.position_linear_axes,
+                                          start_position_rotation_axes = last_line_status.position_rotation_axes,
+                                          end_position_rotation_axes = current_line_status.position_rotation_axes, 
+                                          arc_information = current_line_status.arc_information,
+                                          feed_rate = current_line_status.feed_rate,
+                                          active_plane = current_line_status.active_plane,
+                                          CNC_Parameter = self.CNC_Parameter)
         
         # Add exact stop if needed
         if current_line_status.exact_stop:
@@ -193,15 +195,16 @@ class MovementManager:
         tool_change_position_linear = self.CNC_Parameter.TOOL_CHANGE_POSITION_LINEAR_AXES
 
         # Create movement to tool
-        movement_get_tool = Movement(g_code_line_index = line_index, 
-                                     movement_type = 0, 
-                                     start_position_linear_axes = current_position_linear_axes, 
-                                     end_position_linear_axes = tool_change_position_linear,
-                                     start_position_rotation_axes = current_position_rotation_axes,
-                                     end_position_rotation_axes = current_position_rotation_axes, 
-                                     arc_information = None,
-                                     feed_rate = self.CNC_Parameter.F_MAX/60000.0,
-                                     active_plane = 17)
+        movement_get_tool: Movement = Movement(g_code_line_index = line_index, 
+                                               movement_type = 0, 
+                                               start_position_linear_axes = current_position_linear_axes, 
+                                               end_position_linear_axes = tool_change_position_linear,
+                                               start_position_rotation_axes = current_position_rotation_axes,
+                                               end_position_rotation_axes = current_position_rotation_axes, 
+                                               arc_information = None,
+                                               feed_rate = self.CNC_Parameter.F_MAX / 60000.0,
+                                               active_plane = 17,
+                                               CNC_Parameter = self.CNC_Parameter)
         
         # Add exact stop
         movement_get_tool.do_exact_stop()   
@@ -215,7 +218,7 @@ class MovementManager:
 
     def add_pause(self, 
                   line_index: int, 
-                  time: int) -> None:
+                  time: float) -> None:
         """
         Adds a pause movement to the list of movements.
 
@@ -228,21 +231,22 @@ class MovementManager:
         """
 
         # Default time if unknown
-        default_pause_time = self.CNC_Parameter.DEFAULT_PAUSE_TIME                                  
+        default_pause_time: float = self.CNC_Parameter.DEFAULT_PAUSE_TIME                                  
 
         # Get last movement
         last_movement: Movement = copy.deepcopy(self.movements[-1]) 
 
         # create new movement
-        new_movement = Movement(g_code_line_index = line_index, 
-                                movement_type = -1, 
-                                start_position_linear_axes = last_movement.end_position_linear_axes, 
-                                end_position_linear_axes = last_movement.end_position_linear_axes,
-                                start_position_rotation_axes = last_movement.end_position_linear_axes,
-                                end_position_rotation_axes = last_movement.end_position_rotation_axes, 
-                                arc_information = None,
-                                feed_rate = 0,
-                                active_plane = 17)
+        new_movement: Movement = Movement(g_code_line_index = line_index, 
+                                          movement_type = -1, 
+                                          start_position_linear_axes = last_movement.end_position_linear_axes, 
+                                          end_position_linear_axes = last_movement.end_position_linear_axes,
+                                          start_position_rotation_axes = last_movement.end_position_linear_axes,
+                                          end_position_rotation_axes = last_movement.end_position_rotation_axes, 
+                                          arc_information = None,
+                                          feed_rate = 0,
+                                          active_plane = 17,
+                                          CNC_Parameter = self.CNC_Parameter)
         
         # Check if unknown pause time
         if time == -1:
@@ -269,13 +273,15 @@ class MovementManager:
             The line index of the G-code corresponding to the end of the program.
         """
         self.end_of_program_reached = True  # Set variable
-        self.add_pause(line_index, 0)       # Add final pause
+        # Add final pause
+        self.add_pause(line_index = line_index, 
+                       time = 0)       
         
         # Set flags of last movement
         self.movements[-1].start_time_is_adjustable = False
 
     def get_expected_time_of_gcode_line(self, 
-                                        g_code_line_index: int) -> int:
+                                        g_code_line_index: int) -> float:
         """
         Computes the expected time for the given line index in the G-code.
 
@@ -286,12 +292,12 @@ class MovementManager:
 
         Returns:
         --------
-        int
+        float
             The expected time in milliseconds for the given line index.
         """
 
         # Set expected time to 0
-        expected_time: int = 0                                          
+        expected_time: float = 0.0                                      
 
         # Iterate backwards through all movements and find thouse who match the line index
         for index in range(len(self.movements))[::-1]:
@@ -409,24 +415,12 @@ class MovementManager:
     # TODO: comment
     def all_lines_analysed(self) -> None:
 
-        self.copmpute_start_and_end_vectors()
-        self.update_movement_times_and_copmpute_total_time()
-
-    # TODO: comment 
-    def update_movement_times_and_copmpute_total_time(self) -> None:
-        time: int = 0
-
-        # Iterate through all movements and get time
-        for movement in self.movements:
-            movement.compute_expected_time(self.max_acceleration,
-                                           self.max_deceleration)
-            movement.start_time = time
-            time += movement.time
-
-        self.total_time = time
+        self.copmpute_start_and_end_vectors_and_times()
 
     # TODO: comment
-    def copmpute_start_and_end_vectors(self) -> None:
+    def copmpute_start_and_end_vectors_and_times(self) -> None:
+        
+        time: int = 0
         
         # Iterate through all movements and compute the start and end vectors
         for movement_index in range(len(self.movements)-1):
@@ -454,6 +448,14 @@ class MovementManager:
             # Set start and end vector
             self.movements[movement_index].end_vector_linear_axes = copy.copy(start_and_end_vector)
             self.movements[movement_index+1].start_vector_linear_axes = copy.copy(start_and_end_vector)
+
+            self.movements[movement_index].compute_expected_time(self.CNC_Parameter.get_acceleration_as_array(),
+                                                                 self.CNC_Parameter.get_deceleration_as_array())
+
+            self.movements[movement_index].start_time = time
+            time += self.movements[movement_index].time
+
+            self.total_time = time
 
     def set_start_time_and_total_time(self, 
                                       new_start_time: float,
@@ -677,22 +679,6 @@ class MovementManager:
                     time_stamps.append([g_code_line_index, g_code_line_time_stamp])
 
         return time_stamps
-
-    # TODO: comment
-    def get_acceleration_and_deceleration(self):
-
-        # Acceleration
-        max_A_X = self.CNC_Parameter.MAX_ACCELERATION_X
-        max_A_Y = self.CNC_Parameter.MAX_ACCELERATION_Y
-        max_A_Z = self.CNC_Parameter.MAX_ACCELERATION_Z
-        self.max_acceleration = np.array([max_A_X, max_A_Y, max_A_Z])
-
-        # Deceleration
-        max_D_X = self.CNC_Parameter.MAX_DECELERATION_X
-        max_D_Y = self.CNC_Parameter.MAX_DECELERATION_Y
-        max_D_Z = self.CNC_Parameter.MAX_DECELERATION_Z
-        self.max_deceleration = np.array([max_D_X, max_D_Y, max_D_Z])
-
 
 # End of class
 #####################################################################################################

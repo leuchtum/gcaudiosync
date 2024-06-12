@@ -6,6 +6,7 @@ import gcaudiosync.gcanalyser.vectorfunctions as vecfunc
 import gcaudiosync.gcanalyser.numericalmethods as nummet
 
 from gcaudiosync.gcanalyser.arcinformation import ArcInformation
+from gcaudiosync.gcanalyser.cncparameter import CNCParameter
 from gcaudiosync.gcanalyser.linearaxes import LinearAxes
 from gcaudiosync.gcanalyser.rotationaxes import RotationAxes
 
@@ -51,7 +52,8 @@ class Movement:
                  end_position_rotation_axes: RotationAxes,
                  arc_information: ArcInformation,
                  feed_rate: float,
-                 active_plane: int):
+                 active_plane: int,
+                 CNC_Parameter: CNCParameter):
         """
         Initializes the Movement instance with the provided parameters.
 
@@ -86,15 +88,15 @@ class Movement:
         """
 
         # Save all parameters
-        self.g_code_line_index: int                     = g_code_line_index
-        self.movement_type: int                         = movement_type
-        self.start_position_linear_axes: LinearAxes     = copy.deepcopy(start_position_linear_axes)
-        self.end_position_linear_axes: LinearAxes       = copy.deepcopy(end_position_linear_axes)
-        self.start_position_rotation_axes: RotationAxes = copy.deepcopy(start_position_rotation_axes)
-        self.end_position_rotation_axes: RotationAxes   = copy.deepcopy(end_position_rotation_axes)
-        self.arc_information: ArcInformation            = copy.deepcopy(arc_information)
-        self.feed_rate: float                           = feed_rate
-        self.active_plane: int                          = active_plane
+        self.g_code_line_index: int                         = g_code_line_index
+        self.movement_type: int                             = movement_type
+        self.start_position_linear_axes: LinearAxes         = copy.deepcopy(start_position_linear_axes)
+        self.end_position_linear_axes: LinearAxes           = copy.deepcopy(end_position_linear_axes)
+        self.start_position_rotation_axes: RotationAxes     = copy.deepcopy(start_position_rotation_axes)
+        self.end_position_rotation_axes: RotationAxes       = copy.deepcopy(end_position_rotation_axes)
+        self.arc_information: ArcInformation                = copy.deepcopy(arc_information)
+        self.feed_rate: float                               = feed_rate
+        self.active_plane: int                              = active_plane
 
         # Create all the vectors
         self.start_vector_linear_axes: np.array     = np.array([0.0, 0.0, 0.0])  
@@ -103,8 +105,8 @@ class Movement:
         self.end_vector_rotation_axes: np.array     = np.array([0.0, 0.0, 0.0]) 
 
         # Set initial values for time and adjustability
-        self.start_time: float              = 0                      
-        self.time: float                    = 0
+        self.start_time: float              = 0.0                   
+        self.time: float                    = 0.0
         self.start_time_is_adjustable: bool = True
         self.time_is_adjustable: bool       = True 
 
@@ -252,18 +254,18 @@ class Movement:
 
         if self.movement_type == -1:
             # No movement at all
-            return
+            pass
         elif self.movement_type in [0, 1]:
             self.compute_expected_time_linear_movement_type(max_acceleration, max_deceleration)
         elif self.movement_type in [2, 3]:
             self.compute_expected_time_arc_movement_type(max_acceleration, max_deceleration)
         else:
-            raise Exception(f"Unknown movement type: {self.movement_type}")
+            Exception(f"Unknown movement type: {self.movement_type}")
 
     # TODO: comment
     def compute_expected_time_linear_movement_type(self,
                                                    max_acceleration: np.array,
-                                                   max_deceleration: np.array):
+                                                   max_deceleration: np.array) -> None:
 
         # Get start and end position
         start_position_linear_axes = self.start_position_linear_axes.get_as_array()
@@ -299,6 +301,10 @@ class Movement:
         important_axe_acceleration = np.argmax(acceleration_times)
         distance_acceleration = 0.5*max_acceleration[important_axe_acceleration]*acceleration_time**2 + start_velocity_vector_linear_axes[important_axe_acceleration]*acceleration_time
         
+        # Check distance acceleration
+        if distance_acceleration > distance:
+            pass
+        
         # Copmute delta velocity from target to end
         delta_velocity_end = target_velocity_vector_linear_axes - end_velocity_vector_linear_axes
         delta_velocity_end = np.absolute(delta_velocity_end)
@@ -306,20 +312,24 @@ class Movement:
         # Compute acceleration time and distance
         deceleration_times = np.divide(delta_velocity_end, max_deceleration)
         deceleration_time = max(deceleration_times)
-        important_axe_acceleration = np.argmax(deceleration_times)
-        distance_acceleration = 0.5*max_deceleration[important_axe_acceleration]*deceleration_time**2 + end_velocity_vector_linear_axes[important_axe_acceleration]*deceleration_time
+        important_axe_deceleration = np.argmax(deceleration_times)
+        distance_deceleration = 0.5*max_deceleration[important_axe_deceleration]*deceleration_time**2 + end_velocity_vector_linear_axes[important_axe_deceleration]*deceleration_time
+        
+        # Check distance deceleration
+        if distance_deceleration > distance:
+            pass
         
         # Compute and check distance with target velocity
-        distance_target_velocity = distance - distance_acceleration - distance_acceleration
+        distance_target_velocity = distance - distance_acceleration - distance_deceleration
         if distance_target_velocity < 0:
-            distance_target_velocity = 0    # TODO: well, here we would need to change the start and end vectors of this movement. but this would affect everything else. so we ignore it for the moment. the easiest way to adapt would be to compute this at the creation of the movement and adapt the start and end vectors there :)
+            distance_target_velocity = 0
         
         # Compute time with target velocity
         target_velocity_time = distance_target_velocity / target_velocity
 
         # Compute time
         self.time = acceleration_time + target_velocity_time + deceleration_time
-
+    
     # TODO: comment
     def compute_expected_time_arc_movement_type(self,
                                                 max_acceleration: np.array,
@@ -426,7 +436,7 @@ class Movement:
                 
                     # Check start_distance_percentage
                     if start_distance_percentage > 1:
-                        return 1
+                        pass
 
                 # Compute end times for the arc movement
                 end_time_X_Y = 0.0
@@ -456,14 +466,12 @@ class Movement:
                 
                     # Check end_distance_percentage
                     if end_distance_percentage > 1:
-                        return 2
+                        pass
 
                 # Check start and end distance percentage
-                if start_distance_percentage + end_distance_percentage > 1:
-                    return 3
-
-                # Compute time with target velocity
-                distance_target_velocity = distance * (1 - start_distance_percentage - end_distance_percentage)
+                distance_target_velocity = 0
+                if start_distance_percentage + end_distance_percentage <= 1:
+                    distance_target_velocity = distance * (1 - start_distance_percentage - end_distance_percentage)
 
                 # Compute time with target velocity
                 target_velocity_time = distance_target_velocity / target_velocity
@@ -479,8 +487,6 @@ class Movement:
 
         self.time = time
 
-        return 0
-    
     def get_position_linear_axes_in_movement(self, 
                                              time_in_movement: int) -> np.ndarray:
         """

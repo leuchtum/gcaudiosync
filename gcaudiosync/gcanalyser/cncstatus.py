@@ -63,6 +63,8 @@ class CNCStatus:
         self.F_value: float = 0.0                    # F value in m/min
         self.S_value: float = 0.0                    # S value in RPM
 
+        self.feed_rate: float = 0.0                  # Feed rate in mm/ms
+
         self.spindle_speed: float    = 0.0           # Spindle speed in RPM
         self.spindle_direction: str  = "CW"          # Spindle direction: "CW" or "CCW"
         self.spindle_on: bool        = False         # Spindle on: True or False
