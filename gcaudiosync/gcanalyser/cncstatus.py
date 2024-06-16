@@ -13,25 +13,45 @@ class CNCStatus:
     This class stores the current state of various parameters during CNC machining operations.
 
     Attributes:
-        active_movement_type (int): Active movement type: 0 for rapid linear, 1 for linear, 2 for arc CW, 3 for arc CCW.
-        active_tool (int): Number of the active tool.
-        position_linear_axes (LinearAxes): Absolute positions for X, Y, Z in mm.
-        position_rotation_axes (RotationAxes): Absolute positions for A, B, C in mm.
-        arc_information (ArcInformation): Information about arcs.
-        active_plane (int): Active plane: XY (17), XZ (18), YZ (19).
-        absolute_position (bool): Flag for absolute position for X, Y, Z, A, B, C.
-        absolute_arc_center (bool): Flag for absolute position for I, J, K.
-        cutter_compensation (int): Cutter compensation.
-        F_value (float): F value in m/min.
-        S_value (float): S value in RPM.
-        feed_rate (float): Feed rate in mm/ms.
-        spindle_speed (float): Spindle speed in RPM.
-        spindle_direction (str): Spindle direction: "CW" or "CCW".
-        spindle_on (bool): Spindle on: True or False.
-        cooling_on (bool): Cooling on: True or False.
-        exact_stop (bool): Exact stop: True or False.
-        G_61_active (bool): G61 active: True or False.
-        program_end_reached (bool): Program end reached: True or False.
+    -----------
+    active_movement_type (int): 
+        Active movement type: 0 for rapid linear, 1 for linear, 2 for arc CW, 3 for arc CCW.
+    active_tool (int): 
+        Number of the active tool.
+    position_linear_axes (LinearAxes): 
+        Absolute positions for X, Y, Z in mm.
+    position_rotation_axes (RotationAxes): 
+        Absolute positions for A, B, C in °.
+    arc_information (ArcInformation): 
+        Information about arcs.
+    active_plane (int): 
+        Active plane: XY (17), XZ (18), YZ (19).
+    absolute_position (bool): 
+        Flag for absolute position for X, Y, Z, A, B, C.
+    absolute_arc_center (bool): 
+        Flag for absolute position for I, J, K.
+    cutter_compensation (int): 
+        Cutter compensation.
+    F_value (float): 
+        F value in m/min.
+    S_value (float): 
+        S value in RPM.
+    feed_rate (float): 
+        Feed rate in mm/ms.
+    spindle_speed (float): 
+        Spindle speed in RPM.
+    spindle_direction (str): 
+        Spindle direction: "CW" or "CCW".
+    spindle_on (bool): 
+        Spindle on: True or False.
+    cooling_on (bool): 
+        Cooling on: True or False.
+    exact_stop (bool): 
+        Exact stop: True or False.
+    G_61_active (bool): 
+        G61 active: True or False.
+    program_end_reached (bool): 
+        Program end reached: True or False.
     """
 
     # Constructor
@@ -107,3 +127,4 @@ def copy_CNC_Status(Source: CNCStatus) -> CNCStatus:
     new_CNC_Status.exact_stop = new_CNC_Status.G_61_active
 
     return new_CNC_Status
+

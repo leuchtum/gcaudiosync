@@ -90,7 +90,7 @@ class MovementManager:
     # Methods
 
     def add_linear_movement(self, 
-                            line_index: int, 
+                            g_code_line_index: int, 
                             last_line_status: CNCStatus,
                             current_line_status: CNCStatus) -> None:
         """
@@ -111,7 +111,7 @@ class MovementManager:
             return
                 
         # Create new movement
-        new_movement: Movement = Movement(g_code_line_index = line_index, 
+        new_movement: Movement = Movement(g_code_line_index = g_code_line_index, 
                                           movement_type = current_line_status.active_movement_type, 
                                           start_position_linear_axes = last_line_status.position_linear_axes, 
                                           end_position_linear_axes = current_line_status.position_linear_axes,
@@ -130,7 +130,7 @@ class MovementManager:
         self.movements.append(new_movement)                     
 
     def add_arc_movement(self, 
-                         line_index: int, 
+                         g_code_line_index: int, 
                          last_line_status: CNCStatus,
                          current_line_status: CNCStatus) -> None:
         """
@@ -151,7 +151,7 @@ class MovementManager:
             return
                 
         # Create new movement
-        new_movement: Movement = Movement(g_code_line_index = line_index, 
+        new_movement: Movement = Movement(g_code_line_index = g_code_line_index, 
                                           movement_type = current_line_status.active_movement_type,
                                           start_position_linear_axes = last_line_status.position_linear_axes, 
                                           end_position_linear_axes = current_line_status.position_linear_axes,
@@ -170,13 +170,13 @@ class MovementManager:
         self.movements.append(new_movement)                     
 
     def add_tool_change(self, 
-                        line_index: int) -> None:
+                        g_code_line_index: int) -> None:
         """
         Adds a tool change movement to the list of movements.
 
         Parameters:
         -----------
-        line_index : int
+        g_code_line_index : int
             The line index of the G-code corresponding to this tool change.
         """
 
@@ -195,7 +195,7 @@ class MovementManager:
         tool_change_position_linear = self.CNC_Parameter.TOOL_CHANGE_POSITION_LINEAR_AXES
 
         # Create movement to tool
-        movement_get_tool: Movement = Movement(g_code_line_index = line_index, 
+        movement_get_tool: Movement = Movement(g_code_line_index = g_code_line_index, 
                                                movement_type = 0, 
                                                start_position_linear_axes = current_position_linear_axes, 
                                                end_position_linear_axes = tool_change_position_linear,
@@ -213,18 +213,18 @@ class MovementManager:
         self.movements.append(movement_get_tool)                
         
         # Add pause for tool change
-        self.add_pause(line_index = line_index, 
+        self.add_pause(g_code_line_index = g_code_line_index, 
                        time = self.CNC_Parameter.TOOL_CHANGE_TIME) 
 
     def add_pause(self, 
-                  line_index: int, 
+                  g_code_line_index: int, 
                   time: float) -> None:
         """
         Adds a pause movement to the list of movements.
 
         Parameters:
         -----------
-        line_index : int
+        g_code_line_index : int
             The line index of the G-code corresponding to this pause.
         time : int
             The duration of the pause.
@@ -237,7 +237,7 @@ class MovementManager:
         last_movement: Movement = copy.deepcopy(self.movements[-1]) 
 
         # create new movement
-        new_movement: Movement = Movement(g_code_line_index = line_index, 
+        new_movement: Movement = Movement(g_code_line_index = g_code_line_index, 
                                           movement_type = -1, 
                                           start_position_linear_axes = last_movement.end_position_linear_axes, 
                                           end_position_linear_axes = last_movement.end_position_linear_axes,
@@ -263,7 +263,7 @@ class MovementManager:
         self.movements.append(new_movement)                 
     
     def add_end_of_program(self, 
-                           line_index: int) -> None:
+                           g_code_line_index: int) -> None:
         """
         Marks the end of the program and adds a final pause.
 
@@ -274,7 +274,7 @@ class MovementManager:
         """
         self.end_of_program_reached = True  # Set variable
         # Add final pause
-        self.add_pause(line_index = line_index, 
+        self.add_pause(g_code_line_index = g_code_line_index, 
                        time = 0)       
         
         # Set flags of last movement
@@ -310,7 +310,8 @@ class MovementManager:
         return expected_time
 
     def get_indices_of_movements_for_gcode_line(self, 
-                                                line_index: int) -> List[int]:
+                                                g_code_line_index: int,
+                                                ) -> List[int]:
         """
         Retrieves the indices of all movements corresponding to a given line index in the G-code.
 
@@ -330,15 +331,16 @@ class MovementManager:
         # Iterate backwards through all movements and find thouse who match the line index
         for movement_index in range(len(self.movements))[::-1]:
 
-            if self.movements[movement_index].g_code_line_index < line_index:      # All movements found
+            if self.movements[movement_index].g_code_line_index < g_code_line_index:      # All movements found
                 break                                                           # Break loop
-            elif self.movements[movement_index].g_code_line_index == line_index:   # Matching line index found
+            elif self.movements[movement_index].g_code_line_index == g_code_line_index:   # Matching line index found
                 indices.append(movement_index)                                  # Append index
 
         return indices
 
     def get_tool_path_information(self, 
-                                  current_time: int) -> ToolPathInformation:
+                                  current_time: int,
+                                  ) -> ToolPathInformation:
         """
         Retrieves tool path information at a specific time.
 

@@ -35,5 +35,5 @@ print(time)
 #G_Code_Analyser.Snapshot_Manager.print_information()
 
 # Generate tool path
-G_Code_Analyser.generate_tool_path(10)
+G_Code_Analyser.generate_tool_path(fps = 10)
 G_Code_Analyser.plot_tool_path()

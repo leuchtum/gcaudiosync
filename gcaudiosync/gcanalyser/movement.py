@@ -3,7 +3,6 @@ import copy
 import math
 
 import gcaudiosync.gcanalyser.vectorfunctions as vecfunc
-import gcaudiosync.gcanalyser.numericalmethods as nummet
 
 from gcaudiosync.gcanalyser.arcinformation import ArcInformation
 from gcaudiosync.gcanalyser.cncparameter import CNCParameter
