@@ -98,23 +98,40 @@ class Movement:
         self.active_plane: int                              = active_plane
 
         # Create all the vectors
-        self.start_vector_linear_axes: np.array     = np.array([0.0, 0.0, 0.0])  
-        self.end_vector_linear_axes: np.array       = np.array([0.0, 0.0, 0.0])  
-        self.start_vector_rotation_axes: np.array   = np.array([0.0, 0.0, 0.0]) 
-        self.end_vector_rotation_axes: np.array     = np.array([0.0, 0.0, 0.0]) 
+        self.start_vector_linear_axes: np.array     = np.array([0.0, 0.0, 0.0])
+        self.end_vector_linear_axes: np.array       = np.array([0.0, 0.0, 0.0])
+        self.start_vector_rotation_axes: np.array   = np.array([0.0, 0.0, 0.0])
+        self.end_vector_rotation_axes: np.array     = np.array([0.0, 0.0, 0.0])
+        self.max_acceleration: np.array             = CNC_Parameter.get_acceleration_as_array()
+        self.max_deceleration: np.array             = CNC_Parameter.get_deceleration_as_array()
 
-        # Set initial values for time and adjustability
+        # Create all the scalars
         self.start_time: float              = 0.0                   
-        self.time: float                    = 0.0
+        self.duration: float                = 0.0
         self.start_time_is_adjustable: bool = True
         self.time_is_adjustable: bool       = True 
+        self.duration_acceleration: float   = 0.0
+        self.duration_constant_speed: float = 0.0
+        self.duration_deceleration: float   = 0.0
+        self.distance_acceleration: float   = 0.0
+        self.distance_constant_speed: float = 0.0
+        self.distance_deceleration: float   = 0.0
+        self.total_distance: float          = 0.0
+        self.acceleration: float            = 0.0
+        self.deceleration: float            = 0.0
+        self.max_feed_rate: float           = CNC_Parameter.F_MAX / 60000
+        self.dynamic_is_ok: bool            = True
 
         # Check if movement is valid: compute optimal vectors and expected time
-        if movement_type != -1:
+        if self.movement_type != -1:
+            if self.movement_type in [2, 3]:
+                self.adjust_arc_movement_feed_rate()
+
             self.compute_optimal_start_vector_linear_axes() 
             self.compute_optimal_start_vector_rotation()        # Not implemented
             self.compute_optimal_end_vector_linear_axes()
             self.compute_optimal_end_vector_rotation()          # Not implemented
+
         else:
             self.time_is_adjustable = False
 
@@ -247,94 +264,122 @@ class Movement:
         self.end_vector_rotation_axes = np.array([0.0, 0.0, 0.0])
 
     # TODO: comment
-    def compute_expected_time(self,
-                              max_acceleration: np.array,
-                              max_deceleration: np.array) -> None:
+    def compute_expected_time(self) -> None:
 
         if self.movement_type == -1:
             # No movement at all
             pass
         elif self.movement_type in [0, 1]:
-            self.compute_expected_time_linear_movement_type(max_acceleration, max_deceleration)
+            self.compute_expected_time_linear_movement_type()
         elif self.movement_type in [2, 3]:
-            self.compute_expected_time_arc_movement_type(max_acceleration, max_deceleration)
+            self.compute_expected_time_arc_movement_type()
         else:
             Exception(f"Unknown movement type: {self.movement_type}")
 
     # TODO: comment
-    def compute_expected_time_linear_movement_type(self,
-                                                   max_acceleration: np.array,
-                                                   max_deceleration: np.array) -> None:
+    def compute_expected_time_linear_movement_type(self) -> None:
+        # Assumption: the distance of the movement is long enought to accelerate or decelerate from the start position to the end position
+        # If this is not the case, the start or end velocity must be adjusted. This is not implemented jet. So the computet time would be not computed correct.
+
+        self.dynamic_is_ok = True
 
         # Get start and end position
-        start_position_linear_axes = self.start_position_linear_axes.get_as_array()
-        end_position_linear_axes = self.end_position_linear_axes.get_as_array()
+        start_position_linear_axes = self.start_position_linear_axes.get_as_array()     # [mm]
+        end_position_linear_axes = self.end_position_linear_axes.get_as_array()         # [mm]
 
         # Get start and end vector
-        start_velocity_vector_linear_axes = np.absolute(copy.copy(self.start_vector_linear_axes))
-        end_velocity_vector_linear_axes = np.absolute(copy.copy(self.end_vector_linear_axes))
+        start_velocity_vector_linear_axes = np.absolute(copy.copy(self.start_vector_linear_axes))   # [mm/ms]
+        end_velocity_vector_linear_axes = np.absolute(copy.copy(self.end_vector_linear_axes))       # [mm/ms]
 
-        # Get and check target velocity
-        target_velocity = self.feed_rate
-        if target_velocity == 0:
-            raise Exception(f"F value is 0 in line {self.g_code_line_index+1}.")
+        # Get target velocity
+        target_velocity = self.feed_rate        # [mm/ms]
         
         # Compute distance vector and distance
         distance_vector_linear_axes = np.absolute(end_position_linear_axes - start_position_linear_axes)
-        distance = np.linalg.norm(end_position_linear_axes - start_position_linear_axes)
-
+        self.distance = np.linalg.norm(end_position_linear_axes - start_position_linear_axes)
+        
         # Check if distance > 0
-        if not distance > 0:
-            self.time = 0
-            return
+        if not self.distance > 0:
+            self.duration = 0
 
-        target_velocity_vector_linear_axes = distance_vector_linear_axes / distance * target_velocity
+        # Compute target velocity for linear axes
+        target_velocity_vector_linear_axes = vecfunc.normalize(distance_vector_linear_axes) * target_velocity
+
+        # Acceleration phase #####################################################
+        # Compute max acceleration for this movement -> proportional to the feed rate
+        max_acceleration = self.max_acceleration * target_velocity / self.max_feed_rate
 
         # Copmute delta velocity from start to target
         delta_velocity_start = target_velocity_vector_linear_axes - start_velocity_vector_linear_axes
-        delta_velocity_start = np.absolute(delta_velocity_start)
 
         # Compute acceleration time and distance
-        acceleration_times = np.divide(delta_velocity_start, max_acceleration)
-        acceleration_time = max(acceleration_times)
-        important_axe_acceleration = np.argmax(acceleration_times)
-        distance_acceleration = 0.5*max_acceleration[important_axe_acceleration]*acceleration_time**2 + start_velocity_vector_linear_axes[important_axe_acceleration]*acceleration_time
-        
-        # Check distance acceleration
-        if distance_acceleration > distance:
+        durations_acceleration = np.divide(delta_velocity_start, max_acceleration)
+        self.duration_acceleration = max(durations_acceleration)
+
+        if self.duration_acceleration < 0:
+            raise Exception(f"Something went wrong: acceleration time is negative.")
+        elif self.duration_acceleration == 0:
             pass
+        else:
+            important_axis_acceleration = np.argmax(durations_acceleration)
+            distance_acceleration_important_axis = 0.5 * max_acceleration[important_axis_acceleration] * self.duration_acceleration**2 + start_velocity_vector_linear_axes[important_axis_acceleration] * self.duration_acceleration
+            distance_vector_acceleration_linear_axes = vecfunc.normalize(distance_vector_linear_axes) / distance_vector_linear_axes[important_axis_acceleration] * distance_acceleration_important_axis
+            self.distance_acceleration = np.linalg.norm(distance_vector_acceleration_linear_axes)
+            start_velocity_linear_axes = np.linalg.norm(start_velocity_vector_linear_axes)
+            self.acceleration = 2 * (self.distance_acceleration - start_velocity_linear_axes * self.duration_acceleration) / self.duration_acceleration**2
+            
+            # Check distance acceleration
+            if self.distance_acceleration > self.distance:
+                # TODO: In this case the target feed rate is not reachable in time. -> Adjust target feed rate. Careful: could affect end velocity vector.
+                self.dynamic_is_ok = False
         
+        # Deceleration phase #####################################################
+        # Compute max deceleration for this movement -> proportional to the feed rate
+        max_deceleration = self.max_deceleration * target_velocity / self.max_feed_rate
+
         # Copmute delta velocity from target to end
         delta_velocity_end = target_velocity_vector_linear_axes - end_velocity_vector_linear_axes
-        delta_velocity_end = np.absolute(delta_velocity_end)
 
         # Compute acceleration time and distance
-        deceleration_times = np.divide(delta_velocity_end, max_deceleration)
-        deceleration_time = max(deceleration_times)
-        important_axe_deceleration = np.argmax(deceleration_times)
-        distance_deceleration = 0.5*max_deceleration[important_axe_deceleration]*deceleration_time**2 + end_velocity_vector_linear_axes[important_axe_deceleration]*deceleration_time
-        
-        # Check distance deceleration
-        if distance_deceleration > distance:
+        duration_deceleration = np.divide(delta_velocity_end, max_deceleration)
+        self.duration_deceleration = max(duration_deceleration)
+
+        if self.duration_deceleration < 0:
+            raise Exception(f"Something went wrong: deceleration time is negative.")
+        elif self.duration_deceleration == 0:
             pass
+        else:
+            important_axis_deceleration = np.argmax(duration_deceleration)
+            distance_deceleration_important_axis = 0.5 * max_deceleration[important_axis_deceleration] * self.duration_deceleration**2 + end_velocity_vector_linear_axes[important_axis_deceleration] * self.duration_deceleration
+            distance_vector_deceleration_linear_axes = vecfunc.normalize(distance_vector_linear_axes) / distance_vector_linear_axes[important_axis_deceleration] * distance_deceleration_important_axis
+            self.distance_deceleration = np.linalg.norm(distance_vector_deceleration_linear_axes)
+            end_velocity_linear_axes = np.linalg.norm(end_velocity_vector_linear_axes)
+            self.deceleration = 2 * (self.distance_deceleration - end_velocity_linear_axes * self.duration_deceleration) / self.duration_deceleration**2
+            
+            # Check distance acceleration
+            if self.distance_deceleration > self.distance:
+                # TODO: In this case the end feed rate is not reachable in time. -> Adjust target feed rate. Careful: could affect start velocity vector.
+                self.dynamic_is_ok = False
         
-        # Compute and check distance with target velocity
-        distance_target_velocity = distance - distance_acceleration - distance_deceleration
-        if distance_target_velocity < 0:
-            distance_target_velocity = 0
+        # Phase with target feed rate #####################################################
+        self.distance_constant_speed = self.distance - self.distance_acceleration - self.distance_deceleration
+        if self.distance_constant_speed < 0:
+            # TODO: In this case the end feed rate is not reachable in time. -> Adjust target feed rate and/or start and end velocities
+            self.distance_constant_speed = 0
+            self.dynamic_is_ok = False
         
         # Compute time with target velocity
-        target_velocity_time = distance_target_velocity / target_velocity
+        self.duration_constant_speed = self.distance_constant_speed / target_velocity
 
         # Compute time
-        self.time = acceleration_time + target_velocity_time + deceleration_time
+        self.duration = self.duration_acceleration + self.duration_constant_speed + self.duration_deceleration
     
     # TODO: comment
-    def compute_expected_time_arc_movement_type(self,
-                                                max_acceleration: np.array,
-                                                max_deceleration: np.array) -> int:
-        # Simplified computation: Acceleration or deceleration linear until the start or end velocity for the velocity of the arc movement is reached.
-        # Does not check if acceleration is enought for the arc movement
+    def compute_expected_time_arc_movement_type(self) -> int:
+        # Assumption: the distance of the movement is long enought to accelerate or decelerate from the start position to the end position
+        # If this is not the case, the start or end velocity must be adjusted. This is not implemented jet. So the computet time would be not computed correct.
+
+        self.dynamic_is_ok = True
 
         # Get start and end position
         start_position_linear_axes = self.start_position_linear_axes.get_as_array()
@@ -354,8 +399,6 @@ class Movement:
 
         # Get and check target velocity
         target_velocity = self.feed_rate
-        if target_velocity == 0:
-            raise Exception(f"F value is 0 in line {self.g_code_line_index+1}.")
         
         # Get the radius
         radius = abs(self.arc_information.radius)
@@ -368,126 +411,143 @@ class Movement:
             smaller_angle = False
         else:
             raise Exception(f"Radius of arc movement is 0.")
-        
-        # Initialize time
-        time = 0
 
         # Match the active plane
         match self.active_plane:
             case 17:
                 # Save stuff for Z Axis
-                distance_vector_Z = end_position_linear_axes[2] - start_position_linear_axes[2]
-                start_velocity_Z = start_velocity_vector_linear_axes[2]
-                end_velocity_Z = end_velocity_vector_linear_axes[2]
+                distance_Z = abs(end_position_linear_axes[2] - start_position_linear_axes[2])
+                start_velocity_Z = abs(start_velocity_vector_linear_axes[2])
+                end_velocity_Z = abs(end_velocity_vector_linear_axes[2])
 
                 # Compute start and end velocity for the arc movement
                 start_velocity_arc_movement = np.linalg.norm(start_velocity_vector_linear_axes[0:2])
                 end_velocity_arc_movement = np.linalg.norm(end_velocity_vector_linear_axes[0:2])
 
                 # Create 2D arrays for further computation of the arc
-                start_position_linear_axes = start_position_linear_axes[0:2]
-                end_position_linear_axes = end_position_linear_axes[0:2]
+                start_position_arc_linear_axes = start_position_linear_axes[0:2]
+                end_position_arc_linear_axes = end_position_linear_axes[0:2]
 
                 # Compute angle of movement
-                angle = 0.0
-                if (start_position_linear_axes == end_position_linear_axes).all():
+                angle: float = 0.0
+                if (start_position_arc_linear_axes == end_position_arc_linear_axes).all():
                     angle = 360.0
                 else:
-                    angle: float = vecfunc.compute_small_or_big_angle_in_degree(start_position_linear_axes, 
-                                                                                end_position_linear_axes, 
-                                                                                smaller_angle)
+                    angle = vecfunc.compute_small_or_big_angle_in_degree(start_position_arc_linear_axes, 
+                                                                         end_position_arc_linear_axes, 
+                                                                         smaller_angle)
 
                 # Compute distances
                 circumference: float = 2.0*math.pi*radius
-                arc_distance: float = angle / 360.0 * circumference 
-                distance_Z = abs(distance_vector_Z)
-                distance = math.sqrt(math.pow(arc_distance, 2) + math.pow(distance_Z, 2))
+                distance_arc: float = angle / 360.0 * circumference 
+                self.distance = math.sqrt(math.pow(distance_arc, 2) + math.pow(distance_Z, 2))
 
                 # Compute target velocities
-                target_velocity_Z = target_velocity * distance_Z / distance
-                target_velocity_arc_movement = target_velocity * arc_distance / distance
+                target_velocity_Z = target_velocity * distance_Z / self.distance
+                target_velocity_arc_movement = target_velocity * distance_arc / self.distance
 
-                # Compute start times for the arc movement
-                start_time_X_Y = 0.0
+                # Acceleration phase #####################################################
+                # Compute max acceleration for this movement -> proportional to the feed rate
+
+                min_acceleration_deceleration_arc = min(np.min(self.max_acceleration[0:2]), min(self.max_deceleration[0:2]))  # Min acceleration or deceleration
+                max_tangential_acceleration = math.sqrt(min_acceleration_deceleration_arc**2 + target_velocity_arc_movement**2 / radius)
+                max_acceleration_arc = max_tangential_acceleration * target_velocity / self.max_feed_rate
+                max_acceleration_Z = self.max_acceleration[2] * target_velocity / self.max_feed_rate
+
+                # Compute delta velocities start
                 delta_velocity_start_arc_movement = target_velocity_arc_movement - start_velocity_arc_movement
-                acceleration_start_arc_movement = min(max_acceleration[0:2])
-                if delta_velocity_start_arc_movement > 0:
-                    start_time_X_Y = delta_velocity_start_arc_movement / acceleration_start_arc_movement
-
-                # Compute start time for the Z axis
-                start_time_Z = 0.0
-                delta_velocity_start_Z = abs(target_velocity_Z -  start_velocity_Z)
-                if delta_velocity_start_Z > 0:
-                    start_time_Z = delta_velocity_start_Z / max_acceleration[2]
-
-                # Compute start time
-                start_time = max(start_time_X_Y, start_time_Z)
-
-                # Compute and check start distance
-                start_distance_percentage = 0
-                if start_time > 0:
-                    if start_time_Z >= start_time_X_Y:
-                        start_distance_Z = acceleration_start_arc_movement * start_time**2 + start_velocity_vector_linear_axes[2] * start_time
-                        start_distance_percentage = start_distance_Z / distance_vector_Z
-                    else:
-                        start_distance_X_Y = acceleration_start_arc_movement * start_time**2 + start_velocity_arc_movement * start_time
-                        start_distance_percentage = start_distance_X_Y / arc_distance
+                delta_velocity_start_Z = target_velocity_Z -  start_velocity_Z
                 
-                    # Check start_distance_percentage
-                    if start_distance_percentage > 1:
-                        pass
+                # Compute acceleration time and distance
+                duration_acceleration_arc = delta_velocity_start_arc_movement / max_acceleration_arc
+                duration_acceleration_Z = delta_velocity_start_Z / max_acceleration_Z
+                self.duration_acceleration = max(duration_acceleration_arc, duration_acceleration_Z)
 
-                # Compute end times for the arc movement
-                end_time_X_Y = 0.0
+                if self.duration_acceleration < 0:
+                    raise Exception(f"Something went wrong: acceleration time is negative.")
+                elif self.duration_acceleration == 0:
+                    pass
+                elif duration_acceleration_Z > duration_acceleration_arc:
+                    distance_acceleration_Z = 0.5 * max_acceleration_Z * self.duration_acceleration**2 + start_velocity_Z * self.duration_acceleration
+                    factor_start = distance_acceleration_Z / distance_Z
+                    distance_acceleration_arc = factor_start * distance_arc
+                    self.distance_acceleration = math.sqrt(distance_acceleration_Z**2 + distance_acceleration_arc**2)
+                    start_velocity_linear_axes = np.linalg.norm(start_velocity_vector_linear_axes)
+                    self.acceleration = 2 * (self.distance_acceleration - start_velocity_linear_axes * self.duration_acceleration) / self.duration_acceleration**2
+                else:
+                    distance_acceleration_arc = 0.5 * max_acceleration_arc * self.duration_acceleration**2 + start_velocity_arc_movement * self.duration_acceleration
+                    factor_start = distance_acceleration_arc / distance_arc
+                    distance_acceleration_Z = factor_start * distance_Z
+                    self.distance_acceleration = math.sqrt(distance_acceleration_Z**2 + distance_acceleration_arc**2)
+                    start_velocity_linear_axes = np.linalg.norm(start_velocity_vector_linear_axes)
+                    self.acceleration = 2 * (self.distance_acceleration - start_velocity_linear_axes * self.duration_acceleration) / self.duration_acceleration**2
+
+                    # Check distance acceleration
+                    if self.distance_acceleration > self.distance:
+                        # TODO: In this case the target feed rate is not reachable in time. -> Adjust target feed rate. Careful: could affect end velocity vector.
+                        self.dynamic_is_ok = False
+        
+                # Deceleration phase #####################################################
+                # Compute max deceleration for this movement -> proportional to the feed rate
+
+                min_acceleration_deceleration_arc = min(np.min(self.max_acceleration[0:2]), min(self.max_deceleration[0:2]))  # Min acceleration or deceleration
+                max_tangential_deceleration = math.sqrt(min_acceleration_deceleration_arc**2 + target_velocity_arc_movement**2 / radius)
+                max_deceleration_arc = max_tangential_deceleration * target_velocity / self.max_feed_rate
+                max_deceleration_Z = self.max_deceleration[2] * target_velocity / self.max_feed_rate        
+                
+                # Compute delta velocities end
                 delta_velocity_end_arc_movement = target_velocity_arc_movement - end_velocity_arc_movement
-                deceleration_end_arc_movement = min(max_deceleration[0:2])
-                if delta_velocity_end_arc_movement > 0:
-                    end_time_X_Y = delta_velocity_end_arc_movement / deceleration_end_arc_movement
+                delta_velocity_end_Z = target_velocity_Z -  end_velocity_Z
 
-                # Compute end time for the Z axis
-                end_time_Z = 0.0
-                delta_velocity_end_Z = abs(target_velocity_Z -  end_velocity_Z)
-                if delta_velocity_end_Z > 0:
-                    end_time_Z = delta_velocity_end_Z / max_deceleration[2]
+                # Compute acceleration time and distance
+                duration_deceleration_arc = delta_velocity_end_arc_movement / max_deceleration_arc
+                duration_deceleration_Z = delta_velocity_end_Z / max_deceleration_Z
+                self.duration_deceleration = max(duration_deceleration_arc, duration_deceleration_Z)
                 
-                # Compute end time
-                end_time = max(end_time_X_Y, end_time_Z)
+                if self.duration_deceleration < 0:
+                    raise Exception(f"Something went wrong: deceleration time is negative.")
+                elif self.duration_deceleration == 0:
+                    pass
+                elif duration_deceleration_Z > duration_deceleration_arc:
+                    distance_deceleration_Z = 0.5 * max_deceleration_Z * self.duration_deceleration**2 + end_velocity_Z * self.duration_deceleration
+                    factor_end = distance_deceleration_Z / distance_Z
+                    distance_deceleration_arc = factor_end * distance_arc
+                    self.distance_deceleration = math.sqrt(distance_deceleration_Z**2 + distance_deceleration_arc**2)
+                    end_velocity_linear_axes = np.linalg.norm(end_velocity_vector_linear_axes)
+                    self.deceleration = 2 * (self.distance_deceleration - end_velocity_linear_axes * self.duration_deceleration) / self.duration_deceleration**2
+                else:
+                    distance_deceleration_arc = 0.5 * max_deceleration_arc * self.duration_deceleration**2 + end_velocity_arc_movement * self.duration_deceleration
+                    factor_end = distance_deceleration_arc / distance_arc
+                    distance_deceleration_Z = factor_end * distance_Z
+                    self.distance_deceleration = math.sqrt(distance_deceleration_Z**2 + distance_deceleration_arc**2)
+                    end_velocity_linear_axes = np.linalg.norm(end_velocity_vector_linear_axes)
+                    self.deceleration = 2 * (self.distance_deceleration - end_velocity_linear_axes * self.duration_deceleration) / self.duration_deceleration**2
 
-                # Compute and check end distance
-                end_distance_percentage = 0
-                if end_time > 0:
-                    if end_time_Z >= end_time_X_Y:
-                        end_distance_Z = deceleration_end_arc_movement * end_time**2 + end_velocity_vector_linear_axes[2] * end_time
-                        end_distance_percentage = end_distance_Z / distance_vector_Z
-                    else:
-                        end_distance_X_Y = deceleration_end_arc_movement * end_time**2 + end_velocity_arc_movement * end_time
-                        end_distance_percentage = end_distance_X_Y / arc_distance
+                    # Check distance deceleration
+                    if self.distance_deceleration > self.distance:
+                        # TODO: In this case the target feed rate is not reachable in time. -> Adjust target feed rate. Careful: could affect end velocity vector.
+                        self.dynamic_is_ok = False
+
+                # Phase with target feed rate #####################################################
+                self.distance_constant_speed = self.distance - self.distance_acceleration - self.distance_deceleration
+                if self.distance_constant_speed < 0:
+                    # TODO: In this case the end feed rate is not reachable in time. -> Adjust target feed rate and/or start and end velocities
+                    self.distance_constant_speed = 0
+                    self.dynamic_is_ok = False
                 
-                    # Check end_distance_percentage
-                    if end_distance_percentage > 1:
-                        pass
-
-                # Check start and end distance percentage
-                distance_target_velocity = 0
-                if start_distance_percentage + end_distance_percentage <= 1:
-                    distance_target_velocity = distance * (1 - start_distance_percentage - end_distance_percentage)
-
                 # Compute time with target velocity
-                target_velocity_time = distance_target_velocity / target_velocity
+                self.duration_constant_speed = self.distance_constant_speed / target_velocity
 
-                # Compute total time
-                time = target_velocity_time + start_time + end_time
+                # Compute time
+                self.duration = self.duration_acceleration + self.duration_constant_speed + self.duration_deceleration
 
             case 18:
                 raise Exception(f"G02 and G03 are not available in plane 18")   # TODO
             case 19:
                 raise Exception(f"G02 and G03 are not available in plane 19")   # TODO
-
-
-        self.time = time
-
-    def get_position_linear_axes_in_movement(self, 
-                                             time_in_movement: int) -> np.ndarray:
+    
+    def get_position_linear_axes_in_movement_as_array(self, 
+                                                      time_in_movement: float) -> np.array:
         """
         Get the position of linear axes at a given time during the movement.
 
@@ -496,7 +556,7 @@ class Movement:
 
         Parameters:
         -----------
-        time_in_movement : int
+        time_in_movement : float
             The time at which to compute the position during the movement.
 
         Returns:
@@ -507,7 +567,10 @@ class Movement:
 
         position = np.array([0.0, 0.0, 0.0])
 
-        portion = time_in_movement / self.time
+        portion = time_in_movement / self.duration
+
+        if portion < 0 or portion > 1:
+            raise Exception(f"Something wrong here")
 
         start_position_linear_axes = self.start_position_linear_axes.get_as_array()
         end_position_linear_axes = self.end_position_linear_axes.get_as_array()
@@ -540,12 +603,14 @@ class Movement:
                         smaller_angle = False
 
                     # Compute angele
-                    angle = 0.0
+                    angle: float = 0.0
                     if (start_position_linear_axes == end_position_linear_axes).all():
                         angle = 360.0
                     else:
                         angle = vecfunc.compute_small_or_big_angle_in_degree(center_2_start, center_2_end, smaller_angle)
+
                     current_angle = portion * angle
+                    
                     if self.movement_type == 2:
                         current_angle *= -1
 
@@ -565,7 +630,9 @@ class Movement:
                 case 19:
                     raise Exception(f"G02 and G03 are not available in plane 19")   # TODO
 
-        return np.round(position, 3)
+        position = np.round(position, 3)
+
+        return position
 
     def print_info(self) -> None:
         """
@@ -575,7 +642,7 @@ class Movement:
         movement type, start and end points, start and end vectors, arc information (if applicable),
         feed rate, and expected time.
         """
-        print(f"Expected time: {self.time} ms")
+        print(f"Expected duration: {self.duration} ms")
         print(f"Movement in line {self.g_code_line_index+1}")
         print(f"g_code_line_index: {self.g_code_line_index}")
         print(f"Movement: {self.movement_type}")
@@ -585,9 +652,27 @@ class Movement:
         print(f"End vector: {self.end_vector_linear_axes}")
 
         if self.movement_type in [2, 3]:    # Arc movement
-            print(f"Arc info: {self.arc_information.print()}")
+            self.arc_information.print()
         
         print(f"feed rate [mm/ms]: {self.feed_rate}")
+
+    # TODO: comment
+    def adjust_arc_movement_feed_rate(self):
+        
+        radius = self.arc_information.radius    # [mm]
+        feed_rate = self.feed_rate              # [mm/ms]
+
+        acceleration_normal = feed_rate**2 / radius # Normal acceleration [mm/ms^2]
+
+        min_acceleration_deceleration = min(np.min(self.max_acceleration), min(self.max_deceleration))  # Min acceleration or deceleration
+
+        acceleration_factor = 0.8   # Safety factor for acceleration
+
+        # Check acceleration
+        if acceleration_normal > min_acceleration_deceleration*acceleration_factor:
+            # Compute new feed rate
+            new_feed_rate = math.sqrt(min_acceleration_deceleration*acceleration_factor*radius)
+            self.feed_rate = new_feed_rate
 
 # End of class
 #####################################################################################################

@@ -29,9 +29,11 @@ G_Code_Analyser.Movement_Manager.print_info()
 
 time = 0
 for movement in G_Code_Analyser.Movement_Manager.movements:
-    time += movement.time
+    time += movement.duration
 
 print(time)
+print(G_Code_Analyser.Movement_Manager.movement_dynamic_is_ok)
+
 #G_Code_Analyser.Snapshot_Manager.print_information()
 
 # Generate tool path

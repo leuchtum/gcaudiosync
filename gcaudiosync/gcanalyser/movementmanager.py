@@ -51,12 +51,14 @@ class MovementManager:
             CNC parameter instance.
         """
 
-        self.start_time : float             = 0         # Time for the start
-        self.total_time: float              = 0         # Expected total time
+        self.start_time : float             = 0.0       # Time for the start
+        self.total_duration: float          = 0.0       # Expected total time
         self.movements: List[Movement]      = []        # Movements
         self.end_of_program_reached: bool   = False     # Variable for end of program
         
         self.CNC_Parameter: CNCParameter    = CNC_Parameter              # Get cnc parameter
+
+        self.movement_dynamic_is_ok: bool   = False
 
         # Get max acceleration and deceleration
         self.max_acceleration: np.array     = self.CNC_Parameter.get_acceleration_as_array()
@@ -79,7 +81,7 @@ class MovementManager:
                                             CNC_Parameter = self.CNC_Parameter)
         
         # Time for first movement and set flags
-        first_movement.time = 0
+        first_movement.duration = 0.0
         first_movement.time_is_adjustable = False
         first_movement.start_time_is_adjustable = False          
 
@@ -253,7 +255,7 @@ class MovementManager:
             time = default_pause_time
 
         # Set time and set flags
-        new_movement.time = time      
+        new_movement.duration = time      
         new_movement.time_is_adjustable = False             
         
         # Add exact stop to last movement
@@ -305,7 +307,7 @@ class MovementManager:
             if self.movements[index].line_index < g_code_line_index:       # All movements found
                 break                                                   # Exit loop
             elif self.movements[index].line_index == g_code_line_index:    # Found matching line index
-                expected_time += self.movements[index].time             # Update expected time
+                expected_time += self.movements[index].duration             # Update expected time
 
         return expected_time
 
@@ -339,14 +341,14 @@ class MovementManager:
         return indices
 
     def get_tool_path_information(self, 
-                                  current_time: int,
+                                  current_time: float,
                                   ) -> ToolPathInformation:
         """
         Retrieves tool path information at a specific time.
 
         Parameters:
         -----------
-        current_time : int
+        current_time : float
             The current time for which tool path information is to be retrieved.
 
         Returns:
@@ -356,7 +358,7 @@ class MovementManager:
         """
 
         # Initialize ToolPathInformation object
-        tool_path_information = ToolPathInformation()
+        Tool_Path_Information = ToolPathInformation()
 
         # Flag to check if time stamp was found
         time_stamp_found = False                            
@@ -366,7 +368,7 @@ class MovementManager:
             
             # Get the start and end time of the movement
             movement_start_time = movement.start_time
-            movement_end_time = movement_start_time + movement.time
+            movement_end_time = movement_start_time + movement.duration
 
             # Check if current time is in this time stamp
             if current_time >= movement_start_time and current_time < movement_end_time:  
@@ -385,17 +387,15 @@ class MovementManager:
             raise Exception(f"Error: Current time is negative.")
         
         # Get the current line index
-        current_line_index = movement.g_code_line_index
-        tool_path_information.g_code_line_index = current_line_index
+        Tool_Path_Information.g_code_line_index = movement.g_code_line_index
 
         # Get the positions
-        current_position_linear_axes = movement.get_position_linear_axes_in_movement(time_in_movement)  # Get position
-        tool_path_information.position_linear_axes = current_position_linear_axes
+        Tool_Path_Information.position_linear_axes = movement.get_position_linear_axes_in_movement_as_array(time_in_movement)  # Get position
 
         # Get the movement type
-        tool_path_information.movement_type = movement.movement_type
+        Tool_Path_Information.movement_type = movement.movement_type
 
-        return tool_path_information
+        return Tool_Path_Information
  
     def print_info(self) -> None:
         """
@@ -404,7 +404,7 @@ class MovementManager:
         This method prints the total time, the number of movements, and detailed information
         about each movement in the MovementManager instance.
         """
-        print(f"total_time: {self.total_time} ms")
+        print(f"total_time: {self.total_duration} ms")
         print(f"# movements: {len(self.movements)}")
         print("")
 
@@ -416,14 +416,24 @@ class MovementManager:
 
     # TODO: comment
     def all_lines_analysed(self) -> None:
+        
+        break_if_dynamic_status_nok = True
 
-        self.copmpute_start_and_end_vectors_and_times()
+        max_iterations = 10
+        iterations = 0
+
+        while not self.movement_dynamic_is_ok and iterations <= max_iterations:
+            
+            if iterations == max_iterations:
+                break_if_dynamic_status_nok = False
+
+            self.copmpute_start_and_end_vectors()
+            self.compute_durations_and_times(break_if_dynamic_status_nok = break_if_dynamic_status_nok)
+            iterations += 1
 
     # TODO: comment
-    def copmpute_start_and_end_vectors_and_times(self) -> None:
-        
-        time: int = 0
-        
+    def copmpute_start_and_end_vectors(self) -> None:
+                
         # Iterate through all movements and compute the start and end vectors
         for movement_index in range(len(self.movements)-1):
 
@@ -451,13 +461,26 @@ class MovementManager:
             self.movements[movement_index].end_vector_linear_axes = copy.copy(start_and_end_vector)
             self.movements[movement_index+1].start_vector_linear_axes = copy.copy(start_and_end_vector)
 
-            self.movements[movement_index].compute_expected_time(self.CNC_Parameter.get_acceleration_as_array(),
-                                                                 self.CNC_Parameter.get_deceleration_as_array())
+    def compute_durations_and_times(self, 
+                                    break_if_dynamic_status_nok: bool) -> None:
 
-            self.movements[movement_index].start_time = time
-            time += self.movements[movement_index].time
+        total_duration: float = 0.0
 
-            self.total_time = time
+        # Iterate through all movements and compute the start and end vectors
+        for movement_index in range(len(self.movements)-1):
+
+            self.movements[movement_index].compute_expected_time()
+            self.movements[movement_index].start_time = total_duration
+            total_duration += self.movements[movement_index].duration
+
+            if not self.movements[movement_index].dynamic_is_ok:
+
+                self.movement_dynamic_is_ok = False
+
+                if break_if_dynamic_status_nok:
+                    return
+
+        self.total_duration = total_duration
 
     def set_start_time_and_total_time(self, 
                                       new_start_time: float,
@@ -481,7 +504,7 @@ class MovementManager:
             2 - New total time is too short
         """
 
-        if self.total_time <= 0:
+        if self.total_duration <= 0:
             return 1    # New total time is 0 or less
             raise Exception(f"Something went wrong: expected total time <= 0")  # Just in case someone wants to add exception handling
 
@@ -491,9 +514,9 @@ class MovementManager:
 
         for movement in self.movements:
             if movement.time_is_adjustable:
-                old_adjustable_time += movement.time
+                old_adjustable_time += movement.duration
 
-        nonadjustable_time = self.total_time - old_adjustable_time
+        nonadjustable_time = self.total_duration - old_adjustable_time
         new_adjustable_time = new_total_time - nonadjustable_time
 
         # Error case
@@ -506,21 +529,21 @@ class MovementManager:
 
         # Set time for initialization movement
         self.movements[0].start_time = 0.0          # For savety
-        self.movements[0].time = new_start_time
+        self.movements[0].duration = new_start_time
 
         # Iterate through all movements and adjust start time and time
         for movement_index in range(1, len(self.movements)):
             
             # Set start time
-            self.movements[movement_index].start_time = self.movements[movement_index-1].start_time + self.movements[movement_index-1].time
+            self.movements[movement_index].start_time = self.movements[movement_index-1].start_time + self.movements[movement_index-1].duration
 
             # Adjust time if possible
             if self.movements[movement_index].time_is_adjustable:
-                self.movements[movement_index].time *= factor_for_adjustable_time
+                self.movements[movement_index].duration *= factor_for_adjustable_time
 
         # Save times
         self.start_time = new_start_time
-        self.total_time = new_total_time
+        self.total_duration = new_total_time
         
         return 0    # Everything is fine
     
@@ -578,7 +601,7 @@ class MovementManager:
 
         for movement_index in range(previous_important_movement_index, important_movement_index):
             if not self.movements[movement_index].time_is_adjustable:
-                nonadjustable_time_before += self.movements[movement_index].time
+                nonadjustable_time_before += self.movements[movement_index].duration
 
         old_adjustable_time_before = old_total_time_before - nonadjustable_time_before
         new_adjustable_time_before = new_total_time_before - nonadjustable_time_before
@@ -591,7 +614,7 @@ class MovementManager:
 
         for movement_index in range(important_movement_index, next_important_movement_index):
             if not self.movements[movement_index].time_is_adjustable:
-                nonadjustable_time_after += self.movements[movement_index].time
+                nonadjustable_time_after += self.movements[movement_index].duration
 
         old_adjustable_time_after = old_total_time_after - nonadjustable_time_after
         new_adjustable_time_after = new_total_time_after - nonadjustable_time_after
@@ -607,10 +630,10 @@ class MovementManager:
             
             # Adjust time if possible
             if self.movements[movement_index].time_is_adjustable:
-                self.movements[movement_index].time *= factor_for_previous_adjustable_time
+                self.movements[movement_index].duration *= factor_for_previous_adjustable_time
 
             # Set start time of next movement
-            self.movements[movement_index+1].start_time = self.movements[movement_index].start_time + self.movements[movement_index].time
+            self.movements[movement_index+1].start_time = self.movements[movement_index].start_time + self.movements[movement_index].duration
 
         # Adjust all the times and start times after the important movement
         factor_for_after_adjustable_time: float = new_adjustable_time_after / old_adjustable_time_after
@@ -618,11 +641,11 @@ class MovementManager:
 
             # Adjust time if possible
             if self.movements[movement_index].time_is_adjustable:
-                self.movements[movement_index].time *= factor_for_after_adjustable_time
+                self.movements[movement_index].duration *= factor_for_after_adjustable_time
 
             # Set start time of next movement
             if movement_index != next_important_movement_index-1:
-                self.movements[movement_index+1].start_time = self.movements[movement_index].start_time + self.movements[movement_index].time
+                self.movements[movement_index+1].start_time = self.movements[movement_index].start_time + self.movements[movement_index].duration
 
         # Set flag of important movement
         self.movements[important_movement_index].start_time_is_adjustable = False
@@ -656,7 +679,7 @@ class MovementManager:
 
         return return_value
 
-    def get_time_stamps(self) -> List[Tuple[int, int]]:
+    def get_time_stamps(self) -> List[Tuple[int, float]]:
         """
         Retrieves time stamps for each G-code line.
 
@@ -666,19 +689,20 @@ class MovementManager:
         Returns:
         --------
         List: A list of tuples, where each tuple contains the G-code line index and its time stamp.        """
-        time_stamps: List[Tuple[int, int]] = []
+        time_stamps: List[Tuple[int, float]] = [[0, 0.0]]
 
-        g_code_line_index = 0
-        g_code_line_time_stamp = 0
+        g_code_line_index: int = 0
+        g_code_line_time_stamp: float = 0
 
-        # Get all the time stamps
-        for index, movement in enumerate(self.movements):
-            if index > 0:
-                new_g_code_line = movement.g_code_line_index
-                if new_g_code_line != g_code_line_index:
-                    g_code_line_index = new_g_code_line
-                    g_code_line_time_stamp = movement.start_time
-                    time_stamps.append([g_code_line_index, g_code_line_time_stamp])
+        # Get all the time stamps   
+        for movement_index in range(1, len(self.movements)):
+
+            g_code_line_index_for_this_movement = self.movements[movement_index].g_code_line_index
+
+            if g_code_line_index_for_this_movement != g_code_line_index:
+                g_code_line_index = g_code_line_index_for_this_movement
+                g_code_line_time_stamp = self.movements[movement_index].start_time
+                time_stamps.append([g_code_line_index, g_code_line_time_stamp])
 
         return time_stamps
 

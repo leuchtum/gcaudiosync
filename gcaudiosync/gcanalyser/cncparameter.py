@@ -45,20 +45,20 @@ class CNCParameter:
     START_POSITION_ROTATION_AXES        = RotationAxes()
     TOOL_CHANGE_POSITION_LINEAR_AXES    = LinearAxes(100.0, 100.0, 100.0)
 
-    S_IS_ABSOLUTE: bool = True      # True if S value is absolute
+    S_IS_ABSOLUTE: bool = True          # True if S value is absolute
 
-    F_MAX: float = 20000.0          # max feed rate in mm/min
-    S_MAX: float = 18000.0          # max spindle speed in RPM
+    F_MAX: float = 20000.0              # max feed rate in mm/min
+    S_MAX: float = 18000.0              # max spindle speed in RPM
 
-    MAX_ACCELERATION_X: float = 0.004    # Maximum acceleration of the X-Axis in mm/ms^2.
-    MAX_ACCELERATION_Y: float = 0.004    # Maximum acceleration of the Y-Axis in mm/ms^2.
-    MAX_ACCELERATION_Z: float = 0.004    # Maximum acceleration of the Z-Axis in mm/ms^2.
-    MAX_DECELERATION_X: float = 0.004    # Maximum deceleration of the X-Axis in mm/ms^2.
-    MAX_DECELERATION_Y: float = 0.004    # Maximum deceleration of the Y-Axis in mm/ms^2.
-    MAX_DECELERATION_Z: float = 0.004    # Maximum deceleration of the Z-Axis in mm/ms^2.
+    MAX_ACCELERATION_X: float = 0.004   # Maximum acceleration of the X-Axis in mm/ms^2.
+    MAX_ACCELERATION_Y: float = 0.004   # Maximum acceleration of the Y-Axis in mm/ms^2.
+    MAX_ACCELERATION_Z: float = 0.004   # Maximum acceleration of the Z-Axis in mm/ms^2.
+    MAX_DECELERATION_X: float = 0.004   # Maximum deceleration of the X-Axis in mm/ms^2.
+    MAX_DECELERATION_Y: float = 0.004   # Maximum deceleration of the Y-Axis in mm/ms^2.
+    MAX_DECELERATION_Z: float = 0.004   # Maximum deceleration of the Z-Axis in mm/ms^2.
 
-    DEFAULT_PAUSE_TIME: float = 10000.0     # Time for a pause in ms.
-    TOOL_CHANGE_TIME: float = 8000.0        # Time for a tool change in ms.
+    DEFAULT_PAUSE_TIME: float = 5000.0      # Time for a pause in ms.
+    TOOL_CHANGE_TIME: float = 3000.0        # Time for a tool change in ms.
 
     # M commands
     COMMAND_ABORT: float                = 0.0
@@ -142,7 +142,7 @@ class CNCParameter:
                             self.TOOL_CHANGE_POSITION_LINEAR_AXES.Z = float(value)
                 elif hasattr(self, parameter):          # Handle number parameter 
                     if parameter in all_acc_dec:
-                        value = float(value) / 1000.0
+                        value = abs(float(value) / 1000.0)
                     setattr(self, parameter, float(value))
                 else:                                   # Handle situation that the parameter does not exist
                     print("CNC-Parameter " + parameter + " does not exist. Check file parameter.txt.")

@@ -1,9 +1,11 @@
-from gcaudiosync.gcanalyser.movementmanager import MovementManager
-from gcaudiosync.gcanalyser.toolpathinformation import ToolPathInformation
-
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
+
+from typing import List
+
+from gcaudiosync.gcanalyser.movementmanager import MovementManager
+from gcaudiosync.gcanalyser.toolpathinformation import ToolPathInformation
 
 class ToolPathGenerator:
 
@@ -16,12 +18,13 @@ class ToolPathGenerator:
         self.fps: float = 0
         self.total_time: int = 0
         self.nof_frames: int = 0
-        self.tool_path_time:list = []
-        self.tool_path_X:list = []
-        self.tool_path_Y:list = []
-        self.tool_path_Z: list = []
-        self.line_index:list = []
-        self.g_code: list = []
+        self.tool_path_time: List[float] = []
+        self.tool_path_X: List[float] = []
+        self.tool_path_Y: List[float] = []
+        self.tool_path_Z: List[float] = []
+        self.line_index: List[int] = []
+        self.g_code: List[str] = []
+        self.movement_type: List[int] = []
 
     # generate all the data needed for the toolpath
     def generate_total_tool_path(self, 
@@ -37,7 +40,7 @@ class ToolPathGenerator:
         self.delta_time: float = 1000.0 / self.fps
         
         # get total time
-        self.total_time = Movement_Manager.total_time
+        self.total_time = Movement_Manager.total_duration
 
         # compute number of frames
         self.nof_frames = int(self.total_time / self.delta_time)
@@ -52,16 +55,17 @@ class ToolPathGenerator:
             tool_path_information = Movement_Manager.get_tool_path_information(current_time)
             current_line_index = tool_path_information.g_code_line_index
             current_position_linear_axes = tool_path_information.position_linear_axes
-            current_movement = tool_path_information.movement_type   # TODO
+            current_movement_type = tool_path_information.movement_type   # TODO
 
             self.line_index.append(current_line_index)
             
             # append the new information
+            self.movement_type.append(current_movement_type)
             self.tool_path_time.append(current_time)
             self.tool_path_X.append(current_position_linear_axes[0])
             self.tool_path_Y.append(current_position_linear_axes[1])
             self.tool_path_Z.append(current_position_linear_axes[2])
-
+        
     # plot tool path
     def plot_tool_path(self):
         
@@ -92,18 +96,14 @@ class ToolPathGenerator:
                xlabel = "X", 
                ylabel = "Y")
         
-        # show legend
-        # ax.legend()
-
         # create a toolpath to plot
         tool_path, = ax.plot(self.tool_path_X[0], 
-                             self.tool_path_X[0], 
-                             # label = "",
-                             )
+                                 self.tool_path_Y[0], 
+                                 )
         
         # create the tool position to plot
         tool_position, = ax.plot(self.tool_path_X[0], 
-                                 self.tool_path_X[0], 
+                                 self.tool_path_Y[0], 
                                  "o",
                                  # label = "",          # maybe add the active tool
                                  color = "red")

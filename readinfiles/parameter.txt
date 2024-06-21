@@ -19,8 +19,8 @@ max_deceleration_X 4       ; max deceleration of X-Axis in m/s^2
 max_deceleration_Y 4       ; max deceleration of Y-Axis in m/s^2
 max_deceleration_Z 4       ; max deceleration of Z-Axis in m/s^2
 
-default_pause_time 10000    ; Default time for a pause
-tool_change_time 8000       ; Time for a tool change in ms
+default_pause_time 5000    ; Default time for a pause
+tool_change_time 3000       ; Time for a tool change in ms
 
 command_abort                       0
 command_quit                        1
