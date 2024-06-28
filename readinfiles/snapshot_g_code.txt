@@ -4,6 +4,8 @@
 ; NXXXX (ine number) before the following g-code lines is allowed
 ; The S-value of the snapshot shoult be a number that is not shown up in the rest of the g-code
 
-M3 S1234
+M5
+G04 P500
+M3 S66
 G4 P3.
 M5

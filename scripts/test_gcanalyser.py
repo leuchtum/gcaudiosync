@@ -7,6 +7,8 @@ src_path_g_code = Path("gcode")
 src_path_1 = src_path_g_code / "rechtecke.cnc"
 src_path_2 = src_path_g_code / "Getriebegehaeuse.tap"
 src_path_3 = src_path_g_code / "Sandbox.txt"
+src_path_4 = src_path_g_code / "Testfall_5.txt"
+
 
 # Links to the parameters and to the snapshot
 src_path_cnc_parameter = Path("readinfiles") / "parameter.txt"
@@ -17,7 +19,7 @@ G_Code_Analyser = GCodeAnalyser(parameter_src = src_path_cnc_parameter,
                                 snapshot_src = src_snapshot_g_code)
 
 # Analyse G-Code
-G_Code_Analyser.analyse(src_path_2)
+G_Code_Analyser.analyse(src_path_4)
 
 #G_Code_Analyser.set_start_time_and_total_time(1000, 32000)
 #G_Code_Analyser.adjust_start_time_of_g_code_line(3, 7000)
