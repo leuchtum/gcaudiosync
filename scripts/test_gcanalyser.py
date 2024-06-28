@@ -7,7 +7,7 @@ src_path_g_code = Path("gcode")
 src_path_1 = src_path_g_code / "rechtecke.cnc"
 src_path_2 = src_path_g_code / "Getriebegehaeuse.tap"
 src_path_3 = src_path_g_code / "Sandbox.txt"
-src_path_4 = src_path_g_code / "Testfall_5.txt"
+src_path_4 = src_path_g_code / "Testfall_6.txt"
 
 
 # Links to the parameters and to the snapshot
