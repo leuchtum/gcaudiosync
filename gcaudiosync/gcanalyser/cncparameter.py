@@ -107,7 +107,7 @@ class CNCParameter:
         """
 
         # No src for cnc-parameter given
-        if len(parameter) == 0:
+        if parameter_src == "":
             print("Using default CNC-parameter.")
             return
 

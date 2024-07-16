@@ -5,12 +5,9 @@ from typing import List, Tuple
 
 import gcaudiosync.gcanalyser.vectorfunctions as vecfunc
 
-from gcaudiosync.gcanalyser.arcinformation import ArcInformation
 from gcaudiosync.gcanalyser.cncparameter import CNCParameter
 from gcaudiosync.gcanalyser.cncstatus import CNCStatus
-from gcaudiosync.gcanalyser.linearaxes import LinearAxes
 from gcaudiosync.gcanalyser.movement import Movement
-from gcaudiosync.gcanalyser.rotationaxes import RotationAxes
 from gcaudiosync.gcanalyser.toolpathinformation import ToolPathInformation
 
 class MovementManager:

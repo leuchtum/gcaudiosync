@@ -84,7 +84,8 @@ class GCodeLine:
 
         something_to_find = True
         # Search for: new S and F values, proi G commands and prio M commands
-        while something_to_find and len(g_code_line_info) > 0:          # TODO: this loop might be improveable
+        # TODO: this loop might be improveable
+        while something_to_find and len(g_code_line_info) > 0:          
             for info_index in range(len(g_code_line_info)):
                 
                 # Get the command (letter) and number from line info
@@ -180,7 +181,7 @@ class GCodeLine:
                  g_code_line_info: List[Tuple[str, str]], 
                  CNC_Parameter: CNCParameter,
                  Sync_Info_Manager: SyncInfoManager,
-                 Movement_Manager: MovementManager):
+                 Movement_Manager: MovementManager) -> None:
         """
         Handles the G-code commands.
 
@@ -253,7 +254,7 @@ class GCodeLine:
                  g_code_line_info: List[Tuple[str, str]], 
                  CNC_Parameter: CNCParameter, 
                  Sync_Info_Manager: SyncInfoManager,
-                 Movement_Manager: MovementManager):
+                 Movement_Manager: MovementManager) -> None:
         """
         Handles the M-code commands.
 
@@ -308,7 +309,7 @@ class GCodeLine:
 
     def handle_movement_without_G(self, 
                                   g_code_line_info: List[Tuple[str, str]], 
-                                  Movement_Manager: MovementManager):
+                                  Movement_Manager: MovementManager) -> None:
         """
         Handles movement commands without an explicit G-code.
 
@@ -332,7 +333,7 @@ class GCodeLine:
 
     def handle_F(self, 
                  F_value: float,
-                 CNC_Parameter: CNCParameter):
+                 CNC_Parameter: CNCParameter) -> None:
         """
         Handles setting the feed rate (F value) in the G-code line.
 
@@ -362,7 +363,7 @@ class GCodeLine:
     def handle_S(self, 
                  S_value: float, 
                  CNC_Parameter: CNCParameter,
-                 Sync_Info_Manager: SyncInfoManager):
+                 Sync_Info_Manager: SyncInfoManager) -> None:
         """
         Handles setting the spindle speed (S value) in the G-code line.
 
@@ -408,7 +409,7 @@ class GCodeLine:
 
     def handle_linear_movement(self, 
                                g_code_line_info: List[Tuple[str, str]], 
-                               Movement_Manager: MovementManager):
+                               Movement_Manager: MovementManager) -> None:
         """
         Handles linear movements specified in the G-code line.
 
@@ -474,7 +475,7 @@ class GCodeLine:
 
     def handle_arc_movement(self, 
                             g_code_line_info: List[Tuple[str, str]], 
-                            Movement_Manager: MovementManager):
+                            Movement_Manager: MovementManager) -> None:
         """
         Handles arc movements specified in the G-code line.
 
@@ -583,7 +584,7 @@ class GCodeLine:
     def handle_g04(self, 
                    g_code_line_info: List[Tuple[str, str]], 
                    Sync_Info_Manager: SyncInfoManager,
-                   Movement_Manager: MovementManager):
+                   Movement_Manager: MovementManager) -> None:
         """
         Handles the G04 dwell command in the G-code line.
 
@@ -627,7 +628,7 @@ class GCodeLine:
 
     def handle_abort(self,
                      Sync_Info_Manager: SyncInfoManager,
-                     Movement_Manager: MovementManager):
+                     Movement_Manager: MovementManager) -> None:
         """
         Handles the abort command in the G-code line.
 
@@ -649,7 +650,7 @@ class GCodeLine:
 
     def handle_quit(self, 
                     Sync_Info_Manager: SyncInfoManager,
-                    Movement_Manager: MovementManager):
+                    Movement_Manager: MovementManager) -> None:
         """
         Handles the quit command in the G-code line.
 
@@ -671,7 +672,7 @@ class GCodeLine:
     
     def handle_progabort(self, 
                          Sync_Info_Manager: SyncInfoManager, 
-                         Movement_Manager: MovementManager):
+                         Movement_Manager: MovementManager) -> None:
         """
         Handles the program abort command in the G-code line.
 
@@ -693,7 +694,7 @@ class GCodeLine:
     
     def handle_spindle_operation(self, 
                                  spindle_command: str, 
-                                 Sync_Info_Manager: SyncInfoManager):
+                                 Sync_Info_Manager: SyncInfoManager) -> None:
         """
         Handles spindle operation commands in the G-code line.
 
@@ -720,7 +721,7 @@ class GCodeLine:
                            g_code_line_info: List[Tuple[str, str]], 
                            CNC_Parameter: CNCParameter,
                            Sync_Info_Manager: SyncInfoManager,
-                           Movement_Manager: MovementManager):
+                           Movement_Manager: MovementManager) -> None:
         """
         Handles tool change commands in the G-code line.
 
@@ -763,7 +764,7 @@ class GCodeLine:
 
     def handle_cooling_operation(self, 
                                  cooling_command: str, 
-                                 Sync_Info_Manager: SyncInfoManager):
+                                 Sync_Info_Manager: SyncInfoManager) -> None:
         """
         Handles cooling operation commands in the G-code line.
 
@@ -785,7 +786,7 @@ class GCodeLine:
     
     def handle_end_of_program(self, 
                               Sync_Info_Manager: SyncInfoManager, 
-                              Movement_Manager: MovementManager):        
+                              Movement_Manager: MovementManager) -> None:        
         """
         Handles the end of the G-code program.
 
@@ -808,7 +809,7 @@ class GCodeLine:
         # Inform movement manager
         Movement_Manager.add_end_of_program(self.g_code_line_index)
 
-    def compute_arc_center(self):
+    def compute_arc_center(self) -> None:
         """
         Computes the center of an arc movement based on the current CNC status.
 
@@ -882,7 +883,7 @@ class GCodeLine:
         # Set arc center
         self.cnc_status_current_line.arc_information.set_arc_center(arc_center)         
 
-    def compute_radius(self):
+    def compute_radius(self) -> None:
         """
         Computes the radius of the arc based on the current CNC status.
 
