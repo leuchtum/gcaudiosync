@@ -127,6 +127,7 @@ class SyncInfoManager:
 
     #################################################################################################
     # Methods for frequency info
+
     def new_S(self, 
               g_code_line_index: int, 
               new_S_value: int) -> None:
@@ -141,7 +142,7 @@ class SyncInfoManager:
             The new S value indicating the spindle speed.
         """
 
-        new_f = int(new_S_value / 60)     # Compute frequency in Hz
+        new_f: int = int(new_S_value / 60)     # Compute frequency in Hz
 
         # Check if new frequency needed
         if self.last_spindle_status != 0 and new_f != self.f:
@@ -150,11 +151,11 @@ class SyncInfoManager:
                 # New frequency needed
 
                 # End last frequency
-                self.frequency_information[-1].line_index_end = (g_code_line_index-1)                            
+                self.frequency_information[-1].g_code_line_index_end = (g_code_line_index-1)                            
 
                 # Make new frequency
-                new_frequency_information = FrequencyInformation(line_index_start = g_code_line_index,
-                                                                 line_index_end = g_code_line_index,
+                new_frequency_information = FrequencyInformation(g_code_line_index_start = g_code_line_index,
+                                                                 g_code_line_index_end = g_code_line_index,
                                                                  expected_time_start = 0, 
                                                                  expected_duration = 0,
                                                                  frequency = new_f, 
@@ -182,7 +183,7 @@ class SyncInfoManager:
             The spindle operation command ('off', 'CW', 'CCW').
         """
 
-        new_spindle_status = 0
+        new_spindle_status: int = 0
 
         # Check command
         match spindle_command:
@@ -197,26 +198,26 @@ class SyncInfoManager:
             # Something has to change
 
             # End last frequency
-            self.frequency_information[-1].line_index_end = (g_code_line_index-1)
+            self.frequency_information[-1].g_code_line_index_end = (g_code_line_index-1)
 
             # Create new frequency information based on spindle status
             if new_spindle_status == 0:                 # spindle turns off
-                new_frequency_information = FrequencyInformation(line_index_start = g_code_line_index,
-                                                                 line_index_end = g_code_line_index,
+                new_frequency_information = FrequencyInformation(g_code_line_index_start = g_code_line_index,
+                                                                 g_code_line_index_end = g_code_line_index,
                                                                  expected_time_start = 0, 
                                                                  expected_duration = 0,
                                                                  frequency = 0, 
                                                                  spindle_status = new_spindle_status)
             elif self.last_spindle_status == 0:         # spindle turns on
-                new_frequency_information = FrequencyInformation(line_index_start = g_code_line_index,
-                                                                 line_index_end = g_code_line_index,
+                new_frequency_information = FrequencyInformation(g_code_line_index_start = g_code_line_index,
+                                                                 g_code_line_index_end = g_code_line_index,
                                                                  expected_time_start = 0, 
                                                                  expected_duration = 0,
                                                                  frequency = self.f, 
                                                                  spindle_status = new_spindle_status)                
             else:                                       # spindle changes direction
-                new_frequency_information = FrequencyInformation(line_index_start = g_code_line_index,
-                                                                 line_index_end = g_code_line_index,
+                new_frequency_information = FrequencyInformation(g_code_line_index_start = g_code_line_index,
+                                                                 g_code_line_index_end = g_code_line_index,
                                                                  expected_time_start = 0, 
                                                                  expected_duration = 0,
                                                                  frequency = self.f, 
@@ -228,6 +229,7 @@ class SyncInfoManager:
             # Update attributes
             self.last_spindle_status = new_spindle_status
             self.current_g_code_line_index = g_code_line_index
+
     #################################################################################################
     # Methods for pause info
 
@@ -256,14 +258,15 @@ class SyncInfoManager:
 
     #################################################################################################
     # Methods for updateing all informaiton
+
     def update(self,
                time_stamps: List[Tuple[int, int]]) -> None:
-        time_stamp_index = 0
+        time_stamp_index: int = 0
 
         # Update frequencies
         for frequency in self.frequency_information:
-            index_start = frequency.line_index_start
-            index_end = frequency.line_index_end
+            index_start = frequency.g_code_line_index_start
+            index_end = frequency.g_code_line_index_end
 
             # Find the start time for the current frequency segment
             for index in range(time_stamp_index, len(time_stamps)):
@@ -294,6 +297,20 @@ class SyncInfoManager:
             pause[2] = time_stamps[time_stamp_index][1]
         # TODO: update cooling
         # TODO: update tool change
+
+    #################################################################################################
+    # Methods for printing infos
+
+    def frequency_info(self) -> None:
+        """
+        Print the information of the frequency
+        """
+
+        print(f"Total: {len(self.frequency_information)} frequencies\n")
+
+        for frequence_info in self.frequency_information:
+            frequence_info.info()
+            print("")
 
 # End of class
 #####################################################################################################
