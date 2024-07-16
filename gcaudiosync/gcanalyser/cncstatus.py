@@ -14,71 +14,74 @@ class CNCStatus:
 
     Attributes:
     -----------
-    active_movement_type (int): 
+    active_movement_type : int 
         Active movement type: 0 for rapid linear, 1 for linear, 2 for arc CW, 3 for arc CCW.
-    active_tool (int): 
+    active_tool : int
         Number of the active tool.
-    position_linear_axes (LinearAxes): 
+    position_linear_axes : LinearAxes
         Absolute positions for X, Y, Z in mm.
-    position_rotation_axes (RotationAxes): 
+    position_rotation_axes : RotationAxes
         Absolute positions for A, B, C in °.
-    arc_information (ArcInformation): 
+    arc_information : ArcInformation
         Information about arcs.
-    active_plane (int): 
+    active_plane : int
         Active plane: XY (17), XZ (18), YZ (19).
-    absolute_position (bool): 
+    absolute_position : bool
         Flag for absolute position for X, Y, Z, A, B, C.
-    absolute_arc_center (bool): 
+    absolute_arc_center : bool
         Flag for absolute position for I, J, K.
-    cutter_compensation (int): 
+    cutter_compensation : int
         Cutter compensation.
-    F_value (float): 
+    F_value : float
         F value in m/min.
-    S_value (float): 
+    S_value : float
         S value in RPM.
-    feed_rate (float): 
+    feed_rate : float
         Feed rate in mm/ms.
-    spindle_speed (float): 
+    spindle_speed : float
         Spindle speed in RPM.
-    spindle_direction (str): 
+    spindle_direction : str
         Spindle direction: "CW" or "CCW".
-    spindle_on (bool): 
+    spindle_on : bool
         Spindle on: True or False.
-    cooling_on (bool): 
+    cooling_on : bool
         Cooling on: True or False.
-    exact_stop (bool): 
+    exact_stop : bool 
         Exact stop: True or False.
-    G_61_active (bool): 
+    G_61_active : bool
         G61 active: True or False.
-    program_end_reached (bool): 
+    program_end_reached : bool
         Program end reached: True or False.
     """
 
     # Constructor
     def __init__(self, 
-                 start_position = False, 
+                 start_position: bool = False, 
                  CNC_Parameter: CNCParameter = None):
         """
         Initializes the CNCStatus object.
 
-        Args:
-            start_position (bool): Whether to set the start position. Defaults to False.
-            CNC_Parameter (CNCParameter): CNC parameters to initialize with. Defaults to None.
+        Parameters:
+        -----------
+        start_position : bool 
+            Whether to set the start position. Defaults to False.
+        CNC_Parameter : CNCParameter
+            CNC parameters to initialize with. Defaults to None.
         """
 
         self.active_movement_type: int   = 0         # Active movement: 0: rapid linear, 1: linear, 2: arc CW, 3: arc CCW
         self.active_tool: int            = 0         # Number of the active tool
 
-        self.position_linear_axes = LinearAxes()     # Absolute positions for X, Y, Z in mm
-        self.position_rotation_axes = RotationAxes() # Absolute positions for A, B, C in mm
-        self.arc_information = ArcInformation()      # All infos for an arc
+        self.position_linear_axes: LinearAxes = LinearAxes()        # Absolute positions for X, Y, Z in mm
+        self.position_rotation_axes: RotationAxes = RotationAxes()  # Absolute positions for A, B, C in mm
+        self.arc_information: ArcInformation = ArcInformation()     # All infos for an arc
 
         self.active_plane: int           = 17        # Active plane: XY -> 17, XZ -> 18, YZ -> 19
 
         self.absolute_position: bool     = True      # Absolute position for X, Y, Z, A, B, C: True or false
         self.absolute_arc_center: bool   = False     # Absolute position for I, J, K: True or False
 
-        self.cutter_compensation = 40                # Cutter compensation
+        self.cutter_compensation: float = 40        # Cutter compensation
 
         self.F_value: float = 0.0                    # F value in m/min
         self.S_value: float = 0.0                    # S value in RPM
@@ -113,10 +116,13 @@ def copy_CNC_Status(Source: CNCStatus) -> CNCStatus:
     """
     Returns a copy of a CNCStatus object.
 
-    Args:
-        Source (CNCStatus): The source CNCStatus object to copy.
+    Parameters:
+    -----------
+    Source : CNCStatus
+        The source CNCStatus object to copy.
 
     Returns:
+    --------
         CNCStatus: A new CNCStatus object with all the important information copied for the next line in the G-code.
     """
 
