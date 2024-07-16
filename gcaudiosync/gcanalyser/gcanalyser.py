@@ -18,7 +18,7 @@ class GCodeAnalyser:
 
     Attributes:
     -----------
-    total_time : int
+    total_time : float
         Total time of g-code in milliseconds.
     g_code : List[str]
         List to store the original g-code lines.
@@ -28,16 +28,16 @@ class GCodeAnalyser:
         An object to extract information from a g-code-line.
     Tool_Path_Generator : ToolPathGenerator
         An object to generate the tool path.
-    G_Code_Lines : List[GCodeLine]
+    g_code_lines : List[GCodeLine]
         List to store all the GCodeLine objects in order.
     Sync_Info_Manager: SyncInfoManager
-        An object to manage all information needed for the synchronisation
+        An object to manage all information needed for the synchronisation.
     Movement_Manager : MovementManager
         An object to manage movements based on the CNC parameters and current status.
     """
 
     # Class variables
-    total_time: int = 0                 # Total time of g-code in milliseconds
+    total_time: float = 0               # Total time of g-code in milliseconds
     g_code: List[str] = []              # Original g-code is stored in this list as strings      
     g_code_lines: List[GCodeLine] = []  # Initialize the list to store GCodeLine objects in order
     
@@ -51,31 +51,27 @@ class GCodeAnalyser:
         Parameters:
         -----------
         parameter_src : str
-            The source of the CNC parameters.
+            The source path of the CNC parameters.
         snapshot_pause_src : str
-            The source of the snapshot pause code
+            The source path of the snapshot pause code
         """
 
         # Initialize the CNC parameters
-        self.CNC_Parameter: CNCParameter = CNCParameter(parameter_src)       # Get the CNC-Parameter  
+        self.CNC_Parameter: CNCParameter = CNCParameter(parameter_src)      # Get the CNC-Parameter  
 
-        # Initialize various managers required for g-code analysis
-        self.Line_Extractor: LineExtractor = LineExtractor()                   # Create the Line_Extractor object (we need only one for the whole program)
-        self.Tool_Path_Generator: ToolPathGenerator = ToolPathGenerator()          # Create the Tool_Path_Generator object (we need only one for the whole program)
-        
-        # Create the Info Manager
+        # Initialize the managers and objects required for g-code analysis
+        self.Line_Extractor: LineExtractor = LineExtractor()                
+        self.Tool_Path_Generator: ToolPathGenerator = ToolPathGenerator()   
         self.Sync_Info_Manager = SyncInfoManager(snapshot_src,
                                                  self.Line_Extractor,
                                                  self.CNC_Parameter)    
-
-        # Create the Movement_Manager object (we need only one for the whole program)
         self.Movement_Manager: MovementManager = MovementManager(self.CNC_Parameter)
 
     #################################################################################################
     # Methods
 
     def analyse(self, 
-                g_code_src: str):
+                g_code_src: str) -> None:
         """
         Analyzes the G-code from the provided source file.
 
@@ -106,7 +102,7 @@ class GCodeAnalyser:
                 break
             
             # Check for snapshot
-            if snapshot_index == -1:
+            if snapshot_index == -1:    # snapshot possible
                 possible_start_of_snapshot = g_code_line_index
                 possible_end_of_snapshot = possible_start_of_snapshot + self.Sync_Info_Manager.snapshot_length
 
@@ -115,9 +111,9 @@ class GCodeAnalyser:
                     if self.Sync_Info_Manager.check_start_of_snapshot(g_code_line_index, 
                                                                      g_code_lines_for_snapshot):
                         snapshot_index = 0
-            elif snapshot_index < self.Sync_Info_Manager.snapshot_length-2:
+            elif snapshot_index < self.Sync_Info_Manager.snapshot_length-2: # g-code-line is part of a snapshot
                 snapshot_index += 1
-            else:
+            else:   # snapshot has ended
                 snapshot_index = -1
 
             # Create a G_Code_Line object for the current line
@@ -149,7 +145,7 @@ class GCodeAnalyser:
         self.Sync_Info_Manager.update(time_stamps)
 
     def generate_tool_path(self, 
-                           fps: int):
+                           fps: int) -> None:
         """
         Generates the tool path for the G-code.
 
@@ -169,7 +165,7 @@ class GCodeAnalyser:
                                                           self.Movement_Manager, 
                                                           self.g_code)
 
-    def plot_tool_path(self):
+    def plot_tool_path(self) -> None:
         """
         Plots the tool path using the Tool_Path_Generator.
 
@@ -179,19 +175,19 @@ class GCodeAnalyser:
         based on the analyzed G-code and generated tool paths.
         """
         # Inform the Tool_Path_Generator to plot the tool path
-        self.Tool_Path_Generator.plot_tool_path()   
+        self.Tool_Path_Generator.plot_tool_path()
 
     def set_start_time_and_total_time(self, 
-                                      start_time: int,
-                                      total_time: int):
+                                      start_time: float,
+                                      total_time: float) -> None:
         """
         Sets the start time and total time for the movement manager and updates managers.
 
         Parameters:
         -----------
-        start_time : int
+        start_time : float
             The start time for the tool path in milliseconds.
-        total_time : int
+        total_time : float
             The total time for the tool path in milliseconds.
 
         Notes:
@@ -211,16 +207,16 @@ class GCodeAnalyser:
         self.Sync_Info_Manager.update(time_stamps)
 
     def adjust_start_time_of_g_code_line(self,
-                                         line_index: int,
-                                         start_time: int):
+                                         g_code_line_index: int,
+                                         start_time: float):
         """
         Adjusts the start time of a specific G-code line.
 
         Parameters:
         -----------
-        line_index : int
+        g_code_line_index : int
             The index of the G-code line to adjust.
-        start_time : int
+        start_time : float
             The new start time for the specified G-code line in milliseconds.
 
         Notes:
@@ -228,8 +224,9 @@ class GCodeAnalyser:
         This method informs the Movement_Manager to adjust the start time of the specified G-code line.
         It then updates the time stamps and informs the Frequency_Manager and Pause_Manager of the changes.
         """
+
         # Inform Movement_Manager to adjust the start time of the specified G-code line
-        self.Movement_Manager.adjust_start_time_of_g_code_line(line_index,
+        self.Movement_Manager.adjust_start_time_of_g_code_line(g_code_line_index,
                                                                start_time)
         
         # Get the new time stamps of all movements
@@ -238,10 +235,9 @@ class GCodeAnalyser:
         # Update the Managers with the new time stamps
         self.Sync_Info_Manager.update(time_stamps)
 
-
     def adjust_end_time_of_g_code_line(self,
                                        g_code_line_index: int,
-                                       end_time: int):
+                                       end_time: float):
         """
         Adjusts the end time of a specific G-code line.
 
@@ -249,7 +245,7 @@ class GCodeAnalyser:
         -----------
         g_code_line_index : int
             The index of the G-code line to adjust.
-        end_time : int
+        end_time : float
             The new end time for the specified G-code line in milliseconds.
 
         Notes:

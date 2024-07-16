@@ -7,43 +7,66 @@ from gcaudiosync.gcanalyser.rotationaxes import RotationAxes
 
 class CNCParameter:
     """
-    Represents the parameters of a CNC machine.
-
-    This class stores various parameters used in CNC machining operations.
+    Represents the parameters of a CNC machine. Stores various parameters used in CNC machining operations.
 
     Attributes:
-        START_POSITION_LINEAR_AXES (LinearAxes): The starting position of the linear axes.
-        START_POSITION_ROTATION_AXES (RotationAxes): The starting position of the rotation axes.
-        TOOL_CHANGE_POSITION_LINEAR_AXES (LinearAxes): The position for tool changes.
-        S_IS_ABSOLUTE (bool): Flag indicating whether the S value is absolute.
-        F_MAX (float): Maximum feed rate in mm/min.
-        S_MAX (float): Maximum spindle speed in RPM.
-        MAX_ACCELERATION_X (float): Maximum acceleration of the X-Axis in mm/s^2.
-        MAX_ACCELERATION_Y (float): Maximum acceleration of the Y-Axis in mm/s^2.
-        MAX_ACCELERATION_Z (float): Maximum acceleration of the Z-Axis in mm/s^2.
-        MAX_DECELERATION_X (float): Maximum deceleration of the X-Axis in mm/s^2.
-        MAX_DECELERATION_Y (float): Maximum deceleration of the Y-Axis in mm/s^2.
-        MAX_DECELERATION_Z (float): Maximum deceleration of the Z-Axis in mm/s^2.
-        DEFAULT_PAUSE_TIME (int): Default time for a pause in ms.
-        TOOL_CHANGE_TIME (int): Time taken for a tool change in milliseconds.
-        COMMAND_ABORT (float): M command for aborting.
-        COMMAND_QUIT (float): M command for quitting.
-        COMMAND_PROGABORT (float): M command for program abort.
-        COMMAND_SPINDLE_START_CW (float): M command for starting spindle clockwise.
-        COMMAND_SPINDLE_START_CCW (float): M command for starting spindle counterclockwise.
-        COMMAND_SPINDLE_OFF (float): M command for turning off spindle.
-        COMMAND_TOOL_CHANGE (float): M command for tool change.
-        COMMAND_COOLING_ON (float): M command for turning on cooling.
-        COMMAND_COOLING_OFF (float): M command for turning off cooling.
-        COMMAND_END_OF_PROGRAM (float): M command for end of program.
+    -----------
+    START_POSITION_LINEAR_AXES : LinearAxes
+        The starting position of the linear axes.
+    START_POSITION_ROTATION_AXES : RotationAxes
+        The starting position of the rotation axes.
+    TOOL_CHANGE_POSITION_LINEAR_AXES : LinearAxes)
+        The position for tool changes.
+    S_IS_ABSOLUTE : bool
+        Flag indicating whether the S value is absolute.
+    F_MAX : float
+        Maximum feed rate in mm/min.
+    S_MAX : float
+        Maximum spindle speed in RPM.
+    MAX_ACCELERATION_X : float
+        Maximum acceleration of the X-Axis in mm/s^2.
+    MAX_ACCELERATION_Y : float
+        Maximum acceleration of the Y-Axis in mm/s^2.
+    MAX_ACCELERATION_Z : float
+        Maximum acceleration of the Z-Axis in mm/s^2.
+    MAX_DECELERATION_X : float
+        Maximum deceleration of the X-Axis in mm/s^2.
+    MAX_DECELERATION_Y : float
+        Maximum deceleration of the Y-Axis in mm/s^2.
+    MAX_DECELERATION_Z : float
+        Maximum deceleration of the Z-Axis in mm/s^2.
+    DEFAULT_PAUSE_TIME : float
+        Default time for a pause in ms.
+    TOOL_CHANGE_TIME : float
+        Time taken for a tool change in milliseconds.
+    COMMAND_ABORT : float
+        M command for aborting.
+    COMMAND_QUIT : float
+        M command for quitting.
+    COMMAND_PROGABORT : float
+        M command for program abort.
+    COMMAND_SPINDLE_START_CW : float
+        M command for starting spindle clockwise.
+    COMMAND_SPINDLE_START_CCW : float
+        M command for starting spindle counterclockwise.
+    COMMAND_SPINDLE_OFF : float
+        M command for turning off spindle.
+    COMMAND_TOOL_CHANGE : float
+        M command for tool change.
+    COMMAND_COOLING_ON : float
+        M command for turning on cooling.
+    COMMAND_COOLING_OFF : float
+        M command for turning off cooling.
+    COMMAND_END_OF_PROGRAM : float
+        M command for end of program.
     """
     
     # Class variables
 
     # Machine parameter
-    START_POSITION_LINEAR_AXES          = LinearAxes(100.0, 100.0, 100.0)
-    START_POSITION_ROTATION_AXES        = RotationAxes()
-    TOOL_CHANGE_POSITION_LINEAR_AXES    = LinearAxes(100.0, 100.0, 100.0)
+    START_POSITION_LINEAR_AXES: LinearAxes       = LinearAxes(100.0, 100.0, 100.0)
+    START_POSITION_ROTATION_AXES: RotationAxes   = RotationAxes()
+    TOOL_CHANGE_POSITION_LINEAR_AXES: LinearAxes = LinearAxes(100.0, 100.0, 100.0)
 
     S_IS_ABSOLUTE: bool = True          # True if S value is absolute
 
@@ -57,14 +80,14 @@ class CNCParameter:
     MAX_DECELERATION_Y: float = 0.004   # Maximum deceleration of the Y-Axis in mm/ms^2.
     MAX_DECELERATION_Z: float = 0.004   # Maximum deceleration of the Z-Axis in mm/ms^2.
 
-    DEFAULT_PAUSE_TIME: float = 5000.0      # Time for a pause in ms.
-    TOOL_CHANGE_TIME: float = 3000.0        # Time for a tool change in ms.
+    DEFAULT_PAUSE_TIME: float = 5000.0  # Time for a pause in ms.
+    TOOL_CHANGE_TIME: float   = 3000.0  # Time for a tool change in ms.
 
     # M commands
     COMMAND_ABORT: float                = 0.0
     COMMAND_QUIT : float                = 1.0
-    COMMAND_PROGABORT                   = 2.0
-    COMMAND_SPINDLE_START_CW            = 3.0
+    COMMAND_PROGABORT: float            = 2.0
+    COMMAND_SPINDLE_START_CW: float     = 3.0
     COMMAND_SPINDLE_START_CCW: float    = 4.0
     COMMAND_SPINDLE_OFF: float          = 5.0
     COMMAND_TOOL_CHANGE: float          = 6.0
@@ -78,19 +101,21 @@ class CNCParameter:
         """
         Initializes the CNCParameter object.
 
-        Args:
+        Parameters:
+        -----------
             parameter_src (str, optional): The source of the CNC parameters. Defaults to "".
         """
+
+        # No src for cnc-parameter given
+        if len(parameter) == 0:
+            print("Using default CNC-parameter.")
+            return
 
         # Get the parameter from the parameter list
         parameter: str = read_file(parameter_src)    
 
         # Make an Extractor
         Extractor: LineExtractor = LineExtractor()
-
-        # No src for cnc-parameter given
-        if len(parameter) == 0:
-            print("Using default CNC-parameter.")
 
         # Non number parameter
         non_number_parameter = [
@@ -103,6 +128,7 @@ class CNCParameter:
             "TOOL_CHANGE_POSITION_Z",
         ]
 
+        # Parameter for acceleration and deceleration
         all_acc_dec = [
             "MAX_ACCELERATION_X",
             "MAX_ACCELERATION_Y",
@@ -150,20 +176,34 @@ class CNCParameter:
     #################################################################################################
     # Methods
 
-    # TODO: comment
     def get_acceleration_as_array(self) -> np.array:
+        """
+        Gives back the accelerations of the linear axes.
+
+        Returns:
+        --------
+        np.array: Acceleration of the linear axes.
+        """
+
         max_A_X = self.MAX_ACCELERATION_X
         max_A_Y = self.MAX_ACCELERATION_Y
         max_A_Z = self.MAX_ACCELERATION_Z
 
         return np.array([max_A_X, max_A_Y, max_A_Z])
     
-    # TODO: comment
     def get_deceleration_as_array(self) -> np.array:
+        """
+        Gives back the decelerations of the linear axes.
+
+        Returns:
+        --------
+        np.array: Deceleration of the linear axes.
+        """
         max_D_X = self.MAX_DECELERATION_X
         max_D_Y = self.MAX_DECELERATION_Y
         max_D_Z = self.MAX_DECELERATION_Z
 
         return np.array([max_D_X, max_D_Y, max_D_Z])
+    
 # End of class
 #####################################################################################################
