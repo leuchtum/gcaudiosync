@@ -1,6 +1,6 @@
-start_position_X 100.0
-start_position_Y 100.0
-start_position_Z 100.0
+start_position_X 0.0
+start_position_Y 0.0
+start_position_Z 0.0
 
 tool_change_position_X 100.0
 tool_change_position_Y 100.0

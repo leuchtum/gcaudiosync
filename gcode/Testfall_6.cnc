@@ -1,5 +1,5 @@
 ; Testfall 6
-; Verschiedene Vorschuebe Linear
+; Verschiedene Vorschuebe Kreisboegen
 G17
 G54
 G00 X0 Y0 Z0

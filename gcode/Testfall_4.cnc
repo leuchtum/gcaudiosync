@@ -1,4 +1,4 @@
-; Testfall 3
+; Testfall 4
 ; Laengeres Programm mit Snapshots
 G17
 G54
@@ -22,18 +22,5 @@ G01 X0 Y0
 G03 Z-30 I20
 G01 X30 Y30 Z0
 G02 X40 R-10
-;
-; Snapshot 
-M5
-G04 P500
-M03 S66
-G4 P3.
-M5
-;
-M03 S50
-G04 P500
-G01 X100
-G01 Y100
-G01 X0 Y0
-;
+M05
 M30

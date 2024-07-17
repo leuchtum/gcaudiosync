@@ -486,9 +486,9 @@ class MovementManager:
 
         self.total_duration = total_duration
 
-    def set_start_time_and_total_time(self, 
-                                      new_start_time: float,
-                                      new_total_time: float) -> int: 
+    def set_start_time_and_duration(self, 
+                                    new_start_time: float,
+                                    new_total_duration: float) -> int: 
         """
         Adjusts the start time and total time for the movements, ensuring constraints are met.
 
@@ -521,7 +521,7 @@ class MovementManager:
                 old_adjustable_time += movement.duration
 
         nonadjustable_time = self.total_duration - old_adjustable_time
-        new_adjustable_time = new_total_time - nonadjustable_time
+        new_adjustable_time = new_total_duration - nonadjustable_time
 
         # Error case
         if new_adjustable_time <= 0:
@@ -547,7 +547,7 @@ class MovementManager:
 
         # Save times
         self.start_time = new_start_time
-        self.total_duration = new_total_time
+        self.total_duration = new_total_duration
         
         return 0    # Everything is fine
     

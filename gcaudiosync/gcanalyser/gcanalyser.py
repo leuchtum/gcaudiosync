@@ -37,7 +37,7 @@ class GCodeAnalyser:
     """
 
     # Class variables
-    total_time: float = 0               # Total time of g-code in milliseconds
+    total_duration: float = 0           # Total time of g-code in milliseconds
     g_code: List[str] = []              # Original g-code is stored in this list as strings      
     g_code_lines: List[GCodeLine] = []  # Initialize the list to store GCodeLine objects in order
     
@@ -144,6 +144,9 @@ class GCodeAnalyser:
         # Update the Frequency_Manager with the time stamps
         self.Sync_Info_Manager.update(time_stamps)
 
+        # Update time
+        self.total_duration = self.Movement_Manager.total_duration + self.Movement_Manager.start_time
+
     def generate_tool_path(self, 
                            fps: int) -> None:
         """
@@ -197,8 +200,8 @@ class GCodeAnalyser:
         """
 
         # Inform the Movement_Manager of the start time and total time
-        self.Movement_Manager.set_start_time_and_total_time(new_start_time = start_time,
-                                                            new_total_time = total_time)
+        self.Movement_Manager.set_start_time_and_duration(new_start_time = start_time,
+                                                            new_total_duration = total_time)
         
         # Get the new time stamps of all movements
         time_stamps: List = self.Movement_Manager.get_time_stamps()
@@ -206,6 +209,9 @@ class GCodeAnalyser:
         # Update the Manager with the new time stamps
         self.Sync_Info_Manager.update(time_stamps)
 
+        # Update the time
+        self.total_duration = self.Movement_Manager.total_duration + self.Movement_Manager.start_time
+ 
     def adjust_start_time_of_g_code_line(self,
                                          g_code_line_index: int,
                                          start_time: float):
