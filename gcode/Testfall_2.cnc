@@ -3,7 +3,7 @@
 G17
 G54
 ; Snapshot 1
-M3 S66
+M03 S66
 G4 P3.
 M5
 ;
@@ -13,7 +13,7 @@ G04 P11.5
 ; Snapshot 2
 M5
 G04 P500
-M3 S66
+M03 S66
 G4 P3.
 M5
 ;

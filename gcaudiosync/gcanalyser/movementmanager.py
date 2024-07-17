@@ -16,16 +16,18 @@ class MovementManager:
 
     Attributes:
     -----------
-    start_time : int
-        Time for the start.
-    total_time : int
-        Expected total time.
+    start_time : float
+        Time for the start in ms.
+    total_time : float
+        Expected total time im ms.
     movements : List[Movement]
         List of movements.
     end_of_program_reached : bool
         Indicates if the end of the program has been reached.
     CNC_Parameter : CNCParameter
         CNC parameter instance.
+    movement_dynamic_is_ok : bool
+        Indicates if the dynamics of the movements is ok.
     """
 
     # Constructor
@@ -34,16 +36,8 @@ class MovementManager:
         """
         A class to manage movements in CNC machining.
 
-        Attributes:
+        Parameters:
         -----------
-        start_time : int
-            Time for the start.
-        total_time : int
-            Expected total time.
-        movements : List[Movement]
-            List of movements.
-        end_of_program_reached : bool
-            Indicates if the end of the program has been reached.
         CNC_Parameter : CNCParameter
             CNC parameter instance.
         """
@@ -411,8 +405,11 @@ class MovementManager:
             self.movements[movement_index].print_info()
             print("")
 
-    # TODO: comment
+    # TODO: improve
     def all_lines_analysed(self) -> None:
+        """
+        This Method is called after all g-code-lines are analysed. To compute the dynamic of the movments.
+        """
         
         break_if_dynamic_status_nok = True
 
@@ -428,8 +425,10 @@ class MovementManager:
             self.compute_durations_and_times(break_if_dynamic_status_nok = break_if_dynamic_status_nok)
             iterations += 1
 
-    # TODO: comment
     def copmpute_start_and_end_vectors(self) -> None:
+        '''
+        This method computes the ideal start and end vectors of each movment.
+        '''
                 
         # Iterate through all movements and compute the start and end vectors
         for movement_index in range(len(self.movements)-1):
@@ -461,6 +460,14 @@ class MovementManager:
     def compute_durations_and_times(self, 
                                     break_if_dynamic_status_nok: bool) -> None:
 
+        '''
+        This method computes all the durations and start times of the movments
+
+        Parameters:
+        -----------
+        break_if_dynamic_status_nok : bool
+            Flag if the proceder should be broken even if the dynamic is not ok.
+        '''
         total_duration: float = 0.0
 
         # Iterate through all movements and compute the start and end vectors

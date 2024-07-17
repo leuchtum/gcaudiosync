@@ -263,8 +263,10 @@ class Movement:
         self.end_vector_linear_axes = np.array([0.0, 0.0, 0.0])
         self.end_vector_rotation_axes = np.array([0.0, 0.0, 0.0])
 
-    # TODO: comment
     def compute_expected_time(self) -> None:
+        '''
+        Method to compute the expected time for a movement.
+        '''
 
         if self.movement_type == -1:
             # No movement at all
@@ -276,8 +278,11 @@ class Movement:
         else:
             Exception(f"Unknown movement type: {self.movement_type}")
 
-    # TODO: comment
     def compute_expected_time_linear_movement_type(self) -> None:
+        '''
+        Method to compute the expected time for a linear movement.
+        '''
+
         # Assumption: the distance of the movement is long enought to accelerate or decelerate from the start position to the end position
         # If this is not the case, the start or end velocity must be adjusted. This is not implemented jet. So the computet time would be not computed correct.
 
@@ -374,8 +379,11 @@ class Movement:
         # Compute time
         self.duration = self.duration_acceleration + self.duration_constant_speed + self.duration_deceleration
     
-    # TODO: comment
     def compute_expected_time_arc_movement_type(self) -> int:
+        '''
+        Method to compute the expected time for a arc movement.
+        '''
+
         # Assumption: the distance of the movement is long enought to accelerate or decelerate from the start position to the end position
         # If this is not the case, the start or end velocity must be adjusted. This is not implemented jet. So the computet time would be not computed correct.
 
@@ -656,8 +664,10 @@ class Movement:
         
         print(f"feed rate [mm/ms]: {self.feed_rate}")
 
-    # TODO: comment
     def adjust_arc_movement_feed_rate(self):
+        '''
+        Method to adjust the feed rate of a arc movement
+        '''
         
         radius = self.arc_information.radius    # [mm]
         feed_rate = self.feed_rate              # [mm/ms]
