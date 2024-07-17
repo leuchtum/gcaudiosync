@@ -2,16 +2,20 @@ class SnapshotInformation:
 
     # Constructor
     def __init__(self, 
-                 line_index_start: int, 
-                 expected_time_start: int, 
-                 expected_duration: int):
+                 g_code_line_index_start: int):
     
-        self.line_index_start = line_index_start
-        self.expected_time_start = expected_time_start
-        self.expected_duration = expected_duration
+        self.g_code_line_index_start: int = g_code_line_index_start
+        self.expected_time_start: float = 0.0
 
     #################################################################################################
     # Methods
+
+    def info(self) -> None:
+        """
+        Prints the info of the snapshot
+        """
+
+        print(f"Snapshot in g-code-line {self.g_code_line_index_start}")
 
     # End of class
 #####################################################################################################

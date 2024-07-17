@@ -109,7 +109,7 @@ class GCodeAnalyser:
                 if possible_end_of_snapshot <= len(self.g_code):
                     g_code_lines_for_snapshot = copy.copy(self.g_code[possible_start_of_snapshot:possible_end_of_snapshot])
                     if self.Sync_Info_Manager.check_start_of_snapshot(g_code_line_index, 
-                                                                     g_code_lines_for_snapshot):
+                                                                      g_code_lines_for_snapshot):
                         snapshot_index = 0
             elif snapshot_index < self.Sync_Info_Manager.snapshot_length-2: # g-code-line is part of a snapshot
                 snapshot_index += 1
@@ -133,7 +133,7 @@ class GCodeAnalyser:
 
             # Add snapshot information if this line is the start of a snapshot
             if snapshot_index == 0:
-                pass
+                self.Sync_Info_Manager.add_snapshot(g_code_line_index = g_code_line_index)
 
         # Inform the Movement_Manager that all lines have been analyzed
         self.Movement_Manager.all_lines_analysed()

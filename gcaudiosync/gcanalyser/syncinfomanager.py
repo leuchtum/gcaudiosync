@@ -83,7 +83,7 @@ class SyncInfoManager:
 
     def check_start_of_snapshot(self,
                                 g_code_line_index: int,
-                                g_code_lines_for_snapshot: List[str]):
+                                g_code_lines_for_snapshot: List[str]) -> bool:
         
         # Iterate through all lines of the snapshot
         for snapshot_line_index in range(self.snapshot_length):
@@ -113,7 +113,17 @@ class SyncInfoManager:
         self.g_code_line_index_with_start_of_snapshot.append(g_code_line_index)
 
         return True
-    
+
+    def add_snapshot(self,
+                     g_code_line_index: int) -> None:
+        """
+        Adds a snapshot that appears in a g-code-line
+        """
+
+        new_snapshot = SnapshotInformation(g_code_line_index_start = g_code_line_index)
+
+        self.snapshot_information.append(new_snapshot)
+
     #################################################################################################
     # Methods for tool change info
     def new_Tool(self, 
@@ -295,6 +305,20 @@ class SyncInfoManager:
                     break
 
             pause[2] = time_stamps[time_stamp_index][1]
+
+        # update snapshots
+        for snapshot in self.snapshot_information:
+            time_stamp_index = 0
+            snapshot_g_code_index = snapshot.g_code_line_index_start
+
+            # Find the start time for the current snapshot
+            for index in range(time_stamp_index, len(time_stamps)):
+                if time_stamps[index][0] >= snapshot_g_code_index:
+                    time_stamp_index = index
+                    break
+            
+            snapshot.expected_time_start = time_stamps[time_stamp_index][1]
+
         # TODO: update cooling
         # TODO: update tool change
 
@@ -303,7 +327,7 @@ class SyncInfoManager:
 
     def frequency_info(self) -> None:
         """
-        Print the information of the frequency
+        Print the information of the frequencies
         """
 
         print(f"Total: {len(self.frequency_information)} frequencies\n")
@@ -311,6 +335,16 @@ class SyncInfoManager:
         for frequence_info in self.frequency_information:
             frequence_info.info()
             print("")
+
+    def snapshot_info(self) -> None:
+        """
+        Print the information of the snapshots
+        """
+
+        print(f"Total: {len(self.snapshot_information)} snapshots")
+
+        for snapshot_info in self.snapshot_information:
+            snapshot_info.info()
 
 # End of class
 #####################################################################################################
