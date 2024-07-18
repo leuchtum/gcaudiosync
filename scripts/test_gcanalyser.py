@@ -19,7 +19,7 @@ G_Code_Analyser = GCodeAnalyser(parameter_src = src_path_cnc_parameter,
                                 snapshot_src = src_snapshot_g_code)
 
 # Analyse G-Code
-G_Code_Analyser.analyse(src_path_4)
+G_Code_Analyser.analyse(src_path_1)
 
 #G_Code_Analyser.set_start_time_and_total_time(1000, 32000)
 #G_Code_Analyser.adjust_start_time_of_g_code_line(3, 7000)
@@ -27,17 +27,13 @@ G_Code_Analyser.analyse(src_path_4)
 #G_Code_Analyser.adjust_start_time_of_g_code_line(5, 13000)
 # G_Code_Analyser.adjust_end_time_of_g_code_line(20, 20000)
 
-G_Code_Analyser.Movement_Manager.print_info()
+# G_Code_Analyser.Movement_Manager.print_detailed_info()
 
-time = 0
-for movement in G_Code_Analyser.Movement_Manager.movements:
-    time += movement.duration
+G_Code_Analyser.print_info()
 
-print(time)
+#G_Code_Analyser.Sync_Info_Manager.frequency_info()
 
-G_Code_Analyser.Sync_Info_Manager.frequency_info()
-
-G_Code_Analyser.Sync_Info_Manager.snapshot_info()
+#G_Code_Analyser.Sync_Info_Manager.snapshot_info()
 #G_Code_Analyser.Snapshot_Manager.print_information()
 
 # Generate tool path

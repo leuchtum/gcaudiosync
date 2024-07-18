@@ -660,7 +660,7 @@ class Movement:
         print(f"End vector: {self.end_vector_linear_axes}")
 
         if self.movement_type in [2, 3]:    # Arc movement
-            self.arc_information.print()
+            self.arc_information.print_info()
         
         print(f"feed rate [mm/ms]: {self.feed_rate}")
 

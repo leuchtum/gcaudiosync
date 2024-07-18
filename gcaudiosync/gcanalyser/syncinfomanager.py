@@ -74,9 +74,8 @@ class SyncInfoManager:
         self.f: int = 0
         self.current_g_code_line_index: int = 0
 
-        new_frequency_information = FrequencyInformation(0, 0, 0, 0, 0, 0)
+        new_frequency_information = FrequencyInformation(0, 0, 0, 0)
         self.frequency_information.append(new_frequency_information)
-
 
     #################################################################################################
     # Methods for snapshot info
@@ -166,8 +165,6 @@ class SyncInfoManager:
                 # Make new frequency
                 new_frequency_information = FrequencyInformation(g_code_line_index_start = g_code_line_index,
                                                                  g_code_line_index_end = g_code_line_index,
-                                                                 expected_time_start = 0, 
-                                                                 expected_duration = 0,
                                                                  frequency = new_f, 
                                                                  spindle_status = self.last_spindle_status)
                 self.frequency_information.append(new_frequency_information)
@@ -214,22 +211,16 @@ class SyncInfoManager:
             if new_spindle_status == 0:                 # spindle turns off
                 new_frequency_information = FrequencyInformation(g_code_line_index_start = g_code_line_index,
                                                                  g_code_line_index_end = g_code_line_index,
-                                                                 expected_time_start = 0, 
-                                                                 expected_duration = 0,
                                                                  frequency = 0, 
                                                                  spindle_status = new_spindle_status)
             elif self.last_spindle_status == 0:         # spindle turns on
                 new_frequency_information = FrequencyInformation(g_code_line_index_start = g_code_line_index,
                                                                  g_code_line_index_end = g_code_line_index,
-                                                                 expected_time_start = 0, 
-                                                                 expected_duration = 0,
                                                                  frequency = self.f, 
                                                                  spindle_status = new_spindle_status)                
             else:                                       # spindle changes direction
                 new_frequency_information = FrequencyInformation(g_code_line_index_start = g_code_line_index,
                                                                  g_code_line_index_end = g_code_line_index,
-                                                                 expected_time_start = 0, 
-                                                                 expected_duration = 0,
                                                                  frequency = self.f, 
                                                                  spindle_status = new_spindle_status)     
 
@@ -271,6 +262,7 @@ class SyncInfoManager:
 
     def update(self,
                time_stamps: List[Tuple[int, int]]) -> None:
+        
         time_stamp_index: int = 0
 
         # Update frequencies
@@ -333,7 +325,7 @@ class SyncInfoManager:
         print(f"Total: {len(self.frequency_information)} frequencies\n")
 
         for frequence_info in self.frequency_information:
-            frequence_info.info()
+            frequence_info.print_info()
             print("")
 
     def snapshot_info(self) -> None:
@@ -341,7 +333,7 @@ class SyncInfoManager:
         Print the information of the snapshots
         """
 
-        print(f"Total: {len(self.snapshot_information)} snapshots")
+        print(f"Total: {len(self.snapshot_information)} snapshots+")
 
         for snapshot_info in self.snapshot_information:
             snapshot_info.info()

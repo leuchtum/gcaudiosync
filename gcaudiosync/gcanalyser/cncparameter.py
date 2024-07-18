@@ -61,40 +61,6 @@ class CNCParameter:
         M command for end of program.
     """
     
-    # Class variables
-
-    # Machine parameter
-    START_POSITION_LINEAR_AXES: LinearAxes       = LinearAxes(100.0, 100.0, 100.0)
-    START_POSITION_ROTATION_AXES: RotationAxes   = RotationAxes()
-    TOOL_CHANGE_POSITION_LINEAR_AXES: LinearAxes = LinearAxes(100.0, 100.0, 100.0)
-
-    S_IS_ABSOLUTE: bool = True          # True if S value is absolute
-
-    F_MAX: float = 20000.0              # max feed rate in mm/min
-    S_MAX: float = 18000.0              # max spindle speed in RPM
-
-    MAX_ACCELERATION_X: float = 0.004   # Maximum acceleration of the X-Axis in mm/ms^2.
-    MAX_ACCELERATION_Y: float = 0.004   # Maximum acceleration of the Y-Axis in mm/ms^2.
-    MAX_ACCELERATION_Z: float = 0.004   # Maximum acceleration of the Z-Axis in mm/ms^2.
-    MAX_DECELERATION_X: float = 0.004   # Maximum deceleration of the X-Axis in mm/ms^2.
-    MAX_DECELERATION_Y: float = 0.004   # Maximum deceleration of the Y-Axis in mm/ms^2.
-    MAX_DECELERATION_Z: float = 0.004   # Maximum deceleration of the Z-Axis in mm/ms^2.
-
-    DEFAULT_PAUSE_TIME: float = 5000.0  # Time for a pause in ms.
-    TOOL_CHANGE_TIME: float   = 3000.0  # Time for a tool change in ms.
-
-    # M commands
-    COMMAND_ABORT: float                = 0.0
-    COMMAND_QUIT : float                = 1.0
-    COMMAND_PROGABORT: float            = 2.0
-    COMMAND_SPINDLE_START_CW: float     = 3.0
-    COMMAND_SPINDLE_START_CCW: float    = 4.0
-    COMMAND_SPINDLE_OFF: float          = 5.0
-    COMMAND_TOOL_CHANGE: float          = 6.0
-    COMMAND_COOLING_ON: float           = 8.0
-    COMMAND_COOLING_OFF: float          = 9.0
-    COMMAND_END_OF_PROGRAM: float       = 30.0
-
     # Constructor
     def __init__(self, 
                  parameter_src: str = ""):
@@ -103,10 +69,43 @@ class CNCParameter:
 
         Parameters:
         -----------
-            parameter_src (str, optional): The source of the CNC parameters. Defaults to "".
+        parameter_src : str, optional
+            The source of the CNC parameters. Defaults to "".
         """
 
-        # No src for cnc-parameter given
+        # Machine parameter
+        self.START_POSITION_LINEAR_AXES: LinearAxes       = LinearAxes(100.0, 100.0, 100.0)
+        self.START_POSITION_ROTATION_AXES: RotationAxes   = RotationAxes()
+        self.TOOL_CHANGE_POSITION_LINEAR_AXES: LinearAxes = LinearAxes(100.0, 100.0, 100.0)
+
+        self.S_IS_ABSOLUTE: bool = True          # True if S value is absolute
+
+        self.F_MAX: float = 20000.0              # max feed rate in mm/min
+        self.S_MAX: float = 18000.0              # max spindle speed in RPM
+
+        self.MAX_ACCELERATION_X: float = 0.004   # Maximum acceleration of the X-Axis in mm/ms^2.
+        self.MAX_ACCELERATION_Y: float = 0.004   # Maximum acceleration of the Y-Axis in mm/ms^2.
+        self.MAX_ACCELERATION_Z: float = 0.004   # Maximum acceleration of the Z-Axis in mm/ms^2.
+        self.MAX_DECELERATION_X: float = 0.004   # Maximum deceleration of the X-Axis in mm/ms^2.
+        self.MAX_DECELERATION_Y: float = 0.004   # Maximum deceleration of the Y-Axis in mm/ms^2.
+        self.MAX_DECELERATION_Z: float = 0.004   # Maximum deceleration of the Z-Axis in mm/ms^2.
+
+        self.DEFAULT_PAUSE_TIME: float = 5000.0  # Time for a pause in ms.
+        self.TOOL_CHANGE_TIME: float   = 3000.0  # Time for a tool change in ms.
+
+        # M commands
+        self.COMMAND_ABORT: float                = 0.0
+        self.COMMAND_QUIT : float                = 1.0
+        self.COMMAND_PROGABORT: float            = 2.0
+        self.COMMAND_SPINDLE_START_CW: float     = 3.0
+        self.COMMAND_SPINDLE_START_CCW: float    = 4.0
+        self.COMMAND_SPINDLE_OFF: float          = 5.0
+        self.COMMAND_TOOL_CHANGE: float          = 6.0
+        self.COMMAND_COOLING_ON: float           = 8.0
+        self.COMMAND_COOLING_OFF: float          = 9.0
+        self.COMMAND_END_OF_PROGRAM: float       = 30.0
+
+        # No src for cnc-parameter given -> using defaults
         if parameter_src == "":
             print("Using default CNC-parameter.")
             return
@@ -199,6 +198,7 @@ class CNCParameter:
         --------
         np.array: Deceleration of the linear axes.
         """
+        
         max_D_X = self.MAX_DECELERATION_X
         max_D_Y = self.MAX_DECELERATION_Y
         max_D_Z = self.MAX_DECELERATION_Z

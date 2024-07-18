@@ -33,9 +33,6 @@ class GCodeLine:
         Indices of the movements in the Movement Manager.
     """
 
-    # Class variables
-    movement_indices: List[int] = []           # Indices of the movements at the Movement_Manager
-
     # Constructor
     def __init__(self, 
                  g_code_line_index: int,
@@ -66,7 +63,7 @@ class GCodeLine:
             An instance of the MovementManager class.
         """
 
-
+        self.movement_indices: List[int] = []               # Indices of the movements at the Movement_Manager
 
         self.g_code_line_index: int = g_code_line_index     # Index of this line in the g-code
         self.original_g_code_line: str   = g_code_line      # Save original line
@@ -881,7 +878,7 @@ class GCodeLine:
                 raise Exception(f"G02 and G03 are only available in plane 19")   # TODO
 
         # Set arc center
-        self.cnc_status_current_line.arc_information.set_arc_center(arc_center)         
+        self.cnc_status_current_line.arc_information.set_arc_center_with_array(arc_center)         
 
     def compute_radius(self) -> None:
         """

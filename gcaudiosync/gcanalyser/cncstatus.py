@@ -1,4 +1,3 @@
-import numpy as np
 import copy
 
 from gcaudiosync.gcanalyser.cncparameter import CNCParameter
@@ -63,25 +62,37 @@ class CNCStatus:
 
         Parameters:
         -----------
-        start_position : bool 
+        start_position : bool, optional
             Whether to set the start position. Defaults to False.
-        CNC_Parameter : CNCParameter
+        CNC_Parameter : CNCParameter, optional
             CNC parameters to initialize with. Defaults to None.
         """
 
         self.active_movement_type: int   = 0         # Active movement: 0: rapid linear, 1: linear, 2: arc CW, 3: arc CCW
         self.active_tool: int            = 0         # Number of the active tool
 
-        self.position_linear_axes: LinearAxes = LinearAxes()        # Absolute positions for X, Y, Z in mm
-        self.position_rotation_axes: RotationAxes = RotationAxes()  # Absolute positions for A, B, C in mm
-        self.arc_information: ArcInformation = ArcInformation()     # All infos for an arc
+        # Absolute positions for X, Y, Z in mm
+        self.position_linear_axes: LinearAxes = LinearAxes(X = 0.0,
+                                                           Y = 0.0,
+                                                           Z = 0.0)    
+        # Absolute positions for A, B, C in mm    
+        self.position_rotation_axes: RotationAxes = RotationAxes(A = 0.0,
+                                                                 B = 0.0,
+                                                                 C = 0.0)  
+        # All infos for an arc
+        self.arc_information: ArcInformation = ArcInformation(direction = 2,
+                                                              I = 0.0,
+                                                              J = 0.0,
+                                                              K = 0.0,
+                                                              radius = 0.0)     
 
-        self.active_plane: int           = 17        # Active plane: XY -> 17, XZ -> 18, YZ -> 19
+        self.active_plane: int           = 17        # Active plane: 17: XY, 18: XZ, 19: YZ
 
-        self.absolute_position: bool     = True      # Absolute position for X, Y, Z, A, B, C: True or false
+        self.absolute_position: bool     = True      # Absolute position for X, Y, Z, A, B, C: True or False
         self.absolute_arc_center: bool   = False     # Absolute position for I, J, K: True or False
 
-        self.cutter_compensation: float = 40        # Cutter compensation
+        self.cutter_compensation: float = 40         # Cutter compensation 40: off, 41: on (left side), 42: on (right side)
+                                                     # 41.1: on (left side with extra diameter), 42.1: on (right sind with extra diameter)
 
         self.F_value: float = 0.0                    # F value in m/min
         self.S_value: float = 0.0                    # S value in RPM
@@ -106,19 +117,21 @@ class CNCStatus:
 
     #################################################################################################
     # Methods
+    
+    # TODO: print_info(self) - method
 
     # end of class CNC_Status
 ###################################################################################################
 # Functions related to CNC_Status
 
 # return a copy  of a CNC_Status with all the important information copied for the next line in the g-code
-def copy_CNC_Status(Source: CNCStatus) -> CNCStatus:
+def copy_CNC_Status(CNC_Status: CNCStatus) -> CNCStatus:
     """
     Returns a copy of a CNCStatus object.
 
     Parameters:
     -----------
-    Source : CNCStatus
+    CNC_Status : CNCStatus
         The source CNCStatus object to copy.
 
     Returns:
@@ -127,10 +140,9 @@ def copy_CNC_Status(Source: CNCStatus) -> CNCStatus:
     """
 
     # Make new cnc status
-    new_CNC_Status: CNCStatus = copy.deepcopy(Source)
+    new_CNC_Status: CNCStatus = copy.deepcopy(CNC_Status)
 
     # Change all parameters that are only active in one line
     new_CNC_Status.exact_stop = new_CNC_Status.G_61_active
 
     return new_CNC_Status
-

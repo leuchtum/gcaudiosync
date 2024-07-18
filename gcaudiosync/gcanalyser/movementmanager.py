@@ -387,15 +387,15 @@ class MovementManager:
         Tool_Path_Information.movement_type = movement.movement_type
 
         return Tool_Path_Information
- 
-    def print_info(self) -> None:
+
+    def print_detailed_info(self) -> None:
         """
-        Prints information about the MovementManager.
+        Prints detailed about the MovementManager.
 
         This method prints the total time, the number of movements, and detailed information
         about each movement in the MovementManager instance.
         """
-        print(f"total_time: {self.total_duration} ms")
+        print(f"Total Duration: {self.total_duration} ms")
         print(f"# movements: {len(self.movements)}")
         print("")
 
