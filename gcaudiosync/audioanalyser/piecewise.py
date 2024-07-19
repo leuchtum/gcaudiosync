@@ -88,16 +88,30 @@ class PleateauSegmentBuilder:
         return [BoundedFunction(t0, t1, lambda _: np.array(freq1))]
 
 
-@dataclass(kw_only=True)
 class BendedSegmentBuilder:
     """
     A class that builds a list of bounded functions representing a bended segment.
-
-    Attributes:
-        unsigned_slope (float): The unsigned slope of the linear part of the segment.
     """
 
-    unsigned_slope: float
+    def __init__(self, *, ramp_up_slope: float, ramp_down_slope: float) -> None:
+        """
+        Initializes a Piecewise object with the specified ramp up and ramp down slopes.
+
+        Args:
+            ramp_up_slope (float): The slope of the ramp up segment. Must be non-negative.
+            ramp_down_slope (float): The slope of the ramp down segment. Must be non-positive.
+
+        Raises:
+            ValueError: If ramp_up_slope is negative or ramp_down_slope is positive.
+
+        Returns:
+            None
+        """
+        if not (ramp_up_slope >= 0 and ramp_down_slope <= 0):
+            msg = "ramp_up_slope must be non-negative and ramp_down_slope must be non-positive"
+            raise ValueError(msg)
+        self.ramp_up_slope = ramp_up_slope
+        self.ramp_down_slope = ramp_down_slope
 
     def __call__(
         self, freq0: float, freq1: float, t0: float, t1: float
@@ -107,14 +121,14 @@ class BendedSegmentBuilder:
             return []
 
         # Determine the slope of the linear part
-        slope_signed = np.sign(freq1 - freq0) * self.unsigned_slope
+        slope = self.ramp_up_slope if freq1 > freq0 else self.ramp_down_slope
 
         # np.sign == 0 means that freq1 == freq0, thus no bend is needed
-        if slope_signed == 0:
+        if slope == 0:
             return [*PleateauSegmentBuilder()(freq0, freq1, t0, t1)]
 
         # From here on the slope is non-zero, thus a bend is needed
-        t_middle = t0 + (freq1 - freq0) / slope_signed
+        t_middle = t0 + (freq1 - freq0) / slope
         return [
             *LinearSegmentBuilder()(freq0, freq1, t0, t_middle),
             *PleateauSegmentBuilder()(freq1, freq1, t_middle, t1),
@@ -229,20 +243,25 @@ class ParametrisableFormFunc:
         )
 
 
-freqs = np.array([0, 3000, 2000, 0, 0])
-x = np.linspace(0, 100, 1000)
+def sanbox() -> None:
+    freqs = np.array([0, 3000, 2000, 0, 0])
+    x = np.linspace(0, 100, 1000)
 
-pff = ParametrisableFormFunc(freqs, BendedSegmentBuilder(unsigned_slope=400))
+    pff = ParametrisableFormFunc(
+        freqs, BendedSegmentBuilder(ramp_down_slope=-200, ramp_up_slope=500)
+    )
+
+    ref_points = np.array([0, 20, 40, 60, 80])
+    pff.set_ref_points(ref_points)
+    y = pff.get_parametrized()(x)
+    plt.plot(x, y)
+
+    ref_points = np.array([0, 21, 39, 62, 80])
+    pff.set_ref_points(ref_points)
+    y = pff.get_parametrized()(x)
+    plt.plot(x, y)
+    plt.show()
 
 
-ref_points = np.array([0, 20, 40, 60, 80])
-pff.set_ref_points(ref_points)
-y = pff.get_parametrized()(x)
-plt.plot(x, y)
-
-ref_points = np.array([0, 21, 39, 62, 80])
-pff.set_ref_points(ref_points)
-y = pff.get_parametrized()(x)
-plt.plot(x, y)
-
-pass
+if __name__ == "__main__":
+    sanbox()
