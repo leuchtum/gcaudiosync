@@ -8,22 +8,61 @@ import numpy.typing as npt
 
 @dataclass
 class BoundedFunction:
+    """
+    Represents a bounded function with a start and end time.
+
+    Attributes:
+        start (float): The start time of the bounded function.
+        end (float): The end time of the bounded function.
+        func (Callable[[npt.NDArray[np.float64]], npt.NDArray[np.float64]]): The function to be applied within the bounds.
+    """
+
     start: float
     end: float
     func: Callable[[npt.NDArray[np.float64]], npt.NDArray[np.float64]]
 
     def condition(self, time: npt.NDArray[np.float64]) -> npt.NDArray[np.bool_]:
+        """
+        Check if each element in the input time array falls within the bounds of the function.
+
+        Args:
+            time (npt.NDArray[np.float64]): The array of time values to check.
+
+        Returns:
+            npt.NDArray[np.bool_]: A boolean array indicating whether each element in the input time array falls within the bounds of the function.
+        """
         return (time >= self.start) & (time < self.end)
 
 
 class SegmentBuilder(Protocol):
+    """
+    A protocol for building segments of bounded functions.
+    """
+
     def __call__(
         self, freq0: float, freq1: float, t0: float, t1: float
-    ) -> list[BoundedFunction]: ...
+    ) -> list[BoundedFunction]:
+        """
+        Build a segment of bounded functions.
+
+        Parameters:
+        - freq0 (float): The starting frequency of the segment.
+        - freq1 (float): The ending frequency of the segment.
+        - t0 (float): The starting time of the segment.
+        - t1 (float): The ending time of the segment.
+
+        Returns:
+        - list[BoundedFunction]: A list of bounded functions representing the segment.
+        """
+        ...
 
 
 @dataclass
 class LinearSegmentBuilder:
+    """
+    A class that builds linear segments of bounded functions.
+    """
+
     def __call__(
         self, freq0: float, freq1: float, t0: float, t1: float
     ) -> list[BoundedFunction]:
@@ -36,6 +75,10 @@ class LinearSegmentBuilder:
 
 @dataclass
 class PleateauSegmentBuilder:
+    """
+    A class that builds plateau segments of bounded functions.
+    """
+
     def __call__(
         self, _: float, freq1: float, t0: float, t1: float
     ) -> list[BoundedFunction]:
@@ -45,8 +88,15 @@ class PleateauSegmentBuilder:
         return [BoundedFunction(t0, t1, lambda _: np.array(freq1))]
 
 
-@dataclass
+@dataclass(kw_only=True)
 class BendedSegmentBuilder:
+    """
+    A class that builds a list of bounded functions representing a bended segment.
+
+    Attributes:
+        unsigned_slope (float): The unsigned slope of the linear part of the segment.
+    """
+
     unsigned_slope: float
 
     def __call__(
@@ -80,9 +130,6 @@ class ParamizedFormFunc:
 
     Attributes:
         bounded_funcs (list[BoundedFunction]): A list of bounded functions.
-
-    Methods:
-        __call__(time: npt.ArrayLike) -> npt.ArrayLike: Evaluates the bounded functions based on the given time parameter.
     """
 
     bounded_funcs: list[BoundedFunction]
@@ -106,42 +153,78 @@ class ParamizedFormFunc:
 
 
 class ParametrisableFormFunc:
+    """
+    A class representing a parametrisable form function.
+
+    This class is used to create a parametrized form function by setting
+    reference points and generating bounded functions for inner segments.
+    """
+
     def __init__(self, freqs: npt.NDArray[np.float64], former: SegmentBuilder) -> None:
+        """
+        Initializes the ParametrisableFormFunc object with the given frequencies
+        and former segment builder.
+
+        Args:
+            freqs (numpy.ndarray): An array of frequencies.
+            former (SegmentBuilder): The former segment builder.
+
+        Raises:
+            ValueError: If the first and last frequency are not both 0.
+        """
+
         if not (freqs[[0, -1]] == np.array([0, 0])).all():
             raise ValueError("First and last frequency must be 0")
         self._freqs = freqs
-        self._params = np.zeros_like(freqs)
+        self._ref_points = np.zeros_like(freqs)
         self._former = former
 
-    def set_params(self, params: npt.NDArray[np.float64]) -> None:
-        if not (params[0] == 0 and params[-1] == np.Inf):
-            raise ValueError("First and last parameter must be 0 and np.Inf")
-        if len(params) != len(self._freqs):
-            raise ValueError("Length of params must match length of freqs")
-        self._params = params
+    def set_ref_points(self, ref_points: npt.NDArray[np.float64]) -> None:
+        """
+        Sets the reference points for the ParametrisableFormFunc object.
 
-    def produce(self) -> ParamizedFormFunc:
+        Args:
+            ref_points (npt.NDArray[np.float64]): An array of reference points.
+
+        Raises:
+            ValueError: If the first reference point is not 0 or the length of reference points does not match the length of freqs.
+
+        """
+        if not ref_points[0] == 0:
+            raise ValueError("First reference point must be 0")
+        if len(ref_points) != len(self._freqs):
+            raise ValueError("Length of reference points must match length of freqs")
+        self._ref_points = ref_points
+
+    def get_parametrized(self) -> ParamizedFormFunc:
+        """
+        Generates a parametrized form function based on the reference points and inner segments.
+
+        Returns:
+            ParamizedFormFunc: A parametrized form function.
+
+        """
         # We will store the bounded functions of the inner segments here
         inner_bounded_funcs = []
 
-        # We copy the first and last frequency and parameter. This is helpful
-        # for the following loop, but does not affect the result, since
-        # duration = parameter[i+1] - parameter[i] is always 0 for the first and
+        # We copy the first and last frequency and ref point. This is helpful
+        # for the following loop, but does not affect the result, since then
+        # duration = ref_point[i+1] - ref_point[i] is always 0 for the first and
         # last field.
         freqs = [self._freqs[0], *self._freqs, self._freqs[-1]]
-        params = [self._params[0], *self._params, self._params[-1]]
+        ref_points = [self._ref_points[0], *self._ref_points, self._ref_points[-1]]
 
         for i in range(1, len(freqs) - 1):
             freq0, freq1 = freqs[i - 1], freqs[i]
-            t0, t1 = params[i], params[i + 1]
-            former_result = self._former(freq0, freq1, t0, t1)
+            p0, p1 = ref_points[i], ref_points[i + 1]
+            former_result = self._former(freq0, freq1, p0, p1)
             inner_bounded_funcs.extend(former_result)
 
         return ParamizedFormFunc(
             [
-                BoundedFunction(-np.Inf, self._params[0], lambda _: np.array(0)),
+                BoundedFunction(-np.Inf, self._ref_points[0], lambda _: np.array(0)),
                 *inner_bounded_funcs,
-                BoundedFunction(self._params[-1], np.Inf, lambda _: np.array(0)),
+                BoundedFunction(self._ref_points[-1], np.Inf, lambda _: np.array(0)),
             ]
         )
 
@@ -149,17 +232,17 @@ class ParametrisableFormFunc:
 freqs = np.array([0, 3000, 2000, 0, 0])
 x = np.linspace(0, 100, 1000)
 
-pff = ParametrisableFormFunc(freqs, BendedSegmentBuilder(400))
+pff = ParametrisableFormFunc(freqs, BendedSegmentBuilder(unsigned_slope=400))
 
 
-ref_points = np.array([0, 20, 40, 60, np.Inf])
-pff.set_params(ref_points)
-y = pff.produce()(x)
+ref_points = np.array([0, 20, 40, 60, 80])
+pff.set_ref_points(ref_points)
+y = pff.get_parametrized()(x)
 plt.plot(x, y)
 
-ref_points = np.array([0, 21, 39, 62, np.Inf])
-pff.set_params(ref_points)
-y = pff.produce()(x)
+ref_points = np.array([0, 21, 39, 62, 80])
+pff.set_ref_points(ref_points)
+y = pff.get_parametrized()(x)
 plt.plot(x, y)
 
 pass
