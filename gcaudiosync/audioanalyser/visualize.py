@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import numpy.typing as npt
 
-from gcaudiosync.audioanalyser.setting import Setting
+from gcaudiosync.audioanalyser.constants import Constants
 
 
 def add_footnote(
@@ -27,22 +27,20 @@ def add_footnote(
 def spectrogram(
     X: npt.NDArray[np.float32],
     samplerate: float,
+    constants: Constants,
     is_db: bool = False,
     footnote: bool = True,
-    setting: Setting | None = None,
     ax: matplotlib.axes.Axes | None = None,
     y_axis: Literal["linear", "log"] = "linear",
 ) -> matplotlib.axes.Axes:
-    if setting is None:
-        setting = Setting.default()
     if ax is None:
         _, ax = plt.subplots()
     img = librosa.display.specshow(
         X,
         sr=samplerate,
-        n_fft=setting.n_fft,
-        hop_length=setting.hop_length,
-        win_length=setting.win_length,
+        n_fft=constants.n_fft,
+        hop_length=constants.hop_length,
+        win_length=constants.win_length,
         x_axis="time",
         y_axis=y_axis,
         ax=ax,
@@ -55,9 +53,9 @@ def spectrogram(
         msg = (
             f"is_db: {is_db}\n"
             f"sr={samplerate}\n"
-            f"n_fft={setting.n_fft}\n"
-            f"hop_length={setting.hop_length}\n"
-            f"win_length={setting.win_length}"
+            f"n_fft={constants.n_fft}\n"
+            f"hop_length={constants.hop_length}\n"
+            f"win_length={constants.win_length}"
         )
         ax = add_footnote(ax, msg)
     return ax

@@ -1,46 +1,20 @@
-import re
-from random import sample
-from typing import Literal, Protocol
 
 import librosa
 import numpy as np
 import numpy.typing as npt
 
-from gcaudiosync.audioanalyser.io import RawRecording
-from gcaudiosync.audioanalyser.setting import Setting
+from gcaudiosync.audioanalyser.constants import Constants
 
 
-class GenericProcessedRecording(Protocol):
-    setting: Setting
-    samplerate: float
-
-    def D(self) -> npt.NDArray[np.complex64]: ...
-    def P(self) -> npt.NDArray[np.complex64]: ...
-    def S(self) -> npt.NDArray[np.float32]: ...
-    def dS(self) -> npt.NDArray[np.float32]: ...
-    def S_db(self) -> npt.NDArray[np.float32]: ...
-    def dS_db(self) -> npt.NDArray[np.float32]: ...
-    def A(self) -> npt.NDArray[np.float32]: ...
-
-
-class LazyProcessedRecording(GenericProcessedRecording):
-    def __init__(
-        self,
-        data: npt.NDArray[np.float32],
-        samplerate: float,
-        setting: Setting | None = None,
-    ) -> None:
-        if setting is None:
-            setting = Setting.default()
-        self.setting = setting
-
-        self.samplerate = samplerate
+class LazyProcessedRecording:
+    def __init__(self, data: npt.NDArray[np.float32], constants: Constants) -> None:
+        self.constants = constants
 
         self._D = librosa.stft(
             data,
-            n_fft=setting.n_fft,
-            hop_length=setting.hop_length,
-            win_length=setting.win_length,
+            n_fft=constants.n_fft,
+            hop_length=constants.hop_length,
+            win_length=constants.win_length,
         )
 
     def D(self) -> npt.NDArray[np.complex64]:
