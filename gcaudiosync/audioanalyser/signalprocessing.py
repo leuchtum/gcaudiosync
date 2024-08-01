@@ -1,20 +1,23 @@
-
 import librosa
 import numpy as np
 import numpy.typing as npt
 
-from gcaudiosync.audioanalyser.constants import Constants
 
 
 class LazyProcessedRecording:
-    def __init__(self, data: npt.NDArray[np.float32], constants: Constants) -> None:
-        self.constants = constants
-
+    def __init__(
+        self,
+        data: npt.NDArray[np.float32],
+        *,
+        n_fft: int,
+        hop_length: int,
+        win_length: int,
+    ) -> None:
         self._D = librosa.stft(
             data,
-            n_fft=constants.n_fft,
-            hop_length=constants.hop_length,
-            win_length=constants.win_length,
+            n_fft=n_fft,
+            hop_length=hop_length,
+            win_length=win_length,
         )
 
     def D(self) -> npt.NDArray[np.complex64]:

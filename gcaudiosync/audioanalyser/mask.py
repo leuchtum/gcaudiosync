@@ -5,7 +5,9 @@ import numpy as np
 import numpy.typing as npt
 from matplotlib import pyplot as plt
 
+from gcaudiosync.audioanalyser.slicer import Slicer, SlicerFactory, ValueSlicerConfig
 from gcaudiosync.audioanalyser.util import convert_to_idx
+from gcaudiosync.audioanalyser.visualize import plot_spec
 
 _E = TypeVar("_E", bound=np.generic, covariant=True)
 
@@ -30,17 +32,15 @@ class _TimeShifter:
 
 
 @dataclass(kw_only=True, frozen=True)
-class MaskBuilder:
+class MaskFactory:
     """
-    A class that builds binary and blurred masks for audio analysis.
+    A class that builds binary masks for audio analysis.
     """
 
     n_time: int
     n_freq: int
     freq_max: float
     time_max: float
-    upper_cut_freq: float
-    lower_cut_freq: float
     time_window: float
     freq_window: float
     upsample_factor: int = 10
@@ -54,10 +54,26 @@ class MaskBuilder:
         )
 
     def build_binary_mask(
-        self, signal: npt.NDArray[np.float64]
+        self, signal: npt.NDArray[np.float64], slicer: Slicer
     ) -> npt.NDArray[np.bool_]:
+        # Slice the signal first to reduce workload
+        if signal.shape[0] == self.n_time:
+            sliced_signal = slicer(x=signal)
+        elif signal.shape[0] == (slicer.to_x - slicer.from_x):
+            sliced_signal = signal
+        else:
+            msg = "The signal must have the same length as the slicer or the time axis."
+            raise ValueError(msg)
+
         # First, we upsample the signal. With this the grid will get filled better.
-        upsample_signal = self._upsample(signal)
+        upsample_signal = self._upsample(sliced_signal)
+
+        # original signal as index
+        signal_idx = convert_to_idx(
+            upsample_signal,
+            self.freq_max,
+            self.n_freq,
+        )
 
         # Now we shift the signal up and down
         signal_idx_plus = convert_to_idx(
@@ -85,6 +101,10 @@ class MaskBuilder:
         # 2. up and left
         # 3. down and right
         # 4. down and left
+        # 5. up only
+        # 6. down only
+        # 7. right only
+        # 8. left only
         # This is an good approximation of the envelope of the signal. Also it's
         # possible to specify the value for the shift for each dim (time and freq).
         buf = np.vstack(
@@ -93,6 +113,10 @@ class MaskBuilder:
                 shifter.neg(signal_idx_plus),
                 shifter.pos(signal_idx_minus),
                 shifter.neg(signal_idx_minus),
+                signal_idx_plus,
+                signal_idx_minus,
+                shifter.pos(signal_idx),
+                shifter.neg(signal_idx),
             ]
         )
 
@@ -105,52 +129,49 @@ class MaskBuilder:
         upper = upsample_upper[:: self.upsample_factor]
 
         # Broadcast magic...
-        rows = np.arange(self.lower_cut_idx, self.upper_cut_idx, dtype=np.int64)
+        rows = np.arange(slicer.from_y, slicer.to_y, dtype=np.int64)
         above = rows >= lower[:, None]
         below = rows <= upper[:, None]
         return (above & below).T
 
-    @property
-    def lower_cut_idx(self) -> int:
-        return convert_to_idx(self.lower_cut_freq, self.freq_max, self.n_freq)
-
-    @property
-    def upper_cut_idx(self) -> int:
-        return convert_to_idx(self.upper_cut_freq, self.freq_max, self.n_freq)
-
 
 def sandbox() -> None:
-    T_max = 20
-    T_samples = 2000
+    x_max = 20
+    n_x = 2000
 
-    F_max = 15000
-    F_samples = 2000
+    y_max = 15000
+    n_y = 2000
 
-    time = np.linspace(0, T_max, T_samples, endpoint=False)
-    signal = 1500 * abs(time - time.mean())
-    signal = 10000 * np.ones_like(time)
-    signal[500:1500] = 0
+    slicer_fac = SlicerFactory(
+        n_x=n_x,
+        n_y=n_y,
+        x_max=x_max,
+        y_max=y_max,
+        global_slice_cfg=ValueSlicerConfig(from_y=5000, to_y=11000),
+    )
 
-    fb = MaskBuilder(
-        n_time=T_samples,
-        n_freq=F_samples,
-        freq_max=F_max,
-        time_max=T_max,
+    slicer = slicer_fac.build(ValueSlicerConfig(from_x=1, to_x=4))
+
+    x = np.linspace(0, x_max, n_x, endpoint=False)
+    y = 1000 * abs(x - x.mean()) + 500
+    y[200:300] = 1000
+
+    mask_fac = MaskFactory(
+        n_time=n_x,
+        n_freq=n_y,
+        freq_max=y_max,
+        time_max=x_max,
         time_window=0.5,
         freq_window=100,
-        upper_cut_freq=15000,
-        lower_cut_freq=20,
     )
 
-    W = fb.build_binary_mask(signal).astype(np.float64)
+    image = -1 * np.ones((n_y, n_x), dtype=np.float64)
+    mask = mask_fac.build_binary_mask(y, slicer).astype(np.float64)
+    image[slicer.matrix_slice] = mask
 
-    plt.imshow(
-        W,
-        aspect="auto",
-        origin="lower",
-        extent=(0, T_max, fb.lower_cut_freq, fb.upper_cut_freq),
-    )
-    plt.plot(time, signal, color="red")
+    _, ax = plt.subplots()
+    plot_spec(image, 0, 0, x_max / n_x, y_max / n_y, ax)
+    plt.plot(x, y, color="red")
     plt.show()
 
 

@@ -8,13 +8,15 @@ HOP_LENGTH = 2**9
 
 
 class Constants:
-    def __init__(self, data: npt.NDArray[np.float32], sr: int) -> None:
+    def __init__(self, sr: float, data: npt.NDArray[np.float32]) -> None:
         self.n_fft = N_FFT
         self.win_length = WIN_LENGTH
         self.hop_length = HOP_LENGTH
         self.sr = sr
         self.freqs = librosa.fft_frequencies(sr=sr, n_fft=self.n_fft)
-        self.time = librosa.times_like(data, sr=sr)
+
+        n_frames = data.shape[0] // self.hop_length + 1
+        self.time = librosa.times_like(n_frames, sr=sr)
 
     @property
     def t_max(self) -> float:
