@@ -6,9 +6,10 @@ import numpy as np
 from typing import List, Tuple
 
 import gcaudiosync.gcanalyser.vectorfunctions as vecfunc
+import gcaudiosync.gcanalyser.cncstatus as cnc_status_operations
 
 from gcaudiosync.gcanalyser.cncparameter import CNCParameter
-from gcaudiosync.gcanalyser.cncstatus import CNCStatus, copy_CNC_Status
+from gcaudiosync.gcanalyser.cncstatus import CNCStatus
 from gcaudiosync.gcanalyser.lineextractor import LineExtractor
 from gcaudiosync.gcanalyser.movementmanager import MovementManager
 from gcaudiosync.gcanalyser.syncinfomanager import SyncInfoManager
@@ -68,10 +69,10 @@ class GCodeLine:
         self.g_code_line_index: int = g_code_line_index     # Index of this line in the g-code
         self.original_g_code_line: str   = g_code_line      # Save original line
 
-        g_code_line_info: List[Tuple[str, str]] = Line_Extractor.extract(line = g_code_line)    # Extract info from line
+        g_code_line_info: List[Tuple[str, str]] = Line_Extractor.extract(line = g_code_line)        # Extract info from line
 
-        self.cnc_status_last_line: CNCStatus    = copy.deepcopy(current_cnc_status)             # Save the cnc-status of the last line
-        self.cnc_status_current_line: CNCStatus = copy_CNC_Status(current_cnc_status)           # Create a new cnc-status for this line
+        self.cnc_status_last_line: CNCStatus    = copy.deepcopy(current_cnc_status)                 # Save the cnc-status of the last line
+        self.cnc_status_current_line: CNCStatus = cnc_status_operations.copy_CNC_Status(CNC_Status = current_cnc_status)  # Create a new cnc-status for this line
 
         # Prioritization so the movements have all important infos
         prio_G_numbers = [9, 17, 18, 19]                            # Numbers of priority G commands
