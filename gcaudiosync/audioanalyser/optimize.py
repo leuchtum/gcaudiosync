@@ -1,3 +1,5 @@
+from typing import Callable
+
 import numpy as np
 import numpy.typing as npt
 import tqdm
@@ -18,6 +20,8 @@ class RefPointOptimizer:
         S: npt.NDArray[np.float32],
         dx: float,
         dy: float,
+        use_1st_harmonic: bool = True,
+        callback: Callable[[Slicer, npt.NDArray[np.bool_]], None] | None = None,
     ) -> None:
         self.param_form_func = param_form_func
         self.x_sample = x_sample
@@ -26,6 +30,8 @@ class RefPointOptimizer:
         self.S = S
         self.dx = dx
         self.dy = dy
+        self.use_1st_harmonic = use_1st_harmonic
+        self.callback = callback
 
     def build_mask(
         self, x: npt.NDArray[np.float64], y: npt.NDArray[np.float64], slicer: Slicer
@@ -33,6 +39,8 @@ class RefPointOptimizer:
         self.param_form_func.set_ref_points(x, y)
         form = self.param_form_func.get_parametrized()(self.x_sample[slicer.x_slice])
         mask_freq = self.mask_fac.build_binary_mask(form, slicer)
+        if not self.use_1st_harmonic:
+            return mask_freq
         mask_1st_harmonic = self.mask_fac.build_binary_mask(2 * form, slicer)
         return mask_freq | mask_1st_harmonic
 
@@ -44,8 +52,9 @@ class RefPointOptimizer:
         slicer: Slicer,
     ) -> float:
         mask = self.build_mask(x, y, slicer)
-        Y = np.where(mask, S_reduced, S_reduced.min())
-        return Y.sum()  # type: ignore
+        if self.callback is not None:
+            self.callback(slicer, mask)
+        return S_reduced[mask].sum() # type: ignore
 
     def optimize(
         self,

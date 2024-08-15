@@ -1,3 +1,4 @@
+from tkinter import font
 from typing import Any, Literal
 
 import librosa
@@ -24,43 +25,6 @@ def add_footnote(
     return ax
 
 
-def spectrogram(
-    X: npt.NDArray[np.float32],
-    constants: Constants,
-    is_db: bool = False,
-    footnote: bool = True,
-    ax: matplotlib.axes.Axes | None = None,
-    y_axis: Literal["linear", "log"] = "linear",
-) -> matplotlib.axes.Axes:
-    # Raise, since this function is really outdated
-    raise NotImplementedError
-    if ax is None:
-        _, ax = plt.subplots()
-    img = librosa.display.specshow(
-        X,
-        sr=constants.sr,
-        n_fft=constants.n_fft,
-        hop_length=constants.hop_length,
-        win_length=constants.win_length,
-        x_axis="time",
-        y_axis=y_axis,
-        ax=ax,
-    )
-    if is_db:
-        plt.colorbar(img, ax=ax, format="%+2.0f dB")
-    else:
-        plt.colorbar(img, ax=ax)
-    if footnote:
-        msg = (
-            f"is_db: {is_db}\n"
-            f"sr={constants.sr}\n"
-            f"n_fft={constants.n_fft}\n"
-            f"hop_length={constants.hop_length}\n"
-            f"win_length={constants.win_length}"
-        )
-        ax = add_footnote(ax, msg)
-    return ax
-
 
 def plot_spec(
     X: npt.NDArray[Any],
@@ -70,6 +34,8 @@ def plot_spec(
     freq_delta: float,
     ax: matplotlib.axes.Axes,
     add_labels: bool = True,
+    cmap_label: str = "Amplitude in dB",
+    cmap: str = "binary",
 ) -> None:
     extent = (
         time_min - 0.5 * time_delta,
@@ -83,7 +49,7 @@ def plot_spec(
             aspect="auto",
             origin="lower",
             extent=extent,
-            cmap="binary",
+            cmap=cmap,
         )
     else:
         img = ax.imshow(
@@ -96,10 +62,7 @@ def plot_spec(
         fig = ax.get_figure()
         if fig is None:
             raise ValueError("Fig not found")
-        fig.colorbar(
-            img,
-            orientation="horizontal",
-            label="Magnitude [dB]",
-        )
-        ax.set_xlabel("Time [s]")
-        ax.set_ylabel("Frequency [Hz]")
+        cbar = fig.colorbar(img,orientation="horizontal")
+        cbar.set_label(cmap_label, size=12)
+        ax.set_xlabel("Zeit in s",fontsize=12)
+        ax.set_ylabel("Frequenz in Hz",fontsize=12)
