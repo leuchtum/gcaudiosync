@@ -19,7 +19,7 @@ G_Code_Analyser = GCodeAnalyser(parameter_src = src_path_cnc_parameter,
                                 snapshot_src = src_snapshot_g_code)
 
 # Analyse G-Code
-G_Code_Analyser.analyse(src_path_1)
+G_Code_Analyser.analyse(src_path_3)
 
 #G_Code_Analyser.set_start_time_and_total_time(1000, 32000)
 #G_Code_Analyser.adjust_start_time_of_g_code_line(3, 7000)

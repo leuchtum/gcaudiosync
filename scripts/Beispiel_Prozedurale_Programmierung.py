@@ -1,7 +1,7 @@
 # Schaltjahrrechner
 
 # Hier wird die Funktion "Berechne_ob_Schaltjahr" definiert
-# Die Funktion hat einen Übergabeparameter (Int)
+# Die Funktion hat einen Übergabeparameter "Jahreszahl" (Integer)
 # Die Funktion gibt einen bool zurück
 def Berechne_ob_Schaltjahr(Jahreszahl: int) -> bool:
 
@@ -19,7 +19,7 @@ while True:
 
     # Benutzer wird aufgefordert, eine Jahreszahl einzutippen.
     Jahreszahl = input("Geben Sie eine Jahreszahl ein und bestätigen Sie mit Enter. \n" + 
-                       "Geben Sie etwas anderes ein, um das Programm zu beenden.")
+                       "Geben Sie etwas anderes ein, um das Programm zu beenden. \n")
 
     # Es wird überprüft, ob etwas eingegeben wurde.
     # Wurde keine Jahreszahl eingegeben, so wird das Programm beendet.
@@ -37,4 +37,3 @@ while True:
         print(f"{Jahreszahl} ist ein Schaltjahr.")
     else:
         print(f"{Jahreszahl} ist kein Schaltjahr.")
-

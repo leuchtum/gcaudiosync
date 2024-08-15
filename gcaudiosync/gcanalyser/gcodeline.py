@@ -605,12 +605,8 @@ class GCodeLine:
             P_value_found = False                   # Initialize flag to track if P value is found
 
             if command == "P":                      # P command found
-                dwell_time: float = 0.0             # Initialize the dwell time variable
 
-                if "." in number_for_command: # P value is in s
-                    dwell_time = 1000.0 * float(number_for_command)    # convert to ms
-                else:   # P value is in ms
-                    dwell_time = float(number_for_command)
+                dwell_time: float = 1000.0 * float(number_for_command)    # convert to ms
 
                 P_value_found = True                                        # Set flag that P value was found             
                 g_code_line_info.pop(g_code_line_info_index)                # Remove command and number from line_info
