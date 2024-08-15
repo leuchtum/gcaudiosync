@@ -47,12 +47,14 @@ def parse_args():
     if len(sys.argv) != 6:
         msgs = [
             "Invalid number of arguments. Expected 4 arguments.",
-            "\n",
+            "",
             "Example usage:",
-            "python plot_spectogram_with_slope.py 800 -60 10 sound/VID_20240103_125230.wav output.pngs",
+            "\t Cut at 800 Hz",
+            "\t Slope of -60 Hz/s",
+            "\t Plotting 10 stripes",
             "\t Load file sound/VID_20240103_125230.wav",
             "\t Save to output.png",
-            "\n",
+            "",
             "Results in:",
             "\tpython plot_spectogram_with_slope.py 800 -60 10 sound/VID_20240103_125230.wav output.png",
         ]
