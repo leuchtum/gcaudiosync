@@ -54,7 +54,7 @@ class RefPointOptimizer:
         mask = self.build_mask(x, y, slicer)
         if self.callback is not None:
             self.callback(slicer, mask)
-        return S_reduced[mask].sum() # type: ignore
+        return S_reduced[mask].sum()  # type: ignore
 
     def optimize(
         self,

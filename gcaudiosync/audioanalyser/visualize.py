@@ -1,15 +1,9 @@
-from tkinter import font
 from typing import Any, Literal
 
-import librosa
 import matplotlib
 import matplotlib.axes
 import matplotlib.figure
-import matplotlib.pyplot as plt
-import numpy as np
 import numpy.typing as npt
-
-from gcaudiosync.audioanalyser.constants import Constants
 
 
 def add_footnote(
@@ -23,7 +17,6 @@ def add_footnote(
         ha = "right"
     ax.annotate(text, xy=xy, ha=ha, xycoords="axes fraction", va="top")
     return ax
-
 
 
 def plot_spec(
@@ -62,7 +55,7 @@ def plot_spec(
         fig = ax.get_figure()
         if fig is None:
             raise ValueError("Fig not found")
-        cbar = fig.colorbar(img,orientation="horizontal")
+        cbar = fig.colorbar(img, orientation="horizontal")
         cbar.set_label(cmap_label, size=12)
-        ax.set_xlabel("Zeit in s",fontsize=12)
-        ax.set_ylabel("Frequenz in Hz",fontsize=12)
+        ax.set_xlabel("Zeit in s", fontsize=12)
+        ax.set_ylabel("Frequenz in Hz", fontsize=12)
