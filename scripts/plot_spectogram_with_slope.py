@@ -32,8 +32,7 @@ def parse_args():
         Load file sound/VID_20240103_125230.wav
         Save to output.png
     Results in:
-        python plot_spectogram_with_slope.py 800 -60 10
-        sound/VID_20240103_125230.wav output.png
+        python plot_spectogram_with_slope.py 800 -60 10 sound/VID_20240103_125230.wav output.png
     """
 
     if debugger_is_active():
@@ -163,7 +162,7 @@ def main():
     plt.xlim(0, consts.t_max)
     plt.ylim(0, load_hz_bound())
     plt.tight_layout()
-    fig.savefig(load_out_file(), format="png", dpi=400)
+    fig.savefig(load_out_file(), format="png", dpi=600)
 
 
 if __name__ == "__main__":
