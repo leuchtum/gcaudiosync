@@ -152,7 +152,7 @@ def main():
         cmap="viridis",
     )
 
-    points = np.linspace(0, consts.t_max, load_stripes() + 1)
+    points = np.linspace(0, consts.t_max, load_stripes())
 
     y_start = 0 if load_slope() >= 0 else load_hz_bound()
     y_end = load_hz_bound() if load_slope() >= 0 else 0
