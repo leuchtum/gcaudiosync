@@ -14,12 +14,14 @@ pandas = "^2"
 pydantic = "^2"
 python = "^3.11"
 scipy = "^1"
+tqdm = "^4.66.4"
 
 [tool.poetry.group.dev.dependencies]
 bump2version = "^1"
 mypy = "^1"
 pytest-cov = "^4"
 ruff = "^0"
+types-tqdm = "^4.66.0.20240417"
 
 [build-system]
 build-backend = "poetry.core.masonry.api"
