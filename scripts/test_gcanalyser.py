@@ -1,5 +1,6 @@
 from pathlib import Path
 
+# Import the G-Code-Analyser
 from gcaudiosync.gcanalyser.gcanalyser import GCodeAnalyser
 
 # Links to the test-files
