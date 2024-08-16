@@ -3,6 +3,8 @@
 ; Empty lines will be ignored
 ; NXXXX (ine number) before the following g-code lines is allowed
 ; The S-value of the snapshot shoult be a number that is not shown up in the rest of the g-code
-G04 P500
-M03 S66
-G4 P3.
+; If the snapshot is a special frequency of the spindle, make shure, that the spindle comes to a 
+; complete stop before and after that specific frequency!
+
+M12345 ; Das ist der M-Befehl für eine Hupe
+

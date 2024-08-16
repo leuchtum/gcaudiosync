@@ -37,3 +37,5 @@ while True:
         print(f"{Jahreszahl} ist ein Schaltjahr.")
     else:
         print(f"{Jahreszahl} ist kein Schaltjahr.")
+
+        
