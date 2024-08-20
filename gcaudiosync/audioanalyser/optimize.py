@@ -33,7 +33,7 @@ class RefPointOptimizer:
         self.use_1st_harmonic = use_1st_harmonic
         self.callback = callback
 
-    def build_mask(
+    def _build_mask(
         self, x: npt.NDArray[np.float64], y: npt.NDArray[np.float64], slicer: Slicer
     ) -> npt.NDArray[np.bool_]:
         self.param_form_func.set_ref_points(x, y)
@@ -44,20 +44,21 @@ class RefPointOptimizer:
         mask_1st_harmonic = self.mask_fac.build_binary_mask(2 * form, slicer)
         return mask_freq | mask_1st_harmonic
 
-    def determine_score(
+    def _determine_score(
         self,
         x: npt.NDArray[np.float64],
         y: npt.NDArray[np.float64],
         S_reduced: npt.NDArray[np.float32],
         slicer: Slicer,
     ) -> float:
-        mask = self.build_mask(x, y, slicer)
+        mask = self._build_mask(x, y, slicer)
         if self.callback is not None:
             self.callback(slicer, mask)
         return S_reduced[mask].sum()  # type: ignore
 
-    def optimize(
+    def _optimize(
         self,
+        *,
         x_proposed: npt.NDArray[np.float64],
         y_proposed: npt.NDArray[np.float64],
         n: int,
@@ -66,7 +67,7 @@ class RefPointOptimizer:
         scores = np.empty(n, dtype=np.float64)
         S_reduced = self.S[slicer.matrix_slice]
         for i in tqdm.tqdm(range(n)):
-            scores[i] = self.determine_score(
+            scores[i] = self._determine_score(
                 x_proposed[i, :],
                 y_proposed[i, :],
                 S_reduced,
@@ -95,7 +96,12 @@ class RefPointOptimizer:
 
         slicer = self.slicer_fac.build(ValueSlicerConfig(from_x=xi_lb, to_x=xi_ub))
 
-        return self.optimize(x_proposed, y_proposed, n, slicer)
+        return self._optimize(
+            x_proposed=x_proposed,
+            y_proposed=y_proposed,
+            n=n,
+            slicer=slicer,
+        )
 
     def optimize_yi(
         self,
@@ -118,4 +124,34 @@ class RefPointOptimizer:
 
         slicer = self.slicer_fac.build(ValueSlicerConfig(from_y=yi_lb, to_y=yi_ub))
 
-        return self.optimize(x_proposed, y_proposed, n, slicer)
+        return self._optimize(
+            x_proposed=x_proposed,
+            y_proposed=y_proposed,
+            n=n,
+            slicer=slicer,
+        )
+
+    def optimize_all_x(
+        self,
+        x: npt.NDArray[np.float64],
+        y: npt.NDArray[np.float64],
+        resolution: int,
+    ) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
+        diff_last_elements = x[-1] - x[-2]
+
+        n = int(diff_last_elements / self.dx * resolution)
+
+        x_proposed = np.linspace(x, x + diff_last_elements, n)
+        x_proposed[:, 0] = x[0]
+        x_proposed[:, -1] = x[-1]
+
+        y_proposed = np.tile(y, (n, 1))
+
+        slicer = self.slicer_fac.build()
+
+        return self._optimize(
+            x_proposed=x_proposed,
+            y_proposed=y_proposed,
+            n=n,
+            slicer=slicer,
+        )
