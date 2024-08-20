@@ -66,8 +66,8 @@ class ToolPathGenerator:
             self.tool_path_Y.append(current_position_linear_axes[1])
             self.tool_path_Z.append(current_position_linear_axes[2])
         
-    # plot tool path version Timo
-    def plot_tool_path_Timo(self):
+    # plot tool path version Haas
+    def plot_tool_path_Haas(self):
         
         # set limits of axes
         min_X = min(self.tool_path_X) - 20
@@ -202,8 +202,8 @@ class ToolPathGenerator:
 
         plt.show()
 
-    # plot tool path version Daniel
-    def plot_tool_path_Daniel(self):
+    # plot tool path version Mueller
+    def plot_tool_path_Mueller(self):
         
         # set limits of axes
         min_X = min(self.tool_path_X) - 20
@@ -337,3 +337,5 @@ class ToolPathGenerator:
                                       interval = self.delta_time)
 
         plt.show()
+
+        # Bitte noch das abspeichern hinzufuegen

@@ -43,5 +43,5 @@ G_Code_Analyser.analyse(src_path_1)
 
 # Generate and plot toolpath
 G_Code_Analyser.generate_tool_path(fps = 10)
-G_Code_Analyser.plot_tool_path(version = "Timo")
+G_Code_Analyser.plot_tool_path(version = "Haas")
 

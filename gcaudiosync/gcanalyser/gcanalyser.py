@@ -176,19 +176,19 @@ class GCodeAnalyser:
         Parameters:
         -----------
         version: str
-            Version of the plot. Available: Timo, Daniel
+            Version of the plot. Available: Haas, Mueller
 
         Notes:
         ------
         This method instructs the Tool_Path_Generator to plot the tool path
         based on the analyzed G-code and generated tool paths.
         """
-        
+
         # Inform the Tool_Path_Generator to plot the tool path
-        if version == "Timo":
-            self.Tool_Path_Generator.plot_tool_path_Timo()
-        elif version == "Daniel":
-            self.Tool_Path_Generator.plot_tool_path_Daniel()
+        if version == "Haas":
+            self.Tool_Path_Generator.plot_tool_path_Haas()
+        elif version == "Mueller":
+            self.Tool_Path_Generator.plot_tool_path_Mueller()
 
     def set_start_time_and_total_time(self, 
                                       start_time: float,
