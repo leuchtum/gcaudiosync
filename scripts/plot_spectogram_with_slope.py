@@ -1,12 +1,11 @@
-from pathlib import Path
 import sys
+from pathlib import Path
 
 import numpy as np
 from matplotlib import pyplot as plt
 from sklearn.preprocessing import MinMaxScaler
 
 from gcaudiosync.audioanalyser.constants import Constants
-
 from gcaudiosync.audioanalyser.io import RawRecording
 from gcaudiosync.audioanalyser.signalprocessing import LazyProcessedRecording
 from gcaudiosync.audioanalyser.slicer import SlicerFactory, ValueSlicerConfig
@@ -108,12 +107,14 @@ def main():
     Returns:
     None
     """
-    # Rest of the code...
+    # Loading the file
     print("Loading file...")
     rr = RawRecording.from_file(load_in_file())
 
+    # Initializing the constants
     consts = Constants(rr.samplerate, rr.data)
 
+    # Processing the recording
     pr = LazyProcessedRecording(
         rr.data,
         n_fft=consts.n_fft,
@@ -121,6 +122,9 @@ def main():
         win_length=consts.win_length,
     )
 
+    # Get a slicer factory object. This will factory will be invoked to create a
+    # slicer object. The slicer object will be used to slice the spectrogram
+    # matrix. Here we slice the frequency in the interval [0, hz_bound].
     slicer_fac = SlicerFactory(
         n_x=consts.n_time,
         n_y=consts.n_freq,
@@ -132,13 +136,16 @@ def main():
         ),
     )
 
+    # Create a slicer object
     slicer = slicer_fac.build()
 
+    # Get the sliced spectrogram matrix and normalize it
     S = pr.S_db()[slicer.matrix_slice]
     scaler = MinMaxScaler()
     scaler.fit(S)
     S = scaler.transform(S)
 
+    # Plot the spectrogram
     print("Plotting...")
     fig, ax = plt.subplots(figsize=(8, 5))
     plot_spec(
@@ -152,15 +159,17 @@ def main():
         cmap="viridis",
     )
 
+    # Helper arrays for the slope
     points = np.linspace(0, consts.t_max, load_stripes())
-
     y_start = 0 if load_slope() >= 0 else load_hz_bound()
     y_end = load_hz_bound() if load_slope() >= 0 else 0
 
+    # Plot the slopes
     for x_start in points:
         x_end = x_start + (y_end - y_start) / load_slope()
         ax.plot([x_start, x_end], [y_start, y_end], color="white", linewidth=0.5)
 
+    # Save the plot
     plt.xlim(0, consts.t_max)
     plt.ylim(0, load_hz_bound())
     plt.tight_layout()
