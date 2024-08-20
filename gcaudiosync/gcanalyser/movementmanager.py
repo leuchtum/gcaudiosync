@@ -1,14 +1,14 @@
 import copy
-import numpy as np
-
 from typing import List, Tuple
 
-import gcaudiosync.gcanalyser.vectorfunctions as vecfunc
+import numpy as np
 
+import gcaudiosync.gcanalyser.vectorfunctions as vecfunc
 from gcaudiosync.gcanalyser.cncparameter import CNCParameter
 from gcaudiosync.gcanalyser.cncstatus import CNCStatus
 from gcaudiosync.gcanalyser.movement import Movement
 from gcaudiosync.gcanalyser.toolpathinformation import ToolPathInformation
+
 
 class MovementManager:
     """
@@ -483,6 +483,8 @@ class MovementManager:
 
                 if break_if_dynamic_status_nok:
                     return
+
+        self.movements[-1].start_time = total_duration
 
         self.total_duration = total_duration
 
