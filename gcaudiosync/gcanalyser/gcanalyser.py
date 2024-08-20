@@ -169,17 +169,26 @@ class GCodeAnalyser:
                                                           Movement_Manager = self.Movement_Manager, 
                                                           g_code = self.g_code)
 
-    def plot_tool_path(self) -> None:
+    def plot_tool_path(self, version: str) -> None:
         """
         Plots the tool path using the Tool_Path_Generator.
+
+        Parameters:
+        -----------
+        version: str
+            Version of the plot. Available: Timo, Daniel
 
         Notes:
         ------
         This method instructs the Tool_Path_Generator to plot the tool path
         based on the analyzed G-code and generated tool paths.
         """
+        
         # Inform the Tool_Path_Generator to plot the tool path
-        self.Tool_Path_Generator.plot_tool_path()
+        if version == "Timo":
+            self.Tool_Path_Generator.plot_tool_path_Timo()
+        elif version == "Daniel":
+            self.Tool_Path_Generator.plot_tool_path_Daniel()
 
     def set_start_time_and_total_time(self, 
                                       start_time: float,
