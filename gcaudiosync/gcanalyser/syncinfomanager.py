@@ -412,7 +412,7 @@ class SyncInfoManager:
         Print the information of the snapshots
         """
 
-        print(f"Total: {len(self.snapshot_information)} snapshots+")
+        print(f"Total: {len(self.snapshot_information)} snapshots")
 
         for snapshot_info in self.snapshot_information:
             snapshot_info.info()
