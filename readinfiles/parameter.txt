@@ -22,6 +22,7 @@ max_deceleration_Z 4       ; max deceleration of Z-Axis in m/s^2
 default_pause_time 5000    ; Default time for a pause
 tool_change_time 3000      ; Time for a tool change in ms
 
+; M-commands for the CNC:
 command_abort                       0
 command_quit                        1
 command_progabort                   2
