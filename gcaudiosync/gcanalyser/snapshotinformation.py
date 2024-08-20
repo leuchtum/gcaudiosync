@@ -3,6 +3,13 @@ class SnapshotInformation:
     # Constructor
     def __init__(self, 
                  g_code_line_index_start: int):
+        """
+        Initializes the SnapshotInformation object.
+
+        Args:
+            g_code_line_index_start: int
+                Line number of the G-Code line in which the snapshot starts.
+        """
     
         self.g_code_line_index_start: int = g_code_line_index_start
         self.expected_time_start: float = 0.0

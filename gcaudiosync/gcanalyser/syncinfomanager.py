@@ -12,13 +12,53 @@ from gcaudiosync.gcanalyser.snapshotinformation import SnapshotInformation
 
 
 class SyncInfoManager:
+    """
+    Manages information extracted from G-code files related to synchronization tasks.
+
+    Attributes:
+        tool_change_information: List[int]
+            List of line indices where tool changes occur.
+        cooling_information: List
+            List containing information about coolant activation/deactivation (TODO: Not currently implemented).
+        frequency_information: List[FrequencyInformation] 
+            List of FrequencyInformation objects storing details about spindle speed segments.
+        pause_information: List
+            List containing information about pauses (line index, type, timestamp - partially implemented).
+        snapshot_information: List[SnapshotInformation]
+            List of SnapshotInformation objects containing details about identified snapshots.
+        snapshot_length: int
+            Number of lines in the snapshot G-code definition.
+        snapshot_frequency: int
+            Spindle speed (Hz) extracted from the snapshot G-code definition.
+        g_code_line_index_with_start_of_snapshot: List[int]
+            List of line indices where snapshots begin in the main G-code file.
+        last_spindle_status: int
+            Integer representing the last known spindle status (0: off, 3: clockwise, 4: counter-clockwise).
+        f: int:
+            The current spindle speed (Hz).
+        current_g_code_line_index: int
+            The current line index being processed in the main G-code file.
+
+    """
 
     # Constructor
     def __init__(self,
                  snapshot_src: str,
                  Line_Extractor: LineExtractor,
                  CNC_Parameter: CNCParameter):
-        
+        """
+        Initializes the CNCStatus SyncInfoManager.
+
+        Parameters:
+        ----------
+        snapshot_src: str
+            Path to the G-code file containing snapshot definitions.
+        Line_Extractor: LineExtractor
+            An instance of a class used to extract information from individual G-code lines.
+        CNC_Parameter: CNCParameter
+            An instance of a class holding parameters related to the CNC machine (e.g., S value limits).
+        """
+
         self.Line_Extractor = Line_Extractor
 
         # Generate all the Lists with the information
@@ -83,6 +123,16 @@ class SyncInfoManager:
     def check_start_of_snapshot(self,
                                 g_code_line_index: int,
                                 g_code_lines_for_snapshot: List[str]) -> bool:
+        """
+        Checks if the given g-code line starts a snapshot.
+
+        Args:
+            g_code_line_index (int): Index of the current g-code line.
+            g_code_lines_for_snapshot (List[str]): List of g-code lines to compare with the snapshot definition.
+
+        Returns:
+            bool: True if the line starts a snapshot, False otherwise.
+        """
         
         # Iterate through all lines of the snapshot
         for snapshot_line_index in range(self.snapshot_length):
@@ -116,7 +166,10 @@ class SyncInfoManager:
     def add_snapshot(self,
                      g_code_line_index: int) -> None:
         """
-        Adds a snapshot that appears in a g-code-line
+        Adds a snapshot that appears in a g-code-line.
+
+        Args:
+            g_code_line_index (int): Index of the g-code line where the snapshot starts.
         """
 
         new_snapshot = SnapshotInformation(g_code_line_index_start = g_code_line_index)
@@ -128,9 +181,14 @@ class SyncInfoManager:
     def new_Tool(self, 
                  g_code_line_index: int):
 
-        # for debugging
-        # self.counter += 1
-        # print("Tool_Change_Manager call no. " + str(self.counter) + ": New Tool called in line " + str(index) + ": Tool N. " + str(new_tool_number))
+        """
+        Adds a tool change.
+
+        Parameters:
+        -----------
+        g_code_line_index : int
+            The current line index in the G-code.
+        """
 
         self.tool_change_information.append(g_code_line_index)
 
@@ -238,9 +296,16 @@ class SyncInfoManager:
                   g_code_line_index: int, 
                   time: int):
 
-        # for debugging
-        # self.counter += 1
-        # print("Pause_Manager call no. " + str(self.counter) + ": Dewll was added in line " + str(index) + ": " + str(time) + " ms")
+        """
+        Adds a dwell time.
+
+        Parameters:
+        -----------
+        g_code_line_index : int
+            The current line index in the G-code.
+        time : int
+            Time of the dwell in ms.
+        """
 
         self.pause_information.append(np.array([g_code_line_index, 4, 0, time]))
 
@@ -248,10 +313,16 @@ class SyncInfoManager:
                   g_code_line_index: int, 
                   kind_of_pause: int):
 
-        # for debuging
-        # self.counter += 1
-        # print("Pause_Manager call no. " + str(self.counter) + ": Pause " + str(kind_of_pause) + " was added in in line " + str(index))
+        """
+        Adds a pause.
 
+        Parameters:
+        -----------
+        g_code_line_index : int
+            The current line index in the G-code.
+        kind_of_pause : int
+            Kind of pause used here
+        """
         # here it might be good to inform the frequancy manager that the spindle could stand still. not implemented jet
         # or frequency-manager looks over all pauses at the end.
 
@@ -262,7 +333,15 @@ class SyncInfoManager:
 
     def update(self,
                time_stamps: List[Tuple[int, int]]) -> None:
-        
+        """
+        Updates all time stamps.
+
+        Parameters:
+        -----------
+        time_stamps : List[Tuple[int, int]]
+            List with Toupels of the G-Code-line and the timestamp
+        """
+
         time_stamp_index: int = 0
 
         # Update frequencies
@@ -342,9 +421,22 @@ class SyncInfoManager:
 #####################################################################################################
 
 
-# Function that goes through a list and deletes every entity of list that starts with a ;
+
 def get_snapshot(g_code_list: List[str]) -> List[str]:
+    """
+    Function to get the G-Code of the snapshot.
+
+    Parameters:
+    ----------
+        g_code_list : List[str]
+            List of G-Code-Lines of the snapshot-file.
     
+    Retruns:
+    -------
+        List[str]
+            Useable list of G-Code lines containing the snapshot.
+    """
+
     g_code_line_index = 0
 
     # Remove all spaces and \n

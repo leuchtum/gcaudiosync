@@ -5,11 +5,33 @@ import matplotlib.animation as animation
 from typing import List
 
 from gcaudiosync.gcanalyser.movementmanager import MovementManager
-from gcaudiosync.gcanalyser.toolpathinformation import ToolPathInformation
 
 class ToolPathGenerator:
+    """
+    Generates and visualizes the toolpath of a CNC machine.
+
+    Attributes:
+        visible_tool_path_length (int): Number of visible points on the toolpath for animation.
+        string_length (int): Length of the string used to display G-code commands.
+        active_g_code_line_index (int): Index of the currently active G-code line.
+        delta_time (int): Time between frames in milliseconds.
+        fps (float): Frames per second for the animation.
+        total_time (int): Total duration of the toolpath in milliseconds.
+        nof_frames (int): Total number of frames in the animation.
+        tool_path_time (List[float]): List of timestamps for each toolpath point.
+        tool_path_X (List[float]): List of X coordinates for each toolpath point.
+        tool_path_Y (List[float]): List of Y coordinates for each toolpath point.
+        tool_path_Z (List[float]): List of Z coordinates for each toolpath point.
+        line_index (List[int]): List of G-code line indices corresponding to each toolpath point.
+        g_code (List[str]): List of G-code commands.
+        movement_type (List[int]): List of movement types for each toolpath point (TODO: define movement types).
+    """
 
     def __init__(self):
+        """
+        Initializes the ToolPathGenerator object with default values.
+        """
+
         self.visible_tool_path_length = 200          # visible points of the tool path
         self.string_length = 80
 
@@ -31,6 +53,14 @@ class ToolPathGenerator:
                                  fps: int, 
                                  Movement_Manager: MovementManager, 
                                  g_code: list):
+        """
+        Generates the complete toolpath data.
+
+        Args:
+            fps (int): Frames per second for the animation.
+            Movement_Manager (MovementManager): Object containing toolpath information.
+            g_code (list): List of G-code commands.
+        """
 
         # save parameters
         self.fps = fps
@@ -68,7 +98,10 @@ class ToolPathGenerator:
         
     # plot tool path version Haas
     def plot_tool_path_Haas(self):
-        
+        """
+        Generates a temporary plot of the toolpath.
+        """
+
         # set limits of axes
         min_X = min(self.tool_path_X) - 20
         max_X = max(self.tool_path_X) + 20
@@ -204,7 +237,10 @@ class ToolPathGenerator:
 
     # plot tool path version Mueller
     def plot_tool_path_Mueller(self):
-        
+        """
+        Generates a storable plot of the toolpath.
+        """
+
         # set limits of axes
         min_X = min(self.tool_path_X) - 20
         max_X = max(self.tool_path_X) + 20

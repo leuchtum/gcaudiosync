@@ -2,13 +2,30 @@ import numpy as np
 import copy
 
 class RotationAxes:
+    """
+    Represents the rotationsl axes in a CNC machine.
 
+    This class stores the A, B, and C coordinates of the axes in degrees.
+
+    Attributes:
+        A (float): The A-value.
+        B (float): The B-value.
+        C (float): The C-value.
+    """
 
     # Constructor
     def __init__(self,
                  A: float = 0.0,
                  B: float = 0.0,
                  C: float = 0.0):
+        """
+        Initializes the RotationAxes object.
+
+        Args:
+            A (float, optional): The A-value. Defaults to 0.0.
+            B (float, optional): The B-value. Defaults to 0.0.
+            C (float, optional): The C-value. Defaults to 0.0.
+        """
         
         self.A: float = A
         self.B: float = B

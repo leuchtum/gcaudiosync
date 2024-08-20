@@ -50,7 +50,16 @@ def remove_comments_in_brackets(line: str) -> str:
 
 # Function to find a alpha combo in front of a str
 def find_alpha_combo(line: str):
-    
+    '''
+    Findes a combination of letters in a string
+
+    Args:
+        line: String
+
+    Retruns:
+        combination of letters
+    '''
+
     # Check input
     if len(line) == 0:
         raise Exception("Line is empty")
@@ -79,7 +88,16 @@ def find_alpha_combo(line: str):
     
 # Function to find a number in fromt of a str
 def find_number(line: str):
-    
+    '''
+    Findes a number in a string
+
+    Args:
+        line: String
+
+    Retruns:
+        number
+    '''
+
     valid_characters = "0123456789+-."                                  # valid characters
 
     # check input
