@@ -1,9 +1,7 @@
 import copy
-
 from typing import List
 
 import gcaudiosync.gcanalyser.filefunctions as filefunc
-
 from gcaudiosync.gcanalyser.cncparameter import CNCParameter
 from gcaudiosync.gcanalyser.cncstatus import CNCStatus
 from gcaudiosync.gcanalyser.gcodeline import GCodeLine
@@ -11,6 +9,7 @@ from gcaudiosync.gcanalyser.lineextractor import LineExtractor
 from gcaudiosync.gcanalyser.movementmanager import MovementManager
 from gcaudiosync.gcanalyser.syncinfomanager import SyncInfoManager
 from gcaudiosync.gcanalyser.toolpathgenerator import ToolPathGenerator
+
 
 class GCodeAnalyser:
     """

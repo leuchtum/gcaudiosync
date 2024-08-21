@@ -228,6 +228,8 @@ class MovementManager:
 
         # Get last movement
         last_movement: Movement = copy.deepcopy(self.movements[-1]) 
+        last_movement.start_time_is_adjustable = True
+        last_movement.time_is_adjustable = True
 
         # create new movement
         new_movement: Movement = Movement(g_code_line_index = g_code_line_index, 
@@ -247,7 +249,7 @@ class MovementManager:
 
         # Set time and set flags
         new_movement.duration = time      
-        new_movement.time_is_adjustable = False             
+        #new_movement.time_is_adjustable = False             
         
         # Add exact stop to last movement
         self.movements[-1].do_exact_stop()                  
@@ -488,6 +490,11 @@ class MovementManager:
 
         self.total_duration = total_duration
 
+    def set_start_time_and_duration_old(self, 
+                                    new_start_time: float,
+                                    new_total_duration: float) -> int: 
+        pass
+
     def set_start_time_and_duration(self, 
                                     new_start_time: float,
                                     new_total_duration: float) -> int: 
@@ -511,7 +518,7 @@ class MovementManager:
         """
 
         if self.total_duration <= 0:
-            return 1    # New total time is 0 or less
+            #return 1    # New total time is 0 or less
             raise Exception(f"Something went wrong: expected total time <= 0")  # Just in case someone wants to add exception handling
 
         # Get nonadjustable and adjustable time
@@ -527,7 +534,7 @@ class MovementManager:
 
         # Error case
         if new_adjustable_time <= 0:
-            return 2    # New total time is too short
+            #return 2    # New total time is too short
             raise Exception(f"Something went wrong: new total time is too short")  # Just in case someone wants to add exception handling
         
         # Compute time-factor for nonadjustable times

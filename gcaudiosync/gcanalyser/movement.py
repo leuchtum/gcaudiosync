@@ -1,13 +1,14 @@
-import numpy as np
 import copy
 import math
 
-import gcaudiosync.gcanalyser.vectorfunctions as vecfunc
+import numpy as np
 
+import gcaudiosync.gcanalyser.vectorfunctions as vecfunc
 from gcaudiosync.gcanalyser.arcinformation import ArcInformation
 from gcaudiosync.gcanalyser.cncparameter import CNCParameter
 from gcaudiosync.gcanalyser.linearaxes import LinearAxes
 from gcaudiosync.gcanalyser.rotationaxes import RotationAxes
+
 
 class Movement:
     """
@@ -132,8 +133,8 @@ class Movement:
             self.compute_optimal_end_vector_linear_axes()
             self.compute_optimal_end_vector_rotation()          # Not implemented
 
-        else:
-            self.time_is_adjustable = False
+        #else:
+            #self.time_is_adjustable = False
 
     #################################################################################################
     # Methods
