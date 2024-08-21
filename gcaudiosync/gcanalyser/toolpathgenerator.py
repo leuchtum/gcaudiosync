@@ -465,7 +465,6 @@ class ToolPathGenerator:
 
 
 class AlternativeToolPathAnimator:
-    
     def __init__(
         self,
         movement_manager: MovementManager,
@@ -517,7 +516,7 @@ class AlternativeToolPathAnimator:
         # Setup info axes for the plot
         ax_info.axis("off")
         ax_info.set_xlim(0, 1)
-        ax_info.set_ylim(-3, 2*self.n_texts + 0.5)
+        ax_info.set_ylim(-3, 2 * self.n_texts + 0.5)
 
         # Create the tool path line
         (self.tool_path_line,) = ax_tool.plot([], [])
@@ -534,8 +533,7 @@ class AlternativeToolPathAnimator:
             color="gray",
         )
         self.texts = [
-            ax_info.text(0, i, "", **extra_args)
-            for i in range(2*self.n_texts + 1)
+            ax_info.text(0, i, "", **extra_args) for i in range(2 * self.n_texts + 1)
         ]
         self.texts[self.n_texts].set_color("red")
 
@@ -544,16 +542,16 @@ class AlternativeToolPathAnimator:
             0,
             -1,
             "",
-            #transform=ax_tool.transAxes,
+            # transform=ax_tool.transAxes,
             verticalalignment="top",
             bbox=dict(boxstyle="round", facecolor="grey", alpha=0.15),
         )
 
     def _get_position_linear_axes_save(self, t_ms: float) -> float:
-            try:
-                return self.mm.get_tool_path_information(t_ms).position_linear_axes
-            except Exception:
-                return np.nan, np.nan, np.nan
+        try:
+            return self.mm.get_tool_path_information(t_ms).position_linear_axes
+        except Exception:
+            return np.nan, np.nan, np.nan
 
     def _gen_text(self, t_ms: float, i: int) -> str:
         try:
