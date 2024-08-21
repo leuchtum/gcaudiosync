@@ -12,7 +12,7 @@ class RawRecording:
     data: npt.NDArray[np.float32]
     samplerate: float
     duration: float
-    
+
     @classmethod
     def from_file(cls, file_path: Path, **kwargs) -> Self:
         file_sr = librosa.get_samplerate(file_path)
@@ -23,4 +23,4 @@ class RawRecording:
             msg = "Given duration is greater than the duration of the file"
             raise ValueError(msg)
         data, samplerate = librosa.load(file_path, **kwargs)
-        return cls(data=data, samplerate=samplerate, duration = file_duration)
+        return cls(data=data, samplerate=samplerate, duration=file_duration)

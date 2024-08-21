@@ -34,7 +34,7 @@ class LazyProcessedRecording:
         if not hasattr(self, "_S_sqrt"):
             self._S_sqrt = np.sqrt(self.S())
         return self._S_sqrt
-    
+
     def P(self) -> npt.NDArray[np.complex64]:
         if not hasattr(self, "_P"):
             self._build_S_and_P()
