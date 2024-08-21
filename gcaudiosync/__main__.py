@@ -1,3 +1,23 @@
+"""
+This is the main entry point for the gcaudiosync module. It produces plots and a
+video from the given input parameters. The main function `main()` reads in the
+audio file and creates all the necessary  objects. It then analyses the G-Code
+and converts the frequency information into. The function `plot_spec_raw()`
+plots the base spectrogram and saves the figure if an outfile is specified. The
+function `plot_spec_with_param_func()` plots the base spectrogram and the
+guessed times and frequencies. It also saves the figure if an outfile is
+specified. The function `debugger_is_active()` checks if the debugger is
+currently active. 
+
+The function `parse_args()` parses the command line arguments or uses default
+values if the debugger is active. The main function `main()` calls the necessary
+functions to perform pre-optimization and optimization of the guessed times and
+frequencies. It also plots and saves the spectrogram after pre-optimization.
+
+Note: This note only provides an overview of the functionality of the code. For
+more detailed information, please refer to the comments within the code.
+"""
+
 import sys
 from pathlib import Path
 
@@ -15,7 +35,7 @@ from gcaudiosync.audioanalyser.piecewise import (
     BendedSegmentBuilder,
     ParametrisableFormFunc,
 )
-from gcaudiosync.audioanalyser.signalprocessing import LazyProcessedRecording
+from gcaudiosync.audioanalyser.signalprocessing import ProcessedRecording
 from gcaudiosync.audioanalyser.slicer import (
     IndexSlicerConfig,
     Slicer,
@@ -168,7 +188,7 @@ def main():
     print("Reading in audio file...")
     rr = RawRecording.from_file(args["audio_file"])
     consts = Constants(rr.samplerate, rr.data)
-    pr = LazyProcessedRecording(
+    pr = ProcessedRecording(
         rr.data,
         n_fft=consts.n_fft,
         hop_length=consts.hop_length,
