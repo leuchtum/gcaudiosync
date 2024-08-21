@@ -10,6 +10,8 @@ from gcaudiosync.audioanalyser.slicer import Slicer, SlicerFactory, ValueSlicerC
 
 
 class RefPointOptimizer:
+    """Class for optimizing reference points."""
+
     def __init__(
         self,
         *,
@@ -23,6 +25,20 @@ class RefPointOptimizer:
         use_1st_harmonic: bool = True,
         callback: Callable[[Slicer, npt.NDArray[np.bool_]], None] | None = None,
     ) -> None:
+        """
+        Initializes the Optimize object.
+        Parameters:
+        - param_form_func: The parametrisable form function.
+        - mask_factory: The mask factory.
+        - slicer_factory: The slicer factory.
+        - x_sample: The x sample.
+        - S: The S array.
+        - dx: The dx value.
+        - dy: The dy value.
+        - use_1st_harmonic: Whether to use the 1st harmonic. Default is True.
+        - callback: The callback function. Default is None.
+        """
+
         self.param_form_func = param_form_func
         self.x_sample = x_sample
         self.mask_fac = mask_factory
@@ -36,6 +52,7 @@ class RefPointOptimizer:
     def _build_mask(
         self, x: npt.NDArray[np.float64], y: npt.NDArray[np.float64], slicer: Slicer
     ) -> npt.NDArray[np.bool_]:
+        "Helper function to build a mask."
         self.param_form_func.set_ref_points(x, y)
         form = self.param_form_func.get_parametrized()(self.x_sample[slicer.x_slice])
         mask_freq = self.mask_fac.build_binary_mask(form, slicer)
@@ -51,6 +68,7 @@ class RefPointOptimizer:
         S_reduced: npt.NDArray[np.float32],
         slicer: Slicer,
     ) -> float:
+        "Helper function to determine the score."
         mask = self._build_mask(x, y, slicer)
         if self.callback is not None:
             self.callback(slicer, mask)
@@ -64,6 +82,7 @@ class RefPointOptimizer:
         n: int,
         slicer: Slicer,
     ) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
+        "Helper function to optimize."
         scores = np.empty(n, dtype=np.float64)
         S_reduced = self.S[slicer.matrix_slice]
         for i in tqdm.tqdm(range(n)):
@@ -84,6 +103,7 @@ class RefPointOptimizer:
         xi_ub: float,
         resolution: int,
     ) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
+        """Optimize the reference point in x direction at the given index."""
         x_lower = x.copy()
         x_upper = x.copy()
 
@@ -112,6 +132,7 @@ class RefPointOptimizer:
         yi_ub: float,
         resolution: int,
     ) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
+        """Optimize the reference point in y direction at the given index."""
         y_lower = y.copy()
         y_upper = y.copy()
 
@@ -137,6 +158,7 @@ class RefPointOptimizer:
         y: npt.NDArray[np.float64],
         resolution: int,
     ) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
+        """Optimize the reference points in x direction."""
         diff_last_elements = x[-1] - x[-2]
 
         n = int(diff_last_elements / self.dx * resolution)

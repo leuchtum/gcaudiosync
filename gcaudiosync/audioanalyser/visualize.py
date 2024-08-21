@@ -17,6 +17,7 @@ from gcaudiosync.audioanalyser.util import convert_to_idx
 def add_footnote(
     ax: matplotlib.axes.Axes, text: str, loc: Literal["left", "right"] = "right"
 ) -> matplotlib.axes.Axes:
+    """Helper function to add a footnote to a plot."""
     if loc == "left":
         xy = (0.0, -0.15)
         ha = "left"
@@ -39,6 +40,7 @@ def plot_spec(
     cmap: str = "binary",
     title: str | None = None,
 ) -> None:
+    """ Plot the spectrogram. """
     extent = (
         time_min - 0.5 * time_delta,
         time_min + (X.shape[1] - 0.5) * time_delta,
@@ -73,6 +75,7 @@ def plot_spec(
 
 
 class SpectroAnimator:
+    """ Class to animate a spectrogram. """
     def __init__(
         self,
         *,
@@ -110,6 +113,7 @@ class SpectroAnimator:
         )
         slicer = self.slicer_fac.build()
 
+        # Transform and pad matrix
         scaler = MinMaxScaler()
         scaler.fit(X[slicer.matrix_slice])
 
@@ -124,18 +128,24 @@ class SpectroAnimator:
             global_slice_cfg.to_y - 0.5 * consts.f_delta,
         )
 
+        # Plot spec
         self.img = ax.imshow(
             self.prepare_matrix(0),
             aspect="auto",
             origin="lower",
             extent=extent,
         )
+
+        # Plot red center line
         ax.vlines(0, global_slice_cfg.from_y, global_slice_cfg.to_y, color="red")
+        
+        # Add labels and make it pretty
         ax.set_ylim(global_slice_cfg.from_y, global_slice_cfg.to_y)
         ax.set_xlim(-self.width / 2, self.width / 2)
         ax.set_xlabel("Zeitliche Differenz zu t0 in s")
         ax.set_ylabel("Frequenz in Hz")
 
+        # Add colorbar
         fig = ax.get_figure()
         cbar = fig.colorbar(self.img, orientation="horizontal")
         cbar.set_label("Amplitude normiert auf Maximum")

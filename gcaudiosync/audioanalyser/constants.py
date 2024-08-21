@@ -8,7 +8,20 @@ HOP_LENGTH = 2**9
 
 
 class Constants:
+    """Class that holds the constants that are relevant throughout the analysis."""
+
     def __init__(self, sr: float, data: npt.NDArray[np.float32]) -> None:
+        """
+        Initialize the AudioAnalyser object.
+
+        Parameters:
+        - sr (float): The sample rate of the audio data.
+        - data (npt.NDArray[np.float32]): The audio data.
+
+        Returns:
+        - None
+        """
+
         self.n_fft = N_FFT
         self.win_length = WIN_LENGTH
         self.hop_length = HOP_LENGTH

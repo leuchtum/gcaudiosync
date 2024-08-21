@@ -10,12 +10,15 @@ _E = TypeVar("_E", bound=np.generic, covariant=True)
 
 
 class _SlicerConfig:
+    "Main class for the slicer configuration."
+
     from_x: float | int | None = None
     to_x: float | int | None = None
     from_y: float | int | None = None
     to_y: float | int | None = None
 
     def __post_init__(self) -> None:
+        # Some checks to ensure the configuration is valid.
         if self.from_x is not None and self.to_x is not None:
             if self.from_x >= self.to_x:
                 raise ValueError("from_x must be smaller than to_x")
@@ -26,6 +29,7 @@ class _SlicerConfig:
 
 @dataclass(kw_only=True, frozen=True)
 class IndexSlicerConfig(_SlicerConfig):
+    """Class for the index slicer configuration."""
     from_x: int | None = None
     to_x: int | None = None
     from_y: int | None = None
@@ -34,6 +38,7 @@ class IndexSlicerConfig(_SlicerConfig):
 
 @dataclass(kw_only=True, frozen=True)
 class ValueSlicerConfig(_SlicerConfig):
+    """Class for the value slicer configuration."""
     from_x: float | None = None
     to_x: float | None = None
     from_y: float | None = None
@@ -46,6 +51,7 @@ class ValueSlicerConfig(_SlicerConfig):
         x_max: float,
         y_max: float,
     ) -> IndexSlicerConfig:
+        """ Convert the value slicer configuration to an index slicer configuration. """
         def convert_to_idx_if_not_none(
             z: float | None,
             z_max: float,
@@ -65,6 +71,7 @@ class ValueSlicerConfig(_SlicerConfig):
 
 @dataclass(frozen=True, kw_only=True)
 class Slicer:
+    """ Class for slicing a matrix, given the bounds of the matrix. """
     n_x: int
     n_y: int
     x_max: float
@@ -86,47 +93,11 @@ class Slicer:
     def matrix_slice(self) -> tuple[slice, slice]:
         return self.y_slice, self.x_slice
 
-    def _handle_x(self, x: npt.NDArray[_E]) -> npt.NDArray[_E]:
-        need_shape = (self.n_x,)
-        if x.shape != need_shape:
-            msg = f"x must be shape {need_shape}, got {x.shape}"
-            raise ValueError(msg)
-        return x[self.x_slice]
-
-    def _handle_y(self, y: npt.NDArray[_E]) -> npt.NDArray[_E]:
-        need_shape = (self.n_y,)
-        if y.shape != need_shape:
-            msg = f"y must be shape {need_shape}, got {y.shape}"
-            raise ValueError(msg)
-        return y[self.y_slice]
-
-    def _handle_matrix(self, matrix: npt.NDArray[_E]) -> npt.NDArray[_E]:
-        need_shape = (self.n_y, self.n_x)
-        if matrix.shape != need_shape:
-            msg = f"matrix must be shape {need_shape}, got {matrix.shape}"
-            raise ValueError(msg)
-        return matrix[self.matrix_slice]
-
-    def __call__(
-        self,
-        x: npt.NDArray[_E] | None = None,
-        y: npt.NDArray[_E] | None = None,
-        matrix: npt.NDArray[_E] | None = None,
-    ) -> npt.NDArray[_E]:
-        match (x is None, y is None, matrix is None):
-            case (False, True, True):
-                return self._handle_x(x)  # type: ignore[arg-type]
-            case (True, False, True):
-                return self._handle_y(y)  # type: ignore[arg-type]
-            case (True, True, False):
-                return self._handle_matrix(matrix)  # type: ignore[arg-type]
-            case _:
-                msg = "Exactly one of x, y or matrix must be given"
-                raise ValueError(msg)
 
 
 @dataclass(kw_only=True, frozen=True)
 class SlicerFactory:
+    """Class that builds matrix slicers from configurations."""
     n_x: int
     n_y: int
     x_max: float
@@ -134,6 +105,7 @@ class SlicerFactory:
     global_slice_cfg: IndexSlicerConfig | ValueSlicerConfig | None = None
 
     def _parse_global_slice_cfg(self) -> IndexSlicerConfig:
+        """Helper function to parse the global slice configuration."""
         if self.global_slice_cfg is None:
             return IndexSlicerConfig()
         if isinstance(self.global_slice_cfg, ValueSlicerConfig):
@@ -149,6 +121,7 @@ class SlicerFactory:
         self,
         local_slice_cfg: IndexSlicerConfig | ValueSlicerConfig | None,
     ) -> IndexSlicerConfig:
+        """Helper function to parse the local slice configuration."""
         if local_slice_cfg is None:
             return IndexSlicerConfig()
         if isinstance(local_slice_cfg, ValueSlicerConfig):
@@ -164,6 +137,10 @@ class SlicerFactory:
         self,
         local_slice_cfg: IndexSlicerConfig | ValueSlicerConfig | None = None,
     ) -> Slicer:
+        """
+        Build a slicer object for slicing a matrix. A local config can be
+        given, it will be merged with the global config.
+        """
         global_slice_cfg = self._parse_global_slice_cfg()
         local_slice_cfg = self._parse_local_slice_cfg(local_slice_cfg)
         from_x = max(

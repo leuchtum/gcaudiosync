@@ -3,7 +3,8 @@ import numpy as np
 import numpy.typing as npt
 
 
-class LazyProcessedRecording:
+class ProcessedRecording:
+    """ Class for processing audio data. """
     def __init__(
         self,
         data: npt.NDArray[np.float32],
@@ -12,6 +13,8 @@ class LazyProcessedRecording:
         hop_length: int,
         win_length: int,
     ) -> None:
+        # The main workload of this class is the Short-Time Fourier Transform,
+        # this will only be done once.
         self._D = librosa.stft(
             data,
             n_fft=n_fft,

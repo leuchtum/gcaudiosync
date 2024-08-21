@@ -14,6 +14,8 @@ _E = TypeVar("_E", bound=np.generic, covariant=True)
 
 @dataclass(frozen=True)
 class _TimeShifter:
+    """Class used to shift a signal in time, both back and forth."""
+
     shift: int
 
     def neg(self, x: npt.NDArray[_E]) -> npt.NDArray[_E]:
@@ -56,6 +58,17 @@ class MaskFactory:
     def build_binary_mask(
         self, signal: npt.NDArray[np.float64], slicer: Slicer
     ) -> npt.NDArray[np.bool_]:
+        """
+        Builds a binary mask based on the given signal and slicer.
+        Args:
+            signal (npt.NDArray[np.float64]): The input signal.
+            slicer (Slicer): The slicer object used to slice the signal.
+        Returns:
+            npt.NDArray[np.bool_]: The binary mask.
+        Raises:
+            ValueError: If the signal length does not match the slicer or the
+            time axis.
+        """
         # Slice the signal first to reduce workload
         if signal.shape[0] == self.n_time:
             sliced_signal = slicer(x=signal)
@@ -134,46 +147,3 @@ class MaskFactory:
         below = rows <= upper[:, None]
         return (above & below).T
 
-
-def sandbox() -> None:
-    x_max = 20
-    n_x = 2000
-
-    y_max = 15000
-    n_y = 2000
-
-    slicer_fac = SlicerFactory(
-        n_x=n_x,
-        n_y=n_y,
-        x_max=x_max,
-        y_max=y_max,
-        global_slice_cfg=ValueSlicerConfig(from_y=5000, to_y=11000),
-    )
-
-    slicer = slicer_fac.build(ValueSlicerConfig(from_x=1, to_x=4))
-
-    x = np.linspace(0, x_max, n_x, endpoint=False)
-    y = 1000 * abs(x - x.mean()) + 500
-    y[200:300] = 1000
-
-    mask_fac = MaskFactory(
-        n_time=n_x,
-        n_freq=n_y,
-        freq_max=y_max,
-        time_max=x_max,
-        time_window=0.5,
-        freq_window=100,
-    )
-
-    image = -1 * np.ones((n_y, n_x), dtype=np.float64)
-    mask = mask_fac.build_binary_mask(y, slicer).astype(np.float64)
-    image[slicer.matrix_slice] = mask
-
-    _, ax = plt.subplots()
-    plot_spec(image, 0, 0, x_max / n_x, y_max / n_y, ax)
-    plt.plot(x, y, color="red")
-    plt.show()
-
-
-if __name__ == "__main__":
-    sandbox()
