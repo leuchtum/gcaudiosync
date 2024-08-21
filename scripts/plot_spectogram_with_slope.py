@@ -7,7 +7,7 @@ from sklearn.preprocessing import MinMaxScaler
 
 from gcaudiosync.audioanalyser.constants import Constants
 from gcaudiosync.audioanalyser.io import RawRecording
-from gcaudiosync.audioanalyser.signalprocessing import LazyProcessedRecording
+from gcaudiosync.audioanalyser.signalprocessing import ProcessedRecording
 from gcaudiosync.audioanalyser.slicer import SlicerFactory, ValueSlicerConfig
 from gcaudiosync.audioanalyser.visualize import plot_spec
 
@@ -115,7 +115,7 @@ def main():
     consts = Constants(rr.samplerate, rr.data)
 
     # Processing the recording
-    pr = LazyProcessedRecording(
+    pr = ProcessedRecording(
         rr.data,
         n_fft=consts.n_fft,
         hop_length=consts.hop_length,

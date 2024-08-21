@@ -5,14 +5,14 @@ from matplotlib import pyplot as plt
 
 from gcaudiosync.audioanalyser.constants import Constants
 from gcaudiosync.audioanalyser.io import RawRecording
-from gcaudiosync.audioanalyser.signalprocessing import LazyProcessedRecording
+from gcaudiosync.audioanalyser.signalprocessing import ProcessedRecording
 from gcaudiosync.audioanalyser.visualize import add_footnote, spectrogram
 
 
 def run(file: Path):
     rr = RawRecording.from_file(file)
     consts = Constants(rr.samplerate, rr.data)
-    pr = LazyProcessedRecording(
+    pr = ProcessedRecording(
         rr.data,
         n_fft=consts.n_fft,
         hop_length=consts.hop_length,
