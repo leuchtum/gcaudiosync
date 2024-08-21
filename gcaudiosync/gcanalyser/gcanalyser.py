@@ -168,14 +168,9 @@ class GCodeAnalyser:
                                                           Movement_Manager = self.Movement_Manager, 
                                                           g_code = self.g_code)
 
-    def plot_tool_path(self, version: str) -> None:
+    def plot_tool_path(self) -> None:
         """
         Plots the tool path using the Tool_Path_Generator.
-
-        Parameters:
-        -----------
-        version: str
-            Version of the plot. Available: Haas, Mueller
 
         Notes:
         ------
@@ -184,10 +179,8 @@ class GCodeAnalyser:
         """
 
         # Inform the Tool_Path_Generator to plot the tool path
-        if version == "Haas":
-            self.Tool_Path_Generator.plot_tool_path_Haas()
-        elif version == "Mueller":
-            self.Tool_Path_Generator.plot_tool_path_Mueller()
+        self.Tool_Path_Generator.plot_tool_path_Haas()
+        
 
     def set_start_time_and_total_time(self, 
                                       start_time: float,

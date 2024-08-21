@@ -64,4 +64,4 @@ if use_alternative_toolpath_animator:
     plt.show()
 else:
     G_Code_Analyser.generate_tool_path(fps=10)
-    G_Code_Analyser.plot_tool_path(version="Haas")
+    G_Code_Analyser.plot_tool_path()
