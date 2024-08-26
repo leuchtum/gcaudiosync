@@ -93,6 +93,43 @@ class Slicer:
     def matrix_slice(self) -> tuple[slice, slice]:
         return self.y_slice, self.x_slice
 
+    def _handle_x(self, x: npt.NDArray[_E]) -> npt.NDArray[_E]:
+        need_shape = (self.n_x,)
+        if x.shape != need_shape:
+            msg = f"x must be shape {need_shape}, got {x.shape}"
+            raise ValueError(msg)
+        return x[self.x_slice]
+
+    def _handle_y(self, y: npt.NDArray[_E]) -> npt.NDArray[_E]:
+        need_shape = (self.n_y,)
+        if y.shape != need_shape:
+            msg = f"y must be shape {need_shape}, got {y.shape}"
+            raise ValueError(msg)
+        return y[self.y_slice]
+
+    def _handle_matrix(self, matrix: npt.NDArray[_E]) -> npt.NDArray[_E]:
+        need_shape = (self.n_y, self.n_x)
+        if matrix.shape != need_shape:
+            msg = f"matrix must be shape {need_shape}, got {matrix.shape}"
+            raise ValueError(msg)
+        return matrix[self.matrix_slice]
+
+    def __call__(
+        self,
+        x: npt.NDArray[_E] | None = None,
+        y: npt.NDArray[_E] | None = None,
+        matrix: npt.NDArray[_E] | None = None,
+    ) -> npt.NDArray[_E]:
+        match (x is None, y is None, matrix is None):
+            case (False, True, True):
+                return self._handle_x(x)  # type: ignore[arg-type]
+            case (True, False, True):
+                return self._handle_y(y)  # type: ignore[arg-type]
+            case (True, True, False):
+                return self._handle_matrix(matrix)  # type: ignore[arg-type]
+            case _:
+                msg = "Exactly one of x, y or matrix must be given"
+                raise ValueError(msg)
 
 
 @dataclass(kw_only=True, frozen=True)
