@@ -3,7 +3,12 @@ from pathlib import Path
 import click
 
 
-@click.command()
+@click.group()
+def cli() -> None:
+    pass
+
+
+@cli.command()
 @click.option(
     "--gcode",
     "gc_file",
@@ -60,7 +65,7 @@ import click
     help="The upper frequency that still will be plotted.",
     required=True,
 )
-def main(
+def analyse(
     gc_file: Path,
     audio_file: Path,
     parameter_file: Path,
@@ -84,5 +89,59 @@ def main(
     )
 
 
+@cli.command()
+@click.option(
+    "--audio",
+    "audio_file",
+    type=click.Path(exists=True, dir_okay=False, resolve_path=True, path_type=Path),
+    help="The audio file to be analyzed.",
+    required=True,
+)
+@click.option(
+    "--output-directory",
+    "out_directory",
+    type=click.Path(exists=True, file_okay=False, resolve_path=True, path_type=Path),
+    help="The directory where the output files will be saved.",
+    required=True,
+)
+@click.option(
+    "--slope",
+    "slope",
+    type=float,
+    help="The acceleration/deceleration of the main tool spindle in Hz/s. Carry the minus sign for deceleration!",
+    required=True,
+)
+@click.option(
+    "--hz-bound",
+    "hz_bound",
+    type=float,
+    help="The upper frequency that still will be plotted.",
+    required=True,
+)
+@click.option(
+    "--n-stripes",
+    "n_stripes",
+    type=int,
+    help="The number of stripes to be plotted.",
+    required=True,
+)
+def slope(
+    audio_file: Path,
+    out_directory: Path,
+    slope: float,
+    hz_bound: float,
+    n_stripes: int,
+) -> None:
+    from gcaudiosync import plot_spectrogram_with_slope
+
+    plot_spectrogram_with_slope.main(
+        audio_file=audio_file,
+        out_directory=out_directory,
+        slope=slope,
+        hz_bound=hz_bound,
+        n_stripes=n_stripes,
+    )
+
+
 if __name__ == "__main__":
-    main()
+    cli()

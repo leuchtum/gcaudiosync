@@ -7,7 +7,7 @@ readme = "README.md"
 version = "0.0.1"
 
 [tool.poetry.scripts]
-gcaudiosync-cli = 'gcaudiosync.cli:main'
+gcaudiosync-cli = 'gcaudiosync.cli:cli'
 
 [tool.poetry.dependencies]
 librosa = "^0"
