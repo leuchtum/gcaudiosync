@@ -6,6 +6,9 @@ name = "gcaudiosync"
 readme = "README.md"
 version = "0.0.1"
 
+[tool.poetry.scripts]
+gcaudiosync-cli = 'gcaudiosync.cli:main'
+
 [tool.poetry.dependencies]
 librosa = "^0"
 matplotlib = "^3.9"
