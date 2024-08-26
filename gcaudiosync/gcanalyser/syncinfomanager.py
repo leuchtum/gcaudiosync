@@ -1,4 +1,5 @@
 import copy
+from pathlib import Path
 import numpy as np
 
 from typing import List, Tuple
@@ -43,7 +44,7 @@ class SyncInfoManager:
 
     # Constructor
     def __init__(self,
-                 snapshot_src: str,
+                 snapshot_src: Path,
                  Line_Extractor: LineExtractor,
                  CNC_Parameter: CNCParameter):
         """

@@ -156,7 +156,7 @@ class RefPointOptimizer:
         self,
         x: npt.NDArray[np.float64],
         y: npt.NDArray[np.float64],
-        resolution: int,
+        resolution: float,
     ) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
         """Optimize the reference points in x direction."""
         diff_last_elements = x[-1] - x[-2]

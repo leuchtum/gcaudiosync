@@ -1,12 +1,11 @@
 from typing import Any, Literal
 
-import matplotlib
-import matplotlib.axes
-import matplotlib.figure
+from matplotlib.artist import Artist
+from matplotlib.axes import Axes
 import matplotlib.pyplot as plt
 import numpy as np
 import numpy.typing as npt
-from matplotlib import animation
+from matplotlib.animation import FuncAnimation
 from sklearn.preprocessing import MinMaxScaler
 
 from gcaudiosync.audioanalyser.constants import Constants
@@ -14,9 +13,7 @@ from gcaudiosync.audioanalyser.slicer import SlicerFactory, ValueSlicerConfig
 from gcaudiosync.audioanalyser.util import convert_to_idx
 
 
-def add_footnote(
-    ax: matplotlib.axes.Axes, text: str, loc: Literal["left", "right"] = "right"
-) -> matplotlib.axes.Axes:
+def add_footnote(ax: Axes, text: str, loc: Literal["left", "right"] = "right") -> Axes:
     """Helper function to add a footnote to a plot."""
     if loc == "left":
         xy = (0.0, -0.15)
@@ -34,7 +31,7 @@ def plot_spec(
     time_min: float,
     time_delta: float,
     freq_delta: float,
-    ax: matplotlib.axes.Axes,
+    ax: Axes,
     add_labels: bool = True,
     cmap_label: str = "Amplitude in dB",
     cmap: str = "binary",
@@ -80,9 +77,9 @@ class SpectroAnimator:
     def __init__(
         self,
         *,
-        X: npt.NDArray[Any],
+        X: npt.NDArray[np.float64] | npt.NDArray[np.float32],
         consts: Constants,
-        ax: matplotlib.axes.Axes,
+        ax: Axes,
         global_slice_cfg: ValueSlicerConfig,
         width: int = 10,
         fps: int = 26,
@@ -122,11 +119,14 @@ class SpectroAnimator:
         zeros = np.zeros((X.shape[0], self.padding), dtype=X.dtype)
         self.padded_X = np.concatenate([zeros, X, zeros], axis=1)
 
+        from_y = 0 if global_slice_cfg.from_y is None else global_slice_cfg.from_y
+        to_y = consts.f_max if global_slice_cfg.to_y is None else global_slice_cfg.to_y
+
         extent = (
             -self.width / 2 - 0.5 * consts.t_delta,
             self.width / 2 - 0.5 * consts.t_delta,
-            global_slice_cfg.from_y - 0.5 * consts.f_delta,
-            global_slice_cfg.to_y - 0.5 * consts.f_delta,
+            from_y - 0.5 * consts.f_delta,
+            to_y - 0.5 * consts.f_delta,
         )
 
         # Plot spec
@@ -138,34 +138,40 @@ class SpectroAnimator:
         )
 
         # Plot red center line
-        ax.vlines(0, global_slice_cfg.from_y, global_slice_cfg.to_y, color="red")
+
+        ax.vlines(0, from_y, to_y, color="red")
 
         # Add labels and make it pretty
-        ax.set_ylim(global_slice_cfg.from_y, global_slice_cfg.to_y)
+        ax.set_ylim(from_y, to_y)
         ax.set_xlim(-self.width / 2, self.width / 2)
         ax.set_xlabel("Zeitliche Differenz zu t0 in s")
         ax.set_ylabel("Frequenz in Hz")
 
         # Add colorbar
         fig = ax.get_figure()
+        if fig is None:
+            raise ValueError("Fig not found")
         cbar = fig.colorbar(self.img, orientation="horizontal")
         cbar.set_label("Amplitude normiert auf Maximum")
 
-    def prepare_matrix(self, i: int):
+    def prepare_matrix(self, frame_s: float) -> npt.NDArray[np.float64]:
         slicer = self.padded_slicer_fac.build(
-            ValueSlicerConfig(from_x=i, to_x=i + self.width)
+            ValueSlicerConfig(from_x=frame_s, to_x=frame_s + self.width)
         )
-        return self.padded_X[slicer.matrix_slice]
+        return self.padded_X[slicer.matrix_slice]  # type: ignore
 
-    def callback(self, i: int):
-        self.img.set_data(self.prepare_matrix(i))
-        return self.img
+    def callback(self, frame_s: float) -> list[Artist]:
+        self.img.set_data(self.prepare_matrix(frame_s))
+        return [self.img]
 
-    def run(self):
+    def run(self) -> None:
         frames = np.linspace(0, self.total_time, self.nof_frames)
         time_diff_in_millis = 1000 / self.fps
-        animation.FuncAnimation(
-            self.img.get_figure(),
+        fig = self.img.get_figure()
+        if fig is None:
+            raise ValueError("Fig not found")
+        FuncAnimation(
+            fig,
             self.callback,
             frames=frames,
             blit=False,

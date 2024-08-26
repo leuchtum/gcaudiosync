@@ -1,6 +1,7 @@
+from pathlib import Path
 from typing import List
 
-def read_file(src_path: str) -> List[str]:
+def read_file(src_path: Path) -> List[str]:
     """
     Reads a G-code file and returns its lines as a list of strings.
 

@@ -1,4 +1,5 @@
 import copy
+from pathlib import Path
 from typing import List
 
 import gcaudiosync.gcanalyser.filefunctions as filefunc
@@ -37,16 +38,16 @@ class GCodeAnalyser:
 
     # Constructor
     def __init__(self, 
-                 parameter_src: str,
-                 snapshot_src: str):
+                 parameter_src: Path,
+                 snapshot_src: Path):
         """
         Initializes the GCodeAnalyser instance with necessary parameters and managers.
 
         Parameters:
         -----------
-        parameter_src : str
+        parameter_src : Path
             The source path of the CNC parameters.
-        snapshot_pause_src : str
+        snapshot_pause_src : Path
             The source path of the snapshot pause code
         """
 
@@ -69,8 +70,7 @@ class GCodeAnalyser:
     #################################################################################################
     # Methods
 
-    def analyse(self, 
-                g_code_src: str) -> None:
+    def analyse(self, g_code_src: Path) -> None:
         """
         Analyzes the G-code from the provided source file.
 

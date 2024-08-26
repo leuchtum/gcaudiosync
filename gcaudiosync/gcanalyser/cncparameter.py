@@ -1,3 +1,4 @@
+from pathlib import Path
 import numpy as np
 
 from gcaudiosync.gcanalyser.filefunctions import *
@@ -63,13 +64,13 @@ class CNCParameter:
     
     # Constructor
     def __init__(self, 
-                 parameter_src: str = ""):
+                 parameter_src: Path | None = None) -> None:
         """
         Initializes the CNCParameter object.
 
         Parameters:
         -----------
-        parameter_src : str, optional
+        parameter_src : Path, optional
             The source of the CNC parameters. Defaults to "".
         """
 
@@ -106,7 +107,7 @@ class CNCParameter:
         self.COMMAND_END_OF_PROGRAM: float       = 30.0
 
         # No src for cnc-parameter given -> using defaults
-        if parameter_src == "":
+        if parameter_src is None:
             print("Using default CNC-parameter.")
             return
 

@@ -1,30 +1,12 @@
-"""
-This is the main entry point for the gcaudiosync module. It produces plots and a
-video from the given input parameters. The main function `main()` reads in the
-audio file and creates all the necessary  objects. It then analyses the G-Code
-and converts the frequency information into. The function `plot_spec_raw()`
-plots the base spectrogram and saves the figure if an outfile is specified. The
-function `plot_spec_with_param_func()` plots the base spectrogram and the
-guessed times and frequencies. It also saves the figure if an outfile is
-specified. The function `debugger_is_active()` checks if the debugger is
-currently active. 
-
-The function `parse_args()` parses the command line arguments or uses default
-values if the debugger is active. The main function `main()` calls the necessary
-functions to perform pre-optimization and optimization of the guessed times and
-frequencies. It also plots and saves the spectrogram after pre-optimization.
-
-Note: This note only provides an overview of the functionality of the code. For
-more detailed information, please refer to the comments within the code.
-"""
-
-import sys
 from pathlib import Path
+from typing import Any, Sequence
 
+from matplotlib.animation import FFMpegWriter, FuncAnimation
+from matplotlib.artist import Artist
+import matplotlib.axes
 import numpy as np
 import numpy.typing as npt
 import pandas as pd
-from matplotlib import animation
 from matplotlib import pyplot as plt
 
 from gcaudiosync.audioanalyser.constants import Constants
@@ -43,13 +25,22 @@ from gcaudiosync.audioanalyser.slicer import (
     ValueSlicerConfig,
 )
 from gcaudiosync.audioanalyser.visualize import SpectroAnimator, plot_spec
+from gcaudiosync.gcanalyser.alternativetoolpathgenerator import (
+    AlternativeToolPathAnimator,
+)
 from gcaudiosync.gcanalyser.gcanalyser import GCodeAnalyser
-from gcaudiosync.gcanalyser.toolpathgenerator import AlternativeToolPathAnimator
+from gcaudiosync.helper import debugger_is_active
 
 PLOT = True
 
 
-def _plot_base_spec(S, slicer, consts, ax, title):
+def _plot_base_spec(
+    S: npt.NDArray[Any],
+    slicer: Slicer,
+    consts: Constants,
+    ax: matplotlib.axes.Axes,
+    title: str | None,
+) -> None:
     plot_spec(
         S[slicer.matrix_slice] / S[slicer.matrix_slice].max(),
         consts.freqs[slicer.from_y],
@@ -61,11 +52,12 @@ def _plot_base_spec(S, slicer, consts, ax, title):
         cmap="binary",
         title=title,
     )
-    ax.set_title(title)
+    if title is not None:
+        ax.set_title(title)
 
 
 def plot_spec_raw(
-    matrix: npt.NDArray[np.float64],
+    matrix: npt.NDArray[Any],
     slicer: Slicer,
     consts: Constants,
     title: str | None = None,
@@ -93,11 +85,11 @@ def plot_spec_raw(
 
 
 def plot_spec_with_param_func(
-    matrix: npt.NDArray[np.float64],
+    matrix: npt.NDArray[Any],
     slicer: Slicer,
     consts: Constants,
-    times: npt.NDArray[np.float64],
-    freqs: npt.NDArray[np.float64],
+    times: npt.NDArray[Any],
+    freqs: npt.NDArray[Any],
     param_form_func: ParametrisableFormFunc,
     title: str | None = None,
     outfile: Path | None = None,
@@ -128,65 +120,20 @@ def plot_spec_with_param_func(
         plt.close(fig)
 
 
-def debugger_is_active():
-    """Return if the debugger is currently active"""
-    return hasattr(sys, "gettrace") and sys.gettrace() is not None
-
-
-def parse_args():
-    if debugger_is_active():
-        gc_file = Path("gcode") / "Spindelhochlauf.cnc"
-        audio_file = Path("sound") / "VID_20240103_125230.wav"
-        parameter_file = Path("readinfiles") / "parameter.txt"
-        snapshot_file = Path("readinfiles") / "snapshot_g_code.txt"
-        ramp_up_slope = 60
-        ramp_down_slope = -60
-        hz_bound = 1000
-
-    else:
-        if len(sys.argv) != 8:
-            msgs = [
-                "Invalid number of arguments. Expected 7 arguments.",
-                "",
-                "Example usage:",
-                "\t G-Code file: gcode/Spindelhochlauf.cnc",
-                "\t Audio file: sound/VID_20240103_125230.wav",
-                "\t Parameter file: readinfiles/parameter.txt",
-                "\t Snapshot file: readinfiles/snapshot_g_code.txt",
-                "\t Ramp up slope: 60",
-                "\t Ramp down slope: -60",
-                "\t Hz bound: 1000",
-                "",
-                "Results in:",
-                "\tpython -m gcaudiosync gcode/Spindelhochlauf.cnc sound/VID_20240103_125230.wav readinfiles/parameter.txt readinfiles/snapshot_g_code.txt 60 -60 1000",
-            ]
-            raise ValueError("\n".join(msgs))
-
-        gc_file = Path(sys.argv[1])
-        audio_file = Path(sys.argv[2])
-        parameter_file = Path(sys.argv[3])
-        snapshot_file = Path(sys.argv[4])
-        ramp_up_slope = float(sys.argv[5])
-        ramp_down_slope = float(sys.argv[6])
-        hz_bound = float(sys.argv[7])
-
-    return {
-        "gc_file": gc_file,
-        "audio_file": audio_file,
-        "parameter_file": parameter_file,
-        "snapshot_file": snapshot_file,
-        "ramp_up_slope": ramp_up_slope,
-        "ramp_down_slope": ramp_down_slope,
-        "hz_bound": hz_bound,
-    }
-
-
-def main():
-    args = parse_args()
-
+def main(
+    *,
+    gc_file: Path,
+    audio_file: Path,
+    parameter_file: Path,
+    snapshot_file: Path,
+    out_directory: Path,
+    ramp_up_slope: float,
+    ramp_down_slope: float,
+    hz_bound: float,
+) -> None:
     # Read in the audio file and create all the necessary objects
     print("Reading in audio file...")
-    rr = RawRecording.from_file(args["audio_file"])
+    rr = RawRecording(audio_file)
     consts = Constants(rr.samplerate, rr.data)
     pr = ProcessedRecording(
         rr.data,
@@ -197,13 +144,13 @@ def main():
 
     # Create a G_Code_Analyser
     gc_analyser = GCodeAnalyser(
-        parameter_src=args["parameter_file"],
-        snapshot_src=args["snapshot_file"],
+        parameter_src=parameter_file,
+        snapshot_src=snapshot_file,
     )
 
     # Analyse G-Code
     print("Analysing G-Code...")
-    gc_analyser.analyse(args["gc_file"])
+    gc_analyser.analyse(gc_file)
 
     # Get the frequency information from the analysed G-Code and convert into a
     # timing and freq array. Also convert guessed times from milliseconds to
@@ -225,7 +172,7 @@ def main():
         raise ValueError("Guessed times are zero, cannot continue")
 
     # Add a terminal reference point to the guesses
-    times_guess = np.concatenate((times_guess, [rr.duration]))
+    times_guess = np.concatenate((times_guess, [rr.rough_duration]))
     freqs_guess = np.concatenate((freqs_guess, [0]))
 
     # Create parametrisable form function with the slopes specified. When
@@ -233,8 +180,8 @@ def main():
     # be used to create a parametrized form function.
     param_form_func = ParametrisableFormFunc(
         BendedSegmentBuilder(
-            ramp_up_slope=args["ramp_up_slope"],
-            ramp_down_slope=args["ramp_down_slope"],
+            ramp_up_slope=ramp_up_slope,
+            ramp_down_slope=ramp_down_slope,
         )
     )
 
@@ -269,8 +216,8 @@ def main():
     # For reference, plot the spectrogram as well as the spectrogram with the
     # guessed times and frequencies. For this a seperate slicer is used, which
     # is only used for plotting.
-    slice_to_freq_plot_only = np.argmax(
-        consts.freqs > np.ceil(slice_to_freq / 1e3) * 1e3
+    slice_to_freq_plot_only = int(
+        np.argmax(consts.freqs > np.ceil(slice_to_freq / 1e3) * 1e3)
     )
     slicer_fac_plot_only = SlicerFactory(
         n_x=consts.n_time,
@@ -284,14 +231,14 @@ def main():
             pr.S(),
             slicer_fac_plot_only.build(),
             consts,
-            outfile=Path.cwd() / "spectrogram_unprocessed.png",
+            outfile=out_directory / "spectrogram_unprocessed.png",
             title="Spektrogramm; nicht aufbereitet",
         )
         plot_spec_raw(
             pr.S_sqrt(),
             slicer_fac_plot_only.build(),
             consts,
-            outfile=Path.cwd() / "spectrogram_processed.png",
+            outfile=out_directory / "spectrogram_processed.png",
             title="Spektrogramm; aufbereitet",
         )
         plot_spec_with_param_func(
@@ -301,7 +248,7 @@ def main():
             times_guess,
             freqs_guess,
             param_form_func,
-            outfile=Path.cwd() / "spectrogram_with_guesses.png",
+            outfile=out_directory / "spectrogram_with_guesses.png",
             title="Spektrogramm; aufbereitet; mit Schätzungen",
         )
 
@@ -331,7 +278,7 @@ def main():
             times_guess,
             freqs_guess,
             param_form_func,
-            outfile=Path.cwd() / "spectrogram_with_preoptimized_guesses.png",
+            outfile=out_directory / "spectrogram_with_preoptimized_guesses.png",
             title="Spektrogramm; aufbereitet; mit vor-optimierten Schätzungen",
         )
 
@@ -373,7 +320,7 @@ def main():
             times_guess,
             freqs_guess,
             param_form_func,
-            outfile=Path.cwd() / "spectrogram_with_optimized_guesses.png",
+            outfile=out_directory / "spectrogram_with_optimized_guesses.png",
             title="Spektrogramm; aufbereitet; mit optimierten Schätzungen",
         )
 
@@ -420,19 +367,19 @@ def main():
             ax=ax_spec,
             global_slice_cfg=ValueSlicerConfig(
                 from_y=0,
-                to_y=args["hz_bound"],
+                to_y=hz_bound,
             ),
         )
 
-        def callback(frame_s: float):
-            plt_objs = []
-            plt_objs.append(toolpath_ani.callback(frame_s))
-            plt_objs.append(spec_ani.callback(frame_s))
+        def callback(frame_s: float) -> list[Artist]:
+            plt_objs: list[Artist] = []
+            plt_objs.extend(toolpath_ani.callback(frame_s))
+            plt_objs.extend(spec_ani.callback(frame_s))
             return plt_objs
 
         frames = np.linspace(0, spec_ani.total_time, spec_ani.nof_frames)
         time_diff_in_millis = 1000 / fps
-        anim = animation.FuncAnimation(
+        anim = FuncAnimation(
             fig,
             callback,
             frames=frames,
@@ -441,9 +388,18 @@ def main():
             repeat=False,
         )
         fig.tight_layout()
-        writer = animation.FFMpegWriter(fps=fps)
-        anim.save(Path.cwd() / "toolpath_with_spectrogram.mp4", writer=writer)
+        writer = FFMpegWriter(fps=fps)
+        anim.save(out_directory / "toolpath_with_spectrogram.mp4", writer=writer)
 
 
 if __name__ == "__main__":
-    main()
+    main(
+        gc_file=Path("gcode") / "Spindelhochlauf.cnc",
+        audio_file=Path("sound") / "VID_20240103_125230.wav",
+        parameter_file=Path("readinfiles") / "parameter.txt",
+        snapshot_file=Path("readinfiles") / "snapshot_g_code.txt",
+        out_directory=Path("output"),
+        ramp_up_slope=60,
+        ramp_down_slope=-60,
+        hz_bound=1000,
+    )
