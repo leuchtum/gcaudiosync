@@ -3,11 +3,9 @@ from typing import TypeVar
 
 import numpy as np
 import numpy.typing as npt
-from matplotlib import pyplot as plt
 
-from gcaudiosync.audioanalyser.slicer import Slicer, SlicerFactory, ValueSlicerConfig
+from gcaudiosync.audioanalyser.slicer import Slicer
 from gcaudiosync.audioanalyser.util import convert_to_idx
-from gcaudiosync.audioanalyser.visualize import plot_spec
 
 _E = TypeVar("_E", bound=np.generic, covariant=True)
 
@@ -146,4 +144,3 @@ class MaskFactory:
         above = rows >= lower[:, None]
         below = rows <= upper[:, None]
         return (above & below).T
-

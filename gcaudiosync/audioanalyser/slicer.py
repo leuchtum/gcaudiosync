@@ -30,6 +30,7 @@ class _SlicerConfig:
 @dataclass(kw_only=True, frozen=True)
 class IndexSlicerConfig(_SlicerConfig):
     """Class for the index slicer configuration."""
+
     from_x: int | None = None
     to_x: int | None = None
     from_y: int | None = None
@@ -39,6 +40,7 @@ class IndexSlicerConfig(_SlicerConfig):
 @dataclass(kw_only=True, frozen=True)
 class ValueSlicerConfig(_SlicerConfig):
     """Class for the value slicer configuration."""
+
     from_x: float | None = None
     to_x: float | None = None
     from_y: float | None = None
@@ -51,7 +53,8 @@ class ValueSlicerConfig(_SlicerConfig):
         x_max: float,
         y_max: float,
     ) -> IndexSlicerConfig:
-        """ Convert the value slicer configuration to an index slicer configuration. """
+        """Convert the value slicer configuration to an index slicer configuration."""
+
         def convert_to_idx_if_not_none(
             z: float | None,
             z_max: float,
@@ -71,7 +74,8 @@ class ValueSlicerConfig(_SlicerConfig):
 
 @dataclass(frozen=True, kw_only=True)
 class Slicer:
-    """ Class for slicing a matrix, given the bounds of the matrix. """
+    """Class for slicing a matrix, given the bounds of the matrix."""
+
     n_x: int
     n_y: int
     x_max: float
@@ -135,6 +139,7 @@ class Slicer:
 @dataclass(kw_only=True, frozen=True)
 class SlicerFactory:
     """Class that builds matrix slicers from configurations."""
+
     n_x: int
     n_y: int
     x_max: float

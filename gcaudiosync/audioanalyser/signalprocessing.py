@@ -4,7 +4,8 @@ import numpy.typing as npt
 
 
 class ProcessedRecording:
-    """ Class for processing audio data. """
+    """Class for processing audio data."""
+
     def __init__(
         self,
         data: npt.NDArray[np.float32],

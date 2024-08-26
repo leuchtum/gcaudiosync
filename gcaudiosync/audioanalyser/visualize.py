@@ -40,7 +40,7 @@ def plot_spec(
     cmap: str = "binary",
     title: str | None = None,
 ) -> None:
-    """ Plot the spectrogram. """
+    """Plot the spectrogram."""
     extent = (
         time_min - 0.5 * time_delta,
         time_min + (X.shape[1] - 0.5) * time_delta,
@@ -75,7 +75,8 @@ def plot_spec(
 
 
 class SpectroAnimator:
-    """ Class to animate a spectrogram. """
+    """Class to animate a spectrogram."""
+
     def __init__(
         self,
         *,
@@ -138,7 +139,7 @@ class SpectroAnimator:
 
         # Plot red center line
         ax.vlines(0, global_slice_cfg.from_y, global_slice_cfg.to_y, color="red")
-        
+
         # Add labels and make it pretty
         ax.set_ylim(global_slice_cfg.from_y, global_slice_cfg.to_y)
         ax.set_xlim(-self.width / 2, self.width / 2)

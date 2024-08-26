@@ -49,7 +49,7 @@ def convert_to_idx(
     n_x: int,
     clip: bool = True,
 ) -> npt.NDArray[np.int64] | int:
-    """ Convert a value or array to an index."""
+    """Convert a value or array to an index."""
     if isinstance(x, float | int):
         return _handle_single_value(x, x_max, n_x, clip)
     return _handle_array(x, x_max, n_x, clip)
