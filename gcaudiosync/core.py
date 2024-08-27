@@ -1,3 +1,5 @@
+"""This file contains the core functionality of the gcaudiosync package."""
+
 from pathlib import Path
 from typing import Any
 

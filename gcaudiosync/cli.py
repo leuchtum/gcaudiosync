@@ -1,3 +1,5 @@
+"""This file contains the command line interface for the gcaudiosync package."""
+
 from pathlib import Path
 
 import click

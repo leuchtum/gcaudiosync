@@ -1,3 +1,5 @@
+"""This file contains some helper functions for the gcaudiosync package."""
+
 import sys
 
 

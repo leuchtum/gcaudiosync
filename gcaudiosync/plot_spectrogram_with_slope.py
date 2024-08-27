@@ -1,3 +1,5 @@
+"""This file contains a script that plots a spectrogram with a given slope."""
+
 from pathlib import Path
 
 import numpy as np

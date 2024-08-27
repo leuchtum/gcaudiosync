@@ -93,6 +93,7 @@ class AlternativeToolPathAnimator:
         )
 
     def _get_position_linear_axes_save(self, t_ms: float) -> tuple[float, float, float]:
+        """Helper function to get the position of the tool at a given time."""
         try:
             return self.mm.get_tool_path_information(t_ms).position_linear_axes
         except Exception:
@@ -109,6 +110,7 @@ class AlternativeToolPathAnimator:
         return np.nan, np.nan, np.nan
 
     def _gen_text(self, t_ms: float, i: int) -> str:
+        """Helper function to generate the text for the info box."""
         try:
             path_info = self.mm.get_tool_path_information(t_ms)
             idx = path_info.g_code_line_index + i
@@ -126,6 +128,7 @@ class AlternativeToolPathAnimator:
         return text
 
     def callback(self, frame_s: float) -> tuple[Artist, ...]:
+        """Callback function for the animation."""
         # Convert the frame time to milliseconds
         frame_ms = frame_s * 1000
 
@@ -161,6 +164,7 @@ class AlternativeToolPathAnimator:
         return self.tool_path_line, self.tool_position_line, *self.texts, self.info_box
 
     def run(self) -> None:
+        """Run the animation."""
         frames = np.linspace(0, self.total_time, self.nof_frames)
         time_diff_in_millis = 1000 / self.fps
         fig = self.tool_path_line.get_figure()

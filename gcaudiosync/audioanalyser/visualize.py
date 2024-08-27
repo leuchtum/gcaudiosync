@@ -135,7 +135,7 @@ class SpectroAnimator:
 
         # Plot spec
         self.img = ax.imshow(
-            self.prepare_matrix(0),
+            self._prepare_matrix(0),
             aspect="auto",
             origin="lower",
             extent=extent,
@@ -167,19 +167,22 @@ class SpectroAnimator:
         cbar = fig.colorbar(self.img, orientation="horizontal")
         cbar.set_label("Amplitude normiert auf Maximum")
 
-    def prepare_matrix(self, frame_s: float) -> npt.NDArray[np.float64]:
+    def _prepare_matrix(self, frame_s: float) -> npt.NDArray[np.float64]:
+        """Prepare the matrix for the given frame."""
         slicer = self.padded_slicer_fac.build(
             ValueSlicerConfig(from_x=frame_s, to_x=frame_s + self.width)
         )
         return self.padded_X[slicer.matrix_slice]  # type: ignore
 
     def callback(self, frame_s: float) -> list[Artist]:
+        """Callback function for the animation."""
         idx = np.argmin((frame_s - self.x) >= 0) - 1
         self.target_freq_line.set_ydata([self.y[idx], self.y[idx], self.y[idx]])
-        self.img.set_data(self.prepare_matrix(frame_s))
+        self.img.set_data(self._prepare_matrix(frame_s))
         return [self.target_freq_line, self.img]
 
     def run(self) -> None:
+        """Run the animation."""
         frames = np.linspace(0, self.total_time, self.nof_frames)
         time_diff_in_millis = 1000 / self.fps
         fig = self.img.get_figure()
