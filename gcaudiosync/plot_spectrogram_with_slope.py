@@ -83,6 +83,8 @@ def main(
     # Save the plot
     plt.xlim(0, consts.t_max)
     plt.ylim(0, hz_bound)
+    if n_stripes > 0:
+        plt.title(f"Spektrogramm mit Steigung {slope} Hz/s")
     plt.tight_layout()
     fig.savefig(out_directory / "spectrogram_with_slope.png", format="png", dpi=600)
 

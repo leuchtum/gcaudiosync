@@ -104,14 +104,10 @@ class RefPointOptimizer:
         resolution: int,
     ) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
         """Optimize the reference point in x direction at the given index."""
-        x_lower = x.copy()
-        x_upper = x.copy()
-
-        x_lower[xi_idx] = xi_lb
-        x_upper[xi_idx] = xi_ub
-
         n = int((xi_ub - xi_lb) / self.dx * resolution)
-        x_proposed = np.linspace(x_lower, x_upper, n)
+
+        x_proposed = np.tile(x, (n, 1))
+        x_proposed[:, xi_idx] = np.linspace(xi_lb, xi_ub, n)
         y_proposed = np.tile(y, (n, 1))
 
         slicer = self.slicer_fac.build(ValueSlicerConfig(from_x=xi_lb, to_x=xi_ub))
@@ -133,15 +129,11 @@ class RefPointOptimizer:
         resolution: int,
     ) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
         """Optimize the reference point in y direction at the given index."""
-        y_lower = y.copy()
-        y_upper = y.copy()
-
-        y_lower[yi_idx] = yi_lb
-        y_upper[yi_idx] = yi_ub
-
         n = int((yi_ub - yi_lb) / self.dy * resolution)
+
         x_proposed = np.tile(x, (n, 1))
-        y_proposed = np.linspace(y_lower, y_upper, n)
+        y_proposed = np.tile(y, (n, 1))
+        y_proposed[:, yi_idx] = np.linspace(yi_lb, yi_ub, n)
 
         slicer = self.slicer_fac.build(ValueSlicerConfig(from_y=yi_lb, to_y=yi_ub))
 

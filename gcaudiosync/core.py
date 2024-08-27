@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any, Sequence
+from typing import Any
 
 from matplotlib.animation import FFMpegWriter, FuncAnimation
 from matplotlib.artist import Artist
@@ -8,6 +8,7 @@ import numpy as np
 import numpy.typing as npt
 import pandas as pd
 from matplotlib import pyplot as plt
+import tqdm
 
 from gcaudiosync.audioanalyser.constants import Constants
 from gcaudiosync.audioanalyser.io import RawRecording
@@ -172,7 +173,8 @@ def main(
         raise ValueError("Guessed times are zero, cannot continue")
 
     # Add a terminal reference point to the guesses
-    times_guess = np.concatenate((times_guess, [rr.rough_duration]))
+    max_time = max(times_guess[-1] + 1, consts.t_max)
+    times_guess = np.concatenate((times_guess, [max_time]))
     freqs_guess = np.concatenate((freqs_guess, [0]))
 
     # Create parametrisable form function with the slopes specified. When
@@ -335,12 +337,37 @@ def main(
 
     # Inform the GCode Analyser about the optimized times
     print("Informing G-Code Analyser about optimized times...")
-    start_time = times_guess[1]
-    total_time = times_guess[-2] - start_time
-    gc_analyser.set_start_time_and_total_time(start_time * 1000, total_time * 1000)
+    start_time_by_freqs = times_guess[1]
+    total_time_by_freqs = times_guess[-2] - start_time_by_freqs
+
+    time_before_first_freq = (
+        gc_analyser.Movement_Manager.get_expected_time_of_gcode_line(
+            freq_infos[0].g_code_line_index_end
+        )
+    )
+    time_after_last_freq = gc_analyser.Movement_Manager.get_expected_time_of_gcode_line(
+        freq_infos[-1].g_code_line_index_start
+    )
+    gc_analyser.set_start_time_and_total_time(
+        start_time_by_freqs * 1000 - time_before_first_freq,
+        total_time_by_freqs * 1000 + time_before_first_freq + time_after_last_freq,
+    )
+
     for freq_info, gc_timestamp in zip(freq_infos[:-1], times_guess[:-2]):
         gc_index = freq_info.g_code_line_index_start
-        gc_analyser.adjust_start_time_of_g_code_line(gc_index, 1000 * gc_timestamp)
+
+        try:
+            gc_analyser.adjust_start_time_of_g_code_line(gc_index, 1000 * gc_timestamp)
+        except Exception as e:
+            g_code = gc_analyser.g_code[gc_index]
+            msg = "\n".join(
+                [
+                    "Warning:",
+                    f"Could not adjust start time of GCode '{g_code}' at line {gc_index}.",
+                    f"Original error: {e.__class__.__name__}: {e}",
+                ]
+            )
+            print(msg)
 
     # Plot the tool path. For this we crate an animation, which will be saved as
     # an mp4 file. We animate via two Animator objects, one for the tool path
@@ -363,6 +390,8 @@ def main(
         )
         spec_ani = SpectroAnimator(
             X=pr.S_db(),
+            x=times_guess,
+            y=freqs_guess,
             consts=consts,
             ax=ax_spec,
             global_slice_cfg=ValueSlicerConfig(
@@ -370,11 +399,13 @@ def main(
                 to_y=hz_bound,
             ),
         )
+        progressbar = tqdm.tqdm(total=spec_ani.nof_frames)
 
         def callback(frame_s: float) -> list[Artist]:
             plt_objs: list[Artist] = []
             plt_objs.extend(toolpath_ani.callback(frame_s))
             plt_objs.extend(spec_ani.callback(frame_s))
+            progressbar.update(1)
             return plt_objs
 
         frames = np.linspace(0, spec_ani.total_time, spec_ani.nof_frames)
@@ -394,11 +425,21 @@ def main(
 
 if __name__ == "__main__":
     main(
-        gc_file=Path("gcode") / "Spindelhochlauf.cnc",
-        audio_file=Path("sound") / "VID_20240103_125230.wav",
-        parameter_file=Path("readinfiles") / "parameter.txt",
-        snapshot_file=Path("readinfiles") / "snapshot_g_code.txt",
-        out_directory=Path("output"),
+        gc_file=Path(
+            "/Users/daniel/Desktop/DEV_cseproject/experiments/fraeseMit3/fraesen.cnc"
+        ),
+        audio_file=Path(
+            "/Users/daniel/Desktop/DEV_cseproject/experiments/fraeseMit3/out.wav"
+        ),
+        parameter_file=Path(
+            "/Users/daniel/Desktop/DEV_cseproject/experiments/fraeseMit3/readinfiles/parameter.txt"
+        ),
+        snapshot_file=Path(
+            "/Users/daniel/Desktop/DEV_cseproject/experiments/fraeseMit3/readinfiles/snapshot_g_code.txt"
+        ),
+        out_directory=Path(
+            "/Users/daniel/Desktop/DEV_cseproject/experiments/fraeseMit3"
+        ),
         ramp_up_slope=60,
         ramp_down_slope=-60,
         hz_bound=1000,

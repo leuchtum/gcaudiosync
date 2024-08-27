@@ -116,8 +116,8 @@ class BendedSegmentBuilder:
     def __call__(
         self, y0: float, y1: float, x0: float, x1: float
     ) -> list[BoundedFunction]:
-        dt = x1 - x0
-        if dt == 0:
+        # To catch inf-inf cases and prevent division by zero
+        if x0 == x1:
             return []
 
         # Determine the slope of the linear part

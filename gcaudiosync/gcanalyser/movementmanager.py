@@ -297,9 +297,9 @@ class MovementManager:
         # Iterate backwards through all movements and find thouse who match the line index
         for index in range(len(self.movements))[::-1]:
 
-            if self.movements[index].line_index < g_code_line_index:       # All movements found
+            if self.movements[index].g_code_line_index < g_code_line_index:       # All movements found
                 break                                                   # Exit loop
-            elif self.movements[index].line_index == g_code_line_index:    # Found matching line index
+            elif self.movements[index].g_code_line_index == g_code_line_index:    # Found matching line index
                 expected_time += self.movements[index].duration             # Update expected time
 
         return expected_time
@@ -357,14 +357,14 @@ class MovementManager:
         time_stamp_found = False                            
 
         # Iterate through all time stamps
-        for movement in self.movements:
+        for movement in self.movements[::-1]:
             
             # Get the start and end time of the movement
             movement_start_time = movement.start_time
             movement_end_time = movement_start_time + movement.duration
 
             # Check if current time is in this time stamp
-            if current_time >= movement_start_time and current_time < movement_end_time:  
+            if current_time >= movement_start_time and current_time <= movement_end_time:  
                 time_stamp_found = True     # Set Flag
                 break                       # Break loop
                 
@@ -490,10 +490,6 @@ class MovementManager:
 
         self.total_duration = total_duration
 
-    def set_start_time_and_duration_old(self, 
-                                    new_start_time: float,
-                                    new_total_duration: float) -> int: 
-        pass
 
     def set_start_time_and_duration(self, 
                                     new_start_time: float,
@@ -589,7 +585,7 @@ class MovementManager:
                 important_movement_index = movement_index
                 break
         if important_movement_index == 0:
-            return 1    # no movement with this index found
+            #return 1    # no movement with this index found
             raise Exception(f"Something went wrong: no movement with this index")   # Just in case someone wants to add exception handling
                 
         # Get index of previous movement with nonadjustable start time
@@ -634,7 +630,7 @@ class MovementManager:
 
         # Error handeling
         if new_adjustable_time_before <= 0 or new_adjustable_time_after <= 0:
-            return 2    # New total adjustable time is too short
+            #return 2    # New total adjustable time is too short
             raise Exception(f"Something went wrong: new total adjustable time is too short")    # Just in case someone wants to add exception handling
         
         # Adjust all the times and start times before the important movement

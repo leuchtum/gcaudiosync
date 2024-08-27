@@ -77,6 +77,20 @@ def analyse(
 ) -> None:
     from gcaudiosync import core
 
+    msg = "\n".join(
+        (
+            "Input:",
+            f"\t- G-code file: {gc_file}",
+            f"\t- Audio file: {audio_file}",
+            f"\t- Parameter file: {parameter_file}",
+            f"\t- Snapshot file: {snapshot_file}",
+            f"\t- Output directory: {out_directory}",
+            f"\t- Ramp-up slope: {ramp_up_slope} Hz/s",
+            f"\t- Ramp-down slope: {ramp_down_slope} Hz/s",
+            f"\t- Hz-bound: {hz_bound} Hz",
+        )
+    )
+    click.echo(msg)
     core.main(
         gc_file=gc_file,
         audio_file=audio_file,

@@ -78,6 +78,8 @@ class SpectroAnimator:
         self,
         *,
         X: npt.NDArray[np.float64] | npt.NDArray[np.float32],
+        x: npt.NDArray[np.float64],
+        y: npt.NDArray[np.float64],
         consts: Constants,
         ax: Axes,
         global_slice_cfg: ValueSlicerConfig,
@@ -88,6 +90,8 @@ class SpectroAnimator:
         self.fps = fps
         self.width = width
         self.gloabl_slice_cfg = global_slice_cfg
+        self.x = x
+        self.y = y
 
         self.frame_delta_time: float = 1 / self.fps
         self.total_time = consts.t_max
@@ -137,8 +141,17 @@ class SpectroAnimator:
             extent=extent,
         )
 
-        # Plot red center line
+        # Plot target freq line
+        (self.target_freq_line,) = ax.plot(
+            [extent[0], 0, extent[1]],
+            [self.y[0], self.y[0], self.y[0]],
+            color="red",
+            linestyle="dashed",
+            marker="o",
+            markersize=4,
+        )
 
+        # Plot red center line
         ax.vlines(0, from_y, to_y, color="red")
 
         # Add labels and make it pretty
@@ -161,8 +174,10 @@ class SpectroAnimator:
         return self.padded_X[slicer.matrix_slice]  # type: ignore
 
     def callback(self, frame_s: float) -> list[Artist]:
+        idx = np.argmin((frame_s - self.x) >= 0) - 1
+        self.target_freq_line.set_ydata([self.y[idx], self.y[idx], self.y[idx]])
         self.img.set_data(self.prepare_matrix(frame_s))
-        return [self.img]
+        return [self.target_freq_line, self.img]
 
     def run(self) -> None:
         frames = np.linspace(0, self.total_time, self.nof_frames)

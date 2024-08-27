@@ -16,15 +16,15 @@ class AlternativeToolPathAnimator:
         t_max: float,
         fps: int = 26,
         padding: float = 10,
-        n_points_visible: int = 200,
+        sec_points_visible: float = 60,
         string_length: int = 20,
-        n_texts: int = 5,
+        n_texts: int = 7,
     ) -> None:
         # Save params
         self.mm = movement_manager
         self.g_code = g_code
         self.fps = fps
-        self.n_points_visible = n_points_visible
+        self.n_points_visible = int(fps * sec_points_visible)
         self.string_length = string_length
         self.n_texts = n_texts
 
@@ -96,16 +96,33 @@ class AlternativeToolPathAnimator:
         try:
             return self.mm.get_tool_path_information(t_ms).position_linear_axes
         except Exception:
-            return np.nan, np.nan, np.nan
+            pass
+
+        _, last_valid_timestamp = self.mm.get_time_stamps()[-1]
+        try:
+            return self.mm.get_tool_path_information(
+                last_valid_timestamp
+            ).position_linear_axes
+        except Exception:
+            pass
+
+        return np.nan, np.nan, np.nan
 
     def _gen_text(self, t_ms: float, i: int) -> str:
         try:
-            tool_path_information = self.mm.get_tool_path_information(t_ms)
-            text = self.g_code[tool_path_information.g_code_line_index + i]
+            path_info = self.mm.get_tool_path_information(t_ms)
+            idx = path_info.g_code_line_index + i
         except Exception:
+            idx = len(self.g_code) + i
+
+        if idx < 0 or idx >= len(self.g_code):
             return ""
+
+        text = self.g_code[idx]
+
         if len(text) > self.string_length:
             return f"{text[:self.string_length-3]}..."
+
         return text
 
     def callback(self, frame_s: float) -> tuple[Artist, ...]:

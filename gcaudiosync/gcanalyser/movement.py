@@ -133,7 +133,8 @@ class Movement:
             self.compute_optimal_end_vector_linear_axes()
             self.compute_optimal_end_vector_rotation()          # Not implemented
 
-        #else:
+        else:
+            pass
             #self.time_is_adjustable = False
 
     #################################################################################################
@@ -576,9 +577,13 @@ class Movement:
 
         position = np.array([0.0, 0.0, 0.0])
 
-        portion = time_in_movement / self.duration
-
-        if portion < 0 or portion > 1:
+        if self.duration == 0:
+            portion = 0
+        else:
+            portion = time_in_movement / self.duration
+        
+        eps = 1e-6
+        if portion < 0 - eps or portion > 1 + eps:
             raise Exception(f"Something wrong here")
 
         start_position_linear_axes = self.start_position_linear_axes.get_as_array()
