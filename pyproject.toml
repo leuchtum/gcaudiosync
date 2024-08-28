@@ -4,7 +4,7 @@ description = "Synchronise G-codes with an audio file that was recorded during t
 license = "MIT"
 name = "gcaudiosync"
 readme = "README.md"
-version = "0.0.1"
+version = "0.0.2"
 
 [tool.poetry.scripts]
 gcaudiosync-cli = 'gcaudiosync.cli:cli'

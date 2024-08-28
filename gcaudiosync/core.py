@@ -3,14 +3,14 @@
 from pathlib import Path
 from typing import Any
 
-from matplotlib.animation import FFMpegWriter, FuncAnimation
-from matplotlib.artist import Artist
 import matplotlib.axes
 import numpy as np
 import numpy.typing as npt
 import pandas as pd
-from matplotlib import pyplot as plt
 import tqdm
+from matplotlib import pyplot as plt
+from matplotlib.animation import FFMpegWriter, FuncAnimation
+from matplotlib.artist import Artist
 
 from gcaudiosync.audioanalyser.constants import Constants
 from gcaudiosync.audioanalyser.io import RawRecording
@@ -379,9 +379,9 @@ def main(
         print("Plotting and saving tool path...")
         fps = 26
         fig = plt.figure(figsize=(15, 5))
-        ax_info = fig.add_subplot(1, 6, 1)
-        ax_tool = fig.add_subplot(1, 6, (2, 3))
-        ax_spec = fig.add_subplot(1, 6, (4, 6))
+        ax_info = fig.add_subplot(1, 7, (1, 2))
+        ax_tool = fig.add_subplot(1, 7, (3, 4))
+        ax_spec = fig.add_subplot(1, 7, (5, 7))
         toolpath_ani = AlternativeToolPathAnimator(
             gc_analyser.Movement_Manager,
             gc_analyser.g_code,

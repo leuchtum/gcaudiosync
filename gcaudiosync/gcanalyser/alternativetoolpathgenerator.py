@@ -1,9 +1,10 @@
+import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.animation import FuncAnimation
 from matplotlib.artist import Artist
-from gcaudiosync.gcanalyser.movementmanager import MovementManager
-import numpy as np
 from matplotlib.axes import Axes
+
+from gcaudiosync.gcanalyser.movementmanager import MovementManager
 
 
 class AlternativeToolPathAnimator:
@@ -17,7 +18,7 @@ class AlternativeToolPathAnimator:
         fps: int = 26,
         padding: float = 10,
         sec_points_visible: float = 60,
-        string_length: int = 20,
+        string_length: int = 30,
         n_texts: int = 7,
     ) -> None:
         # Save params
@@ -120,7 +121,7 @@ class AlternativeToolPathAnimator:
         if idx < 0 or idx >= len(self.g_code):
             return ""
 
-        text = self.g_code[idx]
+        text = f"{idx:04d}: {self.g_code[idx]}"
 
         if len(text) > self.string_length:
             return f"{text[:self.string_length-3]}..."
